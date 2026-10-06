@@ -1,0 +1,155 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Instrument Sans", -apple-system, "SF Pro Text", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      --bg: #0c0d10; --surface: rgba(26,28,34,.68); --surface-hi: rgba(255,255,255,.08);
+      --edge: rgba(255,255,255,.1); --edge-hi: rgba(255,255,255,.18);
+      --ink: #f1eee8; --ink-2: #b9b5ad; --muted: #7f7d77;
+      --lamp-rgb: 233,184,114; --lamp: rgb(var(--lamp-rgb)); --lamp-ink: #2a1c07;
+      --live-rgb: 116,198,157; --live: rgb(var(--live-rgb));
+      --danger-rgb: 224,138,138; --danger: rgb(var(--danger-rgb));
+      --r-lg: 22px; --r-md: 16px;
+    }
+    .dsp { font-weight: 400; letter-spacing: -.025em; text-wrap: balance; }
+    .cap { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .sheet { width: 560px; border-radius: 26px; background: rgba(22,24,30,.92);
+             border: 1px solid var(--edge-hi); box-shadow: 0 40px 100px -30px rgba(0,0,0,.9); overflow: hidden; }
+    .sheet h2 { margin: 0; font-size: 34px; line-height: 1.05; font-weight: 400; letter-spacing: -.025em; }
+    .lede { margin: 0 0 18px; color: var(--ink-2); font-size: 15px; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 14px 26px;
+           border-radius: 999px; background: var(--ink); color: var(--bg); font-weight: 500; font-size: 17px; }
+    .btn.ghost { background: var(--surface-hi); color: var(--ink); border: 1px solid var(--edge); }
+    .t1 { font-size: 15.5px; font-weight: 500; }
+    .t2 { font-size: 13px; color: var(--muted); }
+    .box { border-radius: var(--r-lg); border: 1px solid var(--edge); background: rgba(255,255,255,.03); padding: 20px 22px; }
+    .box.for { border-color: rgba(var(--live-rgb),.3); background: linear-gradient(rgba(var(--live-rgb),.07), rgba(var(--live-rgb),.07)), rgba(255,255,255,.02); }
+    .box.against { border-color: rgba(var(--danger-rgb),.3); background: rgba(var(--danger-rgb),.05); }
+    .box p { margin: 10px 0 0; font-size: 14.5px; line-height: 1.6; color: var(--ink-2); }
+    .box p strong { font-weight: 500; color: var(--ink); }
+    .strip { height: 22px; border-radius: 4px;
+             background: repeating-linear-gradient(90deg, rgb(255,96,0) 0 4px, transparent 4px 7px);
+             filter: drop-shadow(0 0 9px rgba(255,140,40,.7)); }
+    .stage { position: relative; padding: 34px 24px 28px; border-radius: 20px;
+             background: rgba(255,255,255,.03); border: 1px solid var(--edge); overflow: hidden; }
+    .glow { position: absolute; left: 0; right: 0; top: -40px; height: 160px;
+            background: radial-gradient(42% 54% at 50% 50%, rgba(255,140,40,.26), transparent 72%); }
+    .mono { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12.5px; letter-spacing: -.01em; }
+    .node { border-radius: var(--r-md); border: 1px solid var(--edge); background: var(--surface);
+            padding: 16px 18px; }
+    .node .t { font-size: 16px; font-weight: 500; }
+    .node .s { display: block; margin-top: 3px; font-size: 12.5px; color: var(--muted); line-height: 1.5; }
+    .wire { display: flex; align-items: center; gap: 8px; color: var(--muted); }
+    .plan { position: relative; border-radius: var(--r-lg); border: 1px solid var(--edge);
+            background: rgba(255,255,255,.022); overflow: hidden; }
+    .rm { position: absolute; border: 1px solid var(--edge); border-radius: 10px; background: rgba(255,255,255,.02); }
+    .rm > span { position: absolute; left: 12px; top: 9px; font-size: 11.5px; letter-spacing: .1em;
+                 text-transform: uppercase; color: var(--muted); }
+    .dbm { font-variant-numeric: tabular-nums; font-weight: 500; }
+  </style>
+</helmet>
+
+<style>
+  .meas { width: 100%; border-collapse: collapse; }
+  .meas td { padding: 11px 14px; border-top: 1px solid var(--edge); font-size: 14.5px; vertical-align: middle; }
+  .meas tr:first-child td { border-top: 0; }
+  .meas td:first-child { width: 128px; color: var(--ink); }
+  .meas td:last-child { color: var(--ink-2); }
+  .log { border-radius: var(--r-md); border: 1px solid var(--edge); background: rgba(0,0,0,.3); padding: 16px 18px; }
+  .log div { display: grid; grid-template-columns: 52px 1fr; gap: 14px; padding: 6px 0; color: var(--ink-2); }
+  .log div span:first-child { color: var(--muted); }
+</style>
+<div style="position: relative; width: 1440px; height: 900px; overflow: hidden; background: var(--bg); color: var(--ink); font-size: 17px; line-height: 1.4;">
+  <div style="position: absolute; inset: 0; background: linear-gradient(rgb(29,33,46) 0%, rgb(41,42,63) 44%, rgb(92,63,57) 84%, rgb(62,44,42) 100%);"></div>
+  <div style="position: absolute; left: -222px; top: -135px; width: 1855px; height: 1156px; background: radial-gradient(58% 54% at 30% 64%, rgba(72,63,135,.4), transparent 68%), radial-gradient(62% 52% at 54% 110%, rgba(55,51,100,.44), transparent 72%);"></div>
+  <div style="position: absolute; inset: 0; background: rgba(6,7,9,.58);"></div>
+
+  <div class="cap" style="position: absolute; left: 60px; top: 44px;">Today &mdash; one radio, and it is in the garage</div>
+
+  <!-- ============ left: the house, and the hole in the middle of it ============ -->
+  <div style="position: absolute; left: 60px; top: 96px; width: 640px;">
+    <h3 class="dsp" style="margin: 0 0 12px; font-size: 26px; font-weight: 400;">The hub goes where the Ethernet is. The light goes where the light goes.</h3>
+    <p style="margin: 0 0 22px; color: var(--ink-2); font-size: 15.5px; line-height: 1.6;">Everything our own door does, it does over Bluetooth from the one radio inside the box &mdash; and that box is in a cupboard, a garage, or under the stairs, because that is where the socket and the cable are. Nothing about a strip is near it.</p>
+  </div>
+
+  <div class="plan" style="position: absolute; left: 60px; top: 252px; width: 640px; height: 300px;">
+    <div style="position: absolute; left: -110px; top: -90px; width: 420px; height: 420px; border-radius: 999px; background: radial-gradient(closest-side, rgba(var(--live-rgb),.17), transparent 78%);"></div>
+    <div style="position: absolute; left: -50px; top: -30px; width: 300px; height: 300px; border-radius: 999px; border: 1px dashed rgba(var(--live-rgb),.5);"></div>
+
+    <div class="rm" style="left: 14px; top: 34px; width: 172px; height: 124px;"><span>Garage</span></div>
+    <div class="rm" style="left: 14px; top: 170px; width: 172px; height: 116px;"><span>Kitchen</span></div>
+    <div class="rm" style="left: 198px; top: 34px; width: 116px; height: 252px;"><span>Hall</span></div>
+    <div class="rm" style="left: 326px; top: 34px; width: 300px; height: 252px;"><span>Living room</span></div>
+
+    <!-- the hub -->
+    <div style="position: absolute; left: 62px; top: 92px; display: flex; align-items: center; gap: 9px;">
+      <span style="width: 22px; height: 22px; border-radius: 7px; background: var(--live); box-shadow: 0 0 18px rgba(var(--live-rgb),.8);"></span>
+      <span style="font-size: 13.5px; font-weight: 500;">The hub</span>
+    </div>
+    <div class="t2" style="position: absolute; left: 62px; top: 122px;">Ethernet, and the socket</div>
+
+    <!-- the strip, outside the ring -->
+    <div style="position: absolute; left: 400px; top: 78px; width: 176px;">
+      <div class="strip" style="height: 14px; opacity: .85;"></div>
+      <div class="t2" style="margin-top: 9px; color: var(--ink-2);">Behind the television</div>
+    </div>
+    <div style="position: absolute; left: 400px; top: 130px; display: inline-flex; align-items: center; gap: 7px; padding: 5px 11px; border-radius: 999px; background: rgba(var(--danger-rgb),.13); border: 1px solid rgba(var(--danger-rgb),.32);">
+      <span class="dbm" style="font-size: 13px; color: var(--danger);">&minus;72 dBm</span>
+      <span class="t2" style="color: rgba(var(--danger-rgb),.8);">nothing completes here</span>
+    </div>
+
+    <div class="t2" style="position: absolute; left: 198px; top: 8px; color: rgba(var(--live-rgb),.85);">&minus;60 dBm &mdash; as far as the hub hears</div>
+    <div class="t2" style="position: absolute; right: 16px; bottom: 12px;">Plan and the &minus;72 are illustrative. The measured ones are below.</div>
+  </div>
+
+  <div class="box" style="position: absolute; left: 60px; top: 578px; width: 640px; padding: 8px 16px;">
+    <table class="meas">
+      <tr><td><span class="dbm" style="color: var(--live);">&minus;25 dBm</span></td><td>A laptop beside it. The session completes.</td></tr>
+      <tr><td><span class="dbm" style="color: var(--live);">&minus;51 dBm</span></td><td>The hub across a room. SRP6a establishes, first attempt, over BlueZ.</td></tr>
+      <tr><td><span class="dbm" style="color: var(--danger);">&minus;64 dBm</span></td><td>The hub at the far end. The link dies 3&ndash;5 s in, NimBLE <span class="mono">0x208</span>, every attempt.</td></tr>
+    </table>
+  </div>
+  <div class="t2" style="position: absolute; left: 60px; top: 748px; width: 640px; line-height: 1.6;">Measured on a Pi, 21 September (<span class="mono">docs/strip.md</span> item 15). <strong style="color: var(--ink-2); font-weight: 500;">Thirteen decibels is the whole difference</strong>, and neither of the two software levers tried closed it. What is left looks like RF.</div>
+
+  <!-- ============ right: what the household is told ============ -->
+  <div class="sheet" style="position: absolute; left: 760px; top: 96px;">
+    <div style="display: flex; align-items: flex-start; gap: 14px; padding: 24px 22px 6px 28px;">
+      <h2 class="dsp" style="flex: 1;">That did not work.</h2><div style="width: 38px; height: 38px; border-radius: 999px; background: var(--surface-hi); border: 1px solid var(--edge); display: grid; place-items: center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink-2)" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></div>
+    </div>
+    <div style="padding: 4px 28px 26px;">
+      <p class="lede" style="margin-bottom: 20px;">It knocked. Set it up in the same room as the hub, then put it where you want it.</p>
+      <div style="display: flex; gap: 10px;"><span class="btn ghost">Not now</span></div>
+    </div>
+  </div>
+  <div class="t2" style="position: absolute; left: 760px; top: 320px; width: 560px;">Shipped. <span class="mono">brain/hub/strip.py:460</span>, drawn through the last branch of <span class="mono">StripSheet.vue</span>. It is honest, and it is the sentence this collection exists to delete.</div>
+
+  <div class="box" style="position: absolute; left: 760px; top: 372px; width: 620px;">
+    <span class="cap">The evening it took to learn that, in one log</span>
+    <div class="log mono" style="margin-top: 12px;">
+      <div><span>16:29</span><span>something that might be ours is at Matter&rsquo;s door; asking ours again</span></div>
+      <div><span>16:33</span><span>commissioning failed (Commission with code failed for node 2.)</span></div>
+      <div><span>16:35</span><span>our own door did not open (BleakDeviceNotFoundError)</span></div>
+      <div><span>16:40</span><span>a twenty-second scan from the hub: nothing at either door, at all</span></div>
+    </div>
+    <p style="margin: 14px 0 0; font-size: 14.5px; line-height: 1.6; color: var(--ink-2);">Nothing was wrong with the code. <strong style="color: var(--ink); font-weight: 500;">Four failures, four different sentences, and every one of them sent somebody to check a thing that was not wrong.</strong> The hub had the signal strength all along and threw it away.</p>
+  </div>
+
+  <div class="box against" style="position: absolute; left: 760px; top: 728px; width: 620px;">
+    <span class="cap" style="color: rgba(var(--danger-rgb),.85);">And this is what it costs</span>
+    <p><strong>&ldquo;Set it up near the hub&rdquo; quietly repeals &ldquo;put the hub wherever you like&rdquo;.</strong> And a hub on a NUC may have no Bluetooth radio at all.</p>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

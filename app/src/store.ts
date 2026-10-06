@@ -1,0 +1,1018 @@
+// SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+import { learnLan, look, moved, watchDoor } from './door'
+import { carried, tell } from './inapp'
+import { moveCode, withoutCode } from './move'
+// SPDX-License-Identifier: AGPL-3.0-or-later
+import { reactive, watch } from 'vue'
+import { getMe, claimMove, kickStream, type Me, doRestart, type Rung, getBridge, type Bridge, getStrip, stripLooking, type Strip, getHome, getEvents, getAmbient, getScenes, getStatus, getDiscovered, getRoutines, getAssistant, getPresence, getHealth, getSounds, connect, act, setIntent, setHomeIntent, type Room, type Device, type Home, type Event, type Ambient, type Rules, type Status, type Found, type Intent, type Routine, type Assistant, type Presence, type Note, type Sound, requestUpdate, getPhones, type Phone, type Ask, getAccounts, type Account, getShare, type Share, getHappened, type Happened, getChanges, type Changes, getSignals, type SignalsPage, type TryBrief, getRoofline, type Roofline, getPrinters, type Printers, type Printer } from './api'
+import { previewHeld, previewHeldNote, previewRoofDevice, previewRoofline, previewStripBeat } from './controller'
+import { lock, CANCELED, failed } from './code'
+import { isPage } from './pages'
+import { sunPosition, sunGuess, moonPhase } from './sun'
+import { locale, setHouseLanguage } from './lang'
+import { hasCard, printerOn, printerPart, printersIn as inRoom } from './printers'
+
+/* The few soft sheets the panel has. Named rather than written out twice: the restart keeps the one
+   it closed so it can come back to it, and `typeof store.sheet` there would make the store's own type
+   circular -- which typescript answers by quietly making the whole store `any`. */
+export type Sheet = null | 'location' | 'add' | 'code' | 'why' | 'routines' | 'signals' | 'hub' | 'look' | 'house' | 'people' | 'accounts' | 'things' | 'printers' | 'share' | 'notes' | 'happened' | 'changes'
+
+export const store = reactive({
+  rooms: [] as Room[], linkUp: false, linkLost: false, error: '', loaded: false,   // linkLost: down long enough to be worth mentioning
+  toast: null as null | { id: number; text: string; kind: 'info' | 'error'; action?: { label: string; run: () => void } },   // a toast may carry one way back, like Undo
+  pending: {} as Record<string, true>,     // devices waiting for the house to confirm a change
+  viewer: null as Device | null,            // camera shown full screen
+  events: [] as Event[],
+  opened: null as Device | null,   // one device, held open in front of the house
+  /* the weather, held open in the same pane. Its own flag rather than a seat in `opened`,
+     because the weather is not a device and never will be: it has no id, no room and nothing
+     to do to it, and widening `opened` to hold it would put a null check on every line that
+     reads a device out of it. See WeatherPane.vue. */
+  outside: new URLSearchParams(location.search).get('outside') === '1',   // ?outside=1 previews it, the way ?sheet= and ?rest=1 preview the others
+  homeScreenDone: false,   // somebody said Done to Add to your Home Screen on this phone, this visit; band.ts keeps it past the visit
+  ambient: { location: null, weather: null } as Ambient,
+  ambientLoaded: false,
+  rules: {} as Rules,                        // scene rules from the brain, to tell whether a room still matches its scene
+  /* ?sheet=location previews one. ?add=switch is not a preview but the wall's own handoff: the code
+     on the wall opens the house on a phone, and it promised to land ON the step with the camera --
+     which it never did, because nothing here opened the page it lives on. Now it does. */
+  /* The list this checked against was written out by hand beside PAGES in pages.ts, and the two had
+     to be edited together with nothing saying so -- a page added to one and not the other simply
+     would not open from a query string, silently, on the one route nobody tests. It asks pages.ts
+     now. 'why' is not a page of This house, so it stays named here. */
+  sheet: (new URLSearchParams(location.search).has('add') ? 'add'
+    : (v => v === 'why' || isPage(v) ? v : null)(new URLSearchParams(location.search).get('sheet') ?? '')) as Sheet,
+  whyRoom: new URLSearchParams(location.search).get('room') as string | null,   // the room the why sheet is about; ?sheet=why&room=kitchen previews it
+  resume: new URLSearchParams(location.search).get('signin') as string | null,   // a conversation already open in the house (signing an account in again); the add sheet picks it up. ?sheet=add&signin=<flow> previews it
+  /* ...and what it is about, when whoever handed it over knows. The screen it lands on is headed by
+     the thing being signed in to -- "Google Nest" -- rather than by the job, which the panel's own
+     title already says. Empty when a note handed it over and only the flow was known. */
+  resumeName: '' as string,
+  routines: [] as Routine[],                 // the brain's rules, for the routines sheet and to name a rule on a room
+  signals: null as SignalsPage | null,       // what the lights tell you, and the try running now; null until asked
+  signalTry: null as TryBrief | null,        // a try somebody is running, heard by every panel so its band can say so
+  routineErrors: [] as string[],             // rules the brain could not read, in its own words
+  drafts: [] as Routine[],                   // routines the assistant wrote that wait for a person's OK
+  entry: [] as string[],                     // the rooms people come in through; routines for "entry" run there
+  assistant: null as Assistant | null,       // whether the hub can talk to the model at all
+  presence: null as Presence | null,         // who is home, from the brain; null until it has said
+  notes: [] as Note[],                       // what needs a look, in the brain's words
+  happened: null as Happened | null,         // the catch-up, in the brain's words; null until it has answered
+  changes: null as Changes | null,           // who changed what -- only ever loaded behind the code
+  accounts: [] as Account[],                 // the services the house has signed into, for the Accounts page and its door
+  /* What this house gives out to other apps as Matter devices: its own page, and its own door, which
+     says how things stand there without anybody opening it. Null until the hub has answered once. */
+  share: null as Share | null,
+  sounds: [] as Sound[],                     // what a speaker can play: the hub's noises and the files in its sounds folder
+  /* An update is happening -- this screen asked, or the hub started one in the night and said so.
+     For most of it the house is entirely usable: the code, the signature and the download all happen
+     with the brain running, and the panel shows the phase as a line rather than throwing a blackout
+     over a hub that is merely fetching something. `lost` is when the brain actually went, and only
+     then does `left` count down, from the figure the HUB measured on its own last update. */
+  updating: null as null | { at: number; dark: number; left: number; lost: boolean },
+  restoring: false,                          // this screen sent a backup back; cleared when the hub returns
+  /* This screen asked the hub to restart. `left` is the countdown the overlay draws, from the figure
+     the HUB measured on its own last restart -- a spinner says "this may never end", a number that
+     runs out says the house knows what it is doing. `lost` is the guard that makes coming back
+     mean something: the link is still up for the second between the answer and the brain going, so
+     nothing counts as back until it has first gone away. */
+  restarting: null as null | { rung: Rung; at: number; seconds: number; left: number; lost: boolean; from: Sheet },
+  previewSetup: new URLSearchParams(location.search).get('setup') === '1',   // ?setup=1 previews first run; cleared by Open Home
+  status: null as Status | null,            // where the hub is in its life: engine down, fresh, ready; and whether setup finished
+  me: null as Me | null,            // what the hub says about this phone: paired, moved, the house's address and name at home
+  moving: false,                      // the Move this phone page is up (MovePage.vue)
+  phones: [] as Phone[], asks: [] as Ask[],  // the phones that belong to the house, and the ones asking to
+  /* Sharing changed, or somebody scanned the code: a counter rather than the state itself, because
+     only This hub draws it and a page that is not open should not be kept up to date. */
+  shareTick: 0,
+  /* a knock that has been put aside: the pane is down, the ask still stands, and the chip in the
+     band carries it. A NEW knock clears this (App.vue), because putting one phone aside must not
+     silence the next one. */
+  askAside: false,
+  homeName: '' as string,
+  tempUnit: '' as string,                   // the house's temperature unit, from the home's location (°F in the US)
+  found: [] as Found[],                      // things noticed on the network that are not set up yet
+  /* Bridges: how many the house has, and the one job that may be running on one right now -- one at a
+     time, because it is a person holding a thing. null on a hub that knows nothing about bridges at
+     all, which is most of them. `state: 'none'` is a hub that has them and is not busy, which is not
+     the same thing and is why this is not cleared to null -- see refreshBridge(). */
+  bridge: null as Bridge | null,
+  strip: null as Strip | null,   // a light strip being set up; hub/strip.py. One at a time, same as a bridge
+  roofline: null as Roofline | null,   // the light outside made of several boxes; hub/roofline.py. Null on a hub that predates it
+  yard: false,                         // the way round being shown on the roof, from a phone in the yard (design/roofline/TapA)
+  /* The house's 3D printers, as the brain follows them (brain/hub/printers.py): what each is doing, the
+     ones found on the Wi-Fi, and any ask waiting at a printer. Null on a hub that predates them. */
+  printers: null as Printers | null,
+  printer: null as string | null,      // the printer whose pane is open (PrinterPane.vue), by id
+  /* A print card the house no longer has a print for -- OBI1 Ready again -- keeps its place, drained,
+     until the panel looks away, exactly as a lamp just turned off does. This is the last thing each
+     card said; `done` (below) is what says it is still owed a place. printers.ts says why. */
+  printsKept: {} as Record<string, Printer>,
+  /* A sentence somebody started somewhere else, for the command box to open with: "Say another look" on
+     the Roofline's pane opens it with the occasion already said (design/roofline/DrawnC). Say.vue takes it
+     and puts it back to null. */
+  sayStart: null as string | null,
+  /* SOMEBODY ASKED FOR THE STRIP SHEET -- tapped its line in the band, or its row on Add. A knock
+     does not open a screen on its own any more (design/knock/, direction C with A): it is a line
+     and a dot, and this is the tap that turns one into the conversation. Standing on Add counts as
+     asking without it; see stripSheetOpen() in adding.ts, which is where both rules live. */
+  stripAsked: false,
+  /* ...and put back down again. Closing the conversation while standing on Add has to stick, or the
+     page that opened it opens it again straight away. Lives and dies with the knock, the same as
+     stripAsked. */
+  stripPutDown: false,
+  /* The hub is scanning right now because this wall asked it to. Only ever true while Add is open
+     AND the hub has answered, so the page never claims to be listening on an older hub. */
+  looking: false,
+  /* A room the panel has been asked to open from somewhere else -- New devices, after an account
+     brought in six things at once. App.vue takes it and clears it; nothing else reads it. */
+  goRoom: null as string | null,
+  sky: { elevation: -20, azimuth: 0, phase: 0, hour: 0, month: 6, condition: 'clear-night', guessed: true },   // what the sky draws; month is seasonal (0 midwinter → 6 midsummer, either hemisphere)
+})
+
+/*
+ * The house has one language and the panel follows it, wherever the status came from -- the boot
+ * fetch, the websocket, or one of first run's own calls. A watcher rather than a line beside every
+ * `store.status =` there are six of, which is how <html lang> and the clock drifted apart from the
+ * rest of the panel in the first place. See lang.ts.
+ */
+watch(() => store.status?.language, setHouseLanguage, { immediate: true })
+
+/* ---------- the sky: sun from the clock and the location, weather from the house ---------- */
+const params = new URLSearchParams(location.search)
+const previewAt = params.get('at')          // ?at=18:30 previews an hour of the day
+const previewWx = params.get('wx')          // ?wx=rainy previews a condition
+const previewMonth = params.get('month')    // ?month=1 previews a season (1 January … 12 December, northern)
+export const WEATHER_LABEL: Record<string, string> = {
+  sunny: 'Clear', 'clear-night': 'Clear', partlycloudy: 'Partly cloudy', cloudy: 'Cloudy', fog: 'Fog', rainy: 'Rain', pouring: 'Heavy rain',
+  hail: 'Hail', lightning: 'Storm', 'lightning-rainy': 'Thunderstorm', snowy: 'Snow', 'snowy-rainy': 'Sleet', windy: 'Windy', 'windy-variant': 'Windy', exceptional: 'Unusual weather',
+}
+/** Now, on the clock the panel is showing: ?at= moves it, so a print previewed at 2:47 PM is done at the
+    4:20 PM the board says rather than an hour and a half after whenever the preview was opened. */
+export function clockNow(): number {
+  if (!previewAt) return Date.now()
+  const d = new Date(), [h, m] = previewAt.split(':').map(Number)
+  d.setHours(h || 0, m || 0, 0, 0)
+  return d.getTime()
+}
+export function updateSky() {
+  const now = new Date()
+  if (previewAt) { const [h, m] = previewAt.split(':').map(Number); now.setHours(h || 0, m || 0, 0, 0) }
+  const loc = store.ambient.location
+  const sun = loc ? sunPosition(now, loc.lat, loc.lon) : sunGuess(now)
+  const condition = previewWx ?? store.ambient.weather?.condition ?? (sun.elevation < -6 ? 'clear-night' : 'sunny')
+  const month = previewMonth ? Number(previewMonth) - .5 : (now.getMonth() + now.getDate() / 31 + (loc && loc.lat < 0 ? 6 : 0)) % 12   // south of the equator the seasons swap
+  store.sky = { ...sun, phase: moonPhase(now), hour: now.getHours() + now.getMinutes() / 60, month, condition, guessed: !loc }
+}
+/* the two halves separately, for a layout that sets them at different sizes */
+export function weatherParts(): { temp: string; label: string } {
+  const w = store.ambient.weather
+  if (!w && !previewWx) return { temp: '', label: '' }
+  return {
+    temp: w?.temperature != null ? `${Math.round(w.temperature)}${(w.unit || '°').replace(/[^°]/g, '') || '°'}` : '',
+    label: WEATHER_LABEL[previewWx ?? w?.condition ?? ''] ?? '',
+  }
+}
+export function weatherLine(): string {
+  const { temp, label } = weatherParts()
+  return [temp, label].filter(Boolean).join(' · ')
+}
+async function loadRules() { try { store.rules = await getScenes() } catch {} }
+async function loadAmbient() {
+  try { store.ambient = await getAmbient(); store.ambientLoaded = true } catch {}
+  updateSky()
+}
+
+const ACTIVE = new Set(['on', 'playing', 'open', 'unlocked', 'cleaning', 'streaming', 'recording'])
+export const isActive = (d: Device) => ACTIVE.has(d.state)
+export const isDead = (d: Device) => d.state === 'unavailable' || d.state === 'unknown'
+/* What the house treats a thing AS: the owner's answer where they have given one, the driver's otherwise.
+   Every tile, pane, verb and room line reads this. Nothing that picks a service does -- that is the
+   brain's job, from `capability`, and the panel never sees it. See docs/kinds.md. */
+export const cap = (d: Device) => (d.kind || d.guess || d.capability).split('.')[0]
+/** What it is shown as when nobody has said otherwise: the house's guess from its name where it made
+    one (a switch on a fridge is an appliance), the driver's word where it did not. */
+export const defaultKind = (d: Device) => d.guess || d.capability
+/** Said quietly under the name on a thing's own pane, and nowhere else: a tile is a glance, and the
+    point of the override is that the thing stops looking unusual. Empty where nobody has said anything. */
+export const shownAs = (d: Device) => d.kind && d.kind !== defaultKind(d) ? `Shown as ${KIND_NOUN[cap(d)] ?? cap(d)}` : ''
+export const KIND_NOUN: Record<string, string> = { light: 'a light', switch: 'a plug', fan: 'a fan', alarm: 'an alarm', appliance: 'an appliance', media: 'a speaker', cover: 'a blind', climate: 'a thermostat', lock: 'a lock', camera: 'a camera', vacuum: 'a vacuum' }
+/** The glyph for a thing, which for an appliance reads its name: a fridge's ice maker gets the snowflake
+    the weather already draws, and any other machine's feature the machine. Every other kind is its own icon. */
+export const iconFor = (d: Device) => cap(d) === 'appliance' && /\bice\b|freez/i.test(d.name) ? 'snow' : cap(d)
+export const PASSIVE = new Set(['sensor', 'motion', 'contact', 'camera'])
+export const visibleRooms = () => {
+  const rs = store.rooms.filter(r => r.id !== 'unassigned' || r.devices.length)
+  return [...rs.filter(r => !bare(r)), ...rs.filter(bare)]   // rooms with something in them first
+}
+/** The printers a household has put in this room (design/printers/WorkshopB). Most rooms have none. */
+export const printersIn = (r: Room) => inRoom(store.printers?.printers ?? [], r.id).sort((a, b) => Number(printerOn(b)) - Number(printerOn(a)))   // printing first: it is the news
+/** Nothing in the room at all: no devices, and no printer a household has put there. */
+export const bare = (r: Room) => !r.devices.length && !printersIn(r).length
+export const roomOf = (d: Device) => store.rooms.find(r => r.id === d.room_id)
+export const deviceById = (id: string) => { for (const r of store.rooms) { const d = r.devices.find(x => x.id === id); if (d) return d } }
+
+/* ---------- names: say "Speaker" inside the Bedroom, not "Bedroom speaker" ---------- */
+const GENERIC = /^((ceiling|floor|desk|table|main|left|right|wall|bedside|overhead|front|back|side) )?(speaker|tv|television|light|lights|lamp|fan|lock|door|blind|blinds|shade|shades|camera|plug|switch|thermostat|vacuum|window|motion|sensor|strip|doorbell|alarm|siren)$/i
+const norm = (s: string) => s.replace(/[’‘]/g, "'").toLowerCase().trim()
+/** A part named after its unit and its kind -- "Walkway Pathlight" + "Light", the way HA composes them -- IS the
+    unit, on the wall: its tile wears the unit's name, and renaming it renames the unit (units.ts, docs/units.md). */
+export function unitNamed(d: Device): boolean {
+  const unit = (d.hw_name ?? '').trim()
+  if (d.attrs.fan) return false   // the light of a fan-with-a-light is "Bedroom Fan Light", not the fan: under a lamp drawing, "Fan" reads as the wrong thing
+  return !!unit && new RegExp(`^${unit.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s+(light|switch|fan|plug|dimmer)$`, 'i').test(d.name.trim())
+}
+export function shortName(d: Device, room?: Room | null): string {
+  let n = d.name.trim()
+  if (unitNamed(d)) n = (d.hw_name ?? '').trim()
+  if (room) {
+    const r = norm(room.name), nn = norm(n)
+    if (nn.startsWith(r + ' ')) {
+      const rest = n.slice(r.length + 1).trim()
+      if (rest && GENERIC.test(rest)) n = rest   // "Bedroom TV" → "TV"; "Garage View" (a camera's own name) stays whole
+    }
+  }
+  return n.charAt(0).toUpperCase() + n.slice(1)
+}
+
+/* ---------- one line about a room, written for a person ---------- */
+/*
+ * The line before it is joined, because one card wants it short by one phrase.
+ *
+ * The Rooms tab's lead card spends a whole row on what is playing -- the
+ * artwork, the title, the button -- so repeating "The Bear" in the line above
+ * it says the same thing twice and pushes what ELSE the room is doing off the
+ * end. `withMedia: false` leaves the row to say it. Every other caller joins
+ * them all, which is what activity() below does.
+ */
+export function activityParts(r: Room, withMedia = true): string[] {
+  const parts: string[] = []
+  /* First, and on its own terms. Everything else in this line is what a room is doing;
+     a siren is what a room is SHOUTING, and it does not queue behind the lamps. */
+  if (r.devices.some(d => cap(d) === 'alarm' && d.state === 'on')) parts.push('Alarm sounding')
+  /* A printer a household put here is named whatever it is doing -- "OBI1 printing · C3PO ready · Bench
+     light on" (design/printers/WorkshopB). Ready is said too, unlike a lamp that is off: somebody looking
+     for C3PO in the workshop is looking for exactly that word. It does not make the room count as on;
+     only printing does (roomActive). */
+  for (const p of printersIn(r)) parts.push(printerPart(p))
+  const lights = r.devices.filter(d => cap(d) === 'light' && d.state === 'on').length
+  if (lights) parts.push(lights === 1 ? '1 light on' : `${lights} lights on`)
+  if (withMedia) for (const d of r.devices.filter(d => cap(d) === 'media' && d.state === 'playing'))
+    parts.push(d.attrs.media_title ? `${d.attrs.media_title}` : `${shortName(d, r)} playing`)
+  const open = r.devices.filter(d => cap(d) === 'cover' && d.state === 'open').length
+  if (open) parts.push(open === 1 ? 'Blind open' : `${open} blinds open`)
+  if (r.devices.some(d => cap(d) === 'lock' && d.state === 'unlocked')) parts.push('Unlocked')
+  const plugs = r.devices.filter(d => cap(d) === 'switch' && d.state === 'on')
+  if (plugs.length === 1) parts.push(`${shortName(plugs[0], r)} on`); else if (plugs.length) parts.push(`${plugs.length} plugs on`)
+  for (const d of r.devices.filter(d => cap(d) === 'fan' && d.state === 'on')) parts.push(`${shortName(d, r)} on`)
+  for (const d of r.devices.filter(d => cap(d) === 'vacuum' && d.state === 'cleaning')) parts.push(`${shortName(d, r)} cleaning`)
+  if (r.devices.some(d => cap(d) === 'motion' && d.state === 'on')) parts.push('Motion')
+  if (r.devices.some(d => cap(d) === 'camera' && d.state === 'recording')) parts.push('Recording')
+  return parts
+}
+/*
+ * What a room is HOLDING, for a card that would otherwise say "Quiet".
+ *
+ * On a house of thirteen rooms, ten cards said the same word, which is the
+ * whole right-hand side of the Rooms tab saying nothing ten times over.
+ * design/rooms/Main.dc.html never drew that word: its quiet rooms said "Door
+ * closed · Camera idle", "Locked · Doorbell watching", "Mower docked". This is
+ * that line, and it was in the spec before it was a complaint.
+ *
+ * The grammar is activityParts' own, one state along. What is being KEPT --
+ * locked, shut, watched -- comes first, because that is what a person checks a
+ * quiet room for; what is merely off comes after it. Two parts at most: a third
+ * of a card is 260px wide and a third phrase is an ellipsis.
+ */
+export function restingParts(r: Room): string[] {
+  const parts: string[] = []
+  const locks = r.devices.filter(d => cap(d) === 'lock' && !isDead(d))
+  if (locks.length && locks.every(d => d.state === 'locked')) parts.push('Locked')
+  const shut = r.devices.filter(d => cap(d) === 'cover' && d.state === 'closed').length
+  if (shut) parts.push(shut === 1 ? 'Blind closed' : `${shut} blinds closed`)
+  /* A camera watching the porch is not the house doing something -- roomActive
+     says so, and that is why the porch is a quiet room at all. It is still the
+     truest thing a quiet porch has to say. */
+  const eyes = r.devices.filter(d => cap(d) === 'camera' && !isDead(d)).length
+  if (eyes) parts.push(eyes === 1 ? 'Camera watching' : `${eyes} cameras watching`)
+  const screens = r.devices.filter(d => cap(d) === 'media' && !isDead(d))
+  if (screens.length === 1) parts.push(`${shortName(screens[0], r)} off`)
+  else if (screens.length) parts.push(`${screens.length} screens off`)
+  const fans = r.devices.filter(d => cap(d) === 'fan' && !isDead(d))
+  if (fans.length === 1) parts.push(`${shortName(fans[0], r)} off`)
+  else if (fans.length) parts.push(`${fans.length} fans off`)
+  const lamps = r.devices.filter(d => cap(d) === 'light' && !isDead(d)).length
+  if (lamps) parts.push(lamps === 1 ? '1 light off' : `${lamps} lights off`)
+  const plugs = r.devices.filter(d => cap(d) === 'switch' && !isDead(d)).length
+  if (plugs) parts.push(plugs === 1 ? '1 plug off' : `${plugs} plugs off`)
+  return parts.slice(0, 2)
+}
+
+/*
+ * The line under a room's name, in two readings of the same sentence.
+ *
+ * `activity` is what the room is DOING, and it is what the three home layouts
+ * have always shown -- it still ends at "Quiet", because RoomGrid's card is
+ * one band among several and a band of resting states is a band of noise.
+ * `restingLine` is the Rooms tab's, where the card is the whole subject and
+ * "Quiet" is the absence of one. Only the two fallbacks differ, so the two
+ * readings can never disagree about a room that is actually doing something.
+ */
+export function activity(r: Room): string { return roomLine(r, false) }
+export function restingLine(r: Room): string { return roomLine(r, true) }
+function roomLine(r: Room, resting: boolean): string {
+  const parts = activityParts(r)
+  if (parts.length) return parts.join(' · ')
+  if (r.id === 'unassigned') return r.devices.length === 1 ? '1 to place' : `${r.devices.length} to place`
+  if (bare(r)) return 'Nothing here yet'
+  if (resting) {
+    const rest = restingParts(r)
+    if (rest.length) return rest.join(' · ')
+  }
+  if (r.devices.every(d => cap(d) === 'camera')) return r.devices.length === 1 ? '1 camera' : `${r.devices.length} cameras`
+  return 'Quiet'
+}
+/* An appliance's feature being on is not the house doing anything: an ice maker is on all year, and a
+   card for it in "on right now" would be a card that never leaves. It is on its own tile, and that is where. */
+export function roomActive(r: Room) { return r.devices.some(d => isActive(d) && cap(d) !== 'camera' && cap(d) !== 'appliance') || printersIn(r).some(printerOn) }
+/** Everything that is on across the house, cameras and appliances excluded: the "on right now" strip. */
+export function whatsOn(): Device[] {
+  return store.rooms.flatMap(r => r.devices.filter(d => isActive(d) && !PASSIVE.has(cap(d)) && cap(d) !== 'appliance'))
+}
+export function houseLine(): string {
+  if (!store.loaded) return store.error || 'Finding the house…'
+  const on = whatsOn(), out = store.presence?.somebody === false
+  const rooms = new Set(on.map(d => d.room_id))
+  const what = !on.length ? '' : rooms.size === 1 ? `something is on in the ${roomOf(on[0])?.name ?? 'house'}` : `something is on in ${rooms.size} rooms`
+  if (out) return what ? `Nobody's home, but ${what}.` : `Nobody's home${sinceText()}. ${store.homeName || 'The house'} is quiet.`
+  if (!what) return `${store.homeName || 'The house'} is quiet.`
+  return what.charAt(0).toUpperCase() + what.slice(1) + '.'
+}
+/** " since 5:10 pm", or " since yesterday", or nothing when the brain has no time for it. */
+function sinceText(): string {
+  const s = store.presence?.since; if (!s) return ''
+  const d = new Date(s * 1000), today = new Date(); today.setHours(0, 0, 0, 0)
+  if (d.getTime() >= today.getTime()) return ` since ${d.toLocaleTimeString(locale(), { hour: 'numeric', minute: '2-digit' })}`
+  if (d.getTime() >= today.getTime() - 86400000) return ' since yesterday'
+  return ` since ${d.toLocaleDateString(locale(), { weekday: 'long' })}`
+}
+
+/* ---------- scenes: every button says what it will do ---------- */
+export type Scene = { id: string; label: string; icon: string; needs: string[]; hint: (caps: Set<string>) => string }
+const join = (xs: string[]) => xs.length <= 1 ? xs.join('') : xs.slice(0, -1).join(', ') + ' and ' + xs[xs.length - 1]
+const offList = (caps: Set<string>, extra = false) => join([
+  caps.has('light') ? 'lights' : '', caps.has('media') ? 'screens' : '', extra && caps.has('switch') ? 'plugs' : '',
+].filter(Boolean))
+export const SCENES: Scene[] = [
+  { id: 'movie', label: 'Movie', icon: 'film', needs: ['media'], hint: c => c.has('light') ? 'Lights low, screen on' : 'Screen on' },
+  { id: 'guests', label: 'Guests', icon: 'sparkle', needs: ['light'], hint: () => 'Lights up bright' },
+  { id: 'asleep', label: 'Sleep', icon: 'moon', needs: ['light', 'media', 'lock'], hint: c => `${cap1(offList(c))} off${c.has('lock') ? ', door locked' : ''}` },
+  { id: 'empty', label: 'All off', icon: 'power', needs: ['light', 'media', 'switch', 'fan'], hint: c => cap1(join([c.has('light') ? 'lights off' : '', c.has('media') ? 'media paused' : ''].filter(Boolean))) },
+]
+export const HOUSE_SCENES: Scene[] = [
+  { id: 'asleep', label: 'Bedtime', icon: 'moon', needs: [], hint: c => `${cap1(offList(c) || 'everything')} off in every room${c.has('lock') ? ', doors locked' : ''}` },
+  { id: 'away', label: 'Everything off', icon: 'leave', needs: [], hint: c => `${cap1(offList(c, true) || 'everything')} off${c.has('lock') ? ', doors locked' : ''}` },
+]
+const cap1 = (s: string) => (s.charAt(0).toUpperCase() + s.slice(1)).replace(/_/g, ' ')
+export const capsOf = (devices: Device[]) => new Set(devices.map(cap))
+export function scenesFor(room: Room | null): Scene[] {
+  if (!room) return store.rooms.some(r => r.devices.some(d => !PASSIVE.has(cap(d)))) ? HOUSE_SCENES : []
+  const caps = capsOf(room.devices)
+  return SCENES.filter(s => s.needs.some(c => caps.has(c)))
+}
+/* a scene 'holds' while every device it touches is still where the scene left it */
+const EXPECT: Record<string, string[]> = { on: ['on', 'playing', 'paused', 'idle', 'buffering'], off: ['off', 'standby'], pause: ['paused', 'off', 'idle', 'standby'],
+  play: ['playing'], lock: ['locked'], unlock: ['unlocked'], open: ['open', 'opening'], close: ['closed', 'closing'] }
+export function sceneHolds(room: Room, id: string): boolean {
+  const acts = store.rules[id]
+  if (!acts || !acts.length) return false
+  let touched = 0
+  for (const [c, a] of acts) {
+    const want = EXPECT[a]; if (!want) continue
+    for (const d of room.devices) {
+      if (cap(d) !== c || isDead(d)) continue
+      touched++
+      if (!want.includes(d.state)) return false
+    }
+  }
+  return touched > 0
+}
+export function currentScene(room: Room): string | null {
+  return room.intent && sceneHolds(room, room.intent) ? room.intent : null
+}
+export async function runScene(room: Room | null, scene: Scene): Promise<boolean> {
+  try {
+    if (room) { await setIntent(room.id, scene.id); room.intent = scene.id; notify(`${room.name} · ${scene.label}`) }
+    else { await setHomeIntent(scene.id); for (const r of store.rooms) if (r.devices.length) r.intent = scene.id; notify(scene.id === 'asleep' ? 'Good night. The house is off.' : 'Everything is off.') }
+    return true
+  } catch (e: any) { notify(failed('That didn’t work', e), 'error'); return false }
+}
+
+/* ---------- actions with instant feedback ---------- */
+let toastId = 0, toastTimer: number | undefined
+/** How long a fan runs, said the same on its tile and its pane. */
+export const fanFor = (m: number) => m < 60 ? `${m} minutes` : m === 60 ? '1 hour' : `${m / 60} hours`
+export function notify(text: string, kind: 'info' | 'error' = 'info', action?: { label: string; run: () => void }) {
+  if (kind === 'error' && text === CANCELED) return   // cancelling the passcode question is not a failure (design/words-band/)
+  store.toast = { id: ++toastId, text, kind, action }
+  clearTimeout(toastTimer)
+  toastTimer = window.setTimeout(() => (store.toast = null), kind === 'error' ? 5000 : action ? 6000 : 2800)   // long enough to reach for Undo
+}
+export function dismissToast() { store.toast = null; clearTimeout(toastTimer) }
+
+/* ---------- what you have just done, still on the screen ---------- */
+/*
+ * A thing you have just quieted is off, and Home's row is a row of what is on,
+ * so the card it stood in had no reason to be there any more and left a beat
+ * after the tap. That beat was the wrong answer to "did that work": the screen
+ * took the thing away instead of telling you about it, and the row closing over
+ * the gap moved everything else under the hand that was still there.
+ *
+ * So it stays. The card keeps its place, drained, saying what it now is and when
+ * it became that, and tapping it again puts it back -- an undo in the place the
+ * person is already looking, for as long as they are looking, rather than one
+ * riding out on a toast. It is marked before the house is asked, like the state
+ * the guess sets, because by the time the round trip is back the thing has
+ * already left `whatsOn()` and the row would have closed over it unmarked.
+ *
+ * What clears it is the panel LOOKING AWAY: a wall going to rest, a phone going
+ * behind another app, or -- for a screen nobody ever leaves -- half an hour.
+ * Nobody is watching at that moment, so the row can close over the gap without
+ * anything moving under a finger. App.vue owns those three moments; every part
+ * of Home reads the same map, so a layout cannot disagree about it.
+ *
+ * A scene is not in here. "Everything off" means the row to empty, and that
+ * emptying is the confirmation; ten gray cards would argue with it.
+ */
+export const done = reactive<Record<string, { verb: string; at: number }>>({})
+const QUIETED: Record<string, string> = { off: 'Off', close: 'Closed', lock: 'Locked', pause: 'Paused' }
+const WOKEN = new Set(['on', 'open', 'unlock', 'play'])
+/* Held high on purpose: this is a stop on memory, not a policy about the screen. A cap a person can
+   reach by turning off the lights in four rooms would take the earliest card back out from under them,
+   which is the very thing this exists to stop; Home clips what it can draw at its own end. */
+const DONE_KEEP = 24, DONE_FOR = 30 * 60 * 1000
+function markDone(id: string, verb: string, at = Date.now()) {
+  done[id] = { verb, at }
+  const ids = Object.keys(done)
+  if (ids.length > DONE_KEEP)
+    for (const old of ids.sort((a, b) => done[a].at - done[b].at).slice(0, ids.length - DONE_KEEP)) delete done[old]
+}
+/** Something other than a device that should stay on screen the same way: a signal's last try. */
+export const keepDone = (id: string, line: string, at?: number) => markDone(id, line, at)
+/** The panel looked away (all), or has simply been holding one too long (the rest). */
+export function forgetDone(all = false) {
+  const now = Date.now()
+  for (const id of Object.keys(done)) if (all || now - done[id].at > DONE_FOR) delete done[id]
+}
+/** What Home is still showing though it is off: quieted by hand, not yet forgotten. */
+export function justDone(): Device[] {
+  return Object.keys(done).map(deviceById).filter((d): d is Device => !!d && !isActive(d) && !PASSIVE.has(cap(d)))
+}
+/** "Off, just now" -- what a kept card says about itself. */
+export function doneLine(id: string, now = Date.now()): string {
+  const d = done[id]; if (!d) return ''
+  return `${d.verb} · ${ago(d.at / 1000, now).toLowerCase()}`
+}
+/* What the house is about to say, said now.
+ *
+ * A device object is the one the store holds -- a pane is handed it, not a copy -- so writing the
+ * expected reading into it is how the drawing moves before the hub has answered. `perform` does it
+ * either side of the request, and a pane under a finger does it with no request at all: while a
+ * finger is down the drawing moves and the house is left alone, and only the release asks for
+ * anything (panes/slide.ts). That second case used to be written out longhand in each pane, as an
+ * assignment through `props.device` -- the same write as this, from a place a component is not
+ * allowed to write from. The write was never the problem; the address was. So it lives here, where
+ * the store's own object is the store's to change, and a pane asks for it by name. */
+export function guessNow(d: Device, guess: { state?: string; attrs?: Record<string, any> }) {
+  if (guess.state) d.state = guess.state
+  if (guess.attrs) d.attrs = { ...d.attrs, ...guess.attrs }
+}
+/** Apply the expected result right away, ask the house, and step back if it refuses. */
+export async function perform(d: Device, action: string, data?: Record<string, unknown>, guess?: { state?: string; attrs?: Record<string, any> }) {
+  const before = { state: d.state, attrs: { ...d.attrs } }, wasDone = done[d.id]
+  if (guess) guessNow(d, guess)
+  /* guessed, with the state: what this did is the card's own sentence once it is no longer on */
+  if (QUIETED[action]) markDone(d.id, QUIETED[action]); else if (WOKEN.has(action)) delete done[d.id]
+  store.pending[d.id] = true
+  try { await act(d.id, action, data) }
+  catch (e: any) {
+    d.state = before.state; d.attrs = before.attrs; delete store.pending[d.id]
+    if (wasDone) done[d.id] = wasDone; else delete done[d.id]
+    notify(`${shortName(d, roomOf(d))} isn’t answering`, 'error'); return false
+  }
+  window.setTimeout(() => delete store.pending[d.id], 5000)   // the stream normally clears it much sooner
+  return true
+}
+
+/* ---------- recent activity, told plainly ---------- */
+export const LABELS: Record<string, string> = { movie: 'Movie', guests: 'Guests', asleep: 'Sleep', empty: 'All off', away: 'Everything off', occupied: 'In use' }
+export function describe(ev: Event): { text: string; icon: string } | null {
+  if (ev.kind === 'phone') {
+    let d: any = {}; try { d = ev.detail ? JSON.parse(ev.detail) : {} } catch {}
+    const n = d.name || 'A phone'
+    return ev.new === 'joined' ? { text: `${n} was added`, icon: 'phone' } : ev.new === 'asked' ? { text: `${n} asked to be added`, icon: 'phone' }
+      : ev.new === 'removed' ? { text: `${n} was removed`, icon: 'phone' } : ev.new === 'left' ? { text: `${n}'s visit ended`, icon: 'phone' } : null
+  }
+  if (ev.kind === 'presence') return ev.new === 'nobody' ? { text: 'Everyone is out', icon: 'leave' } : ev.new === 'somebody' ? { text: 'Someone is home', icon: 'home' } : null
+  if (ev.kind === 'intent') {
+    if (ev.subject === 'home') return { text: ev.new === 'asleep' ? 'Bedtime' : LABELS[ev.new ?? ''] ?? ev.new ?? '', icon: ev.new === 'asleep' ? 'moon' : 'leave' }
+    const r = store.rooms.find(r => r.id === ev.subject)
+    return r ? { text: `${r.name} set to ${LABELS[ev.new ?? ''] ?? ev.new}`, icon: 'sparkle' } : null
+  }
+  if (ev.kind !== 'state' || ev.old === ev.new) return null
+  const d = deviceById(ev.subject); if (!d) return null
+  const n = d.name, k = cap(d), s = ev.new ?? ''
+  if (s === 'unavailable') return { text: `${n} stopped answering`, icon: k }
+  if (ev.old === 'unavailable') return { text: `${n} is back`, icon: k }
+  let detail: any = null; try { detail = ev.detail ? JSON.parse(ev.detail) : null } catch {}
+  if (k === 'light' || k === 'switch' || k === 'fan') return s === 'on' || s === 'off' ? { text: `${n} turned ${s}`, icon: k } : null
+  if (k === 'media') {
+    if (s === 'playing') return { text: detail?.media_title ? `${n} started playing ${detail.media_title}` : `${n} started playing`, icon: k }
+    if (s === 'paused') return { text: `${n} paused`, icon: k }
+    if (s === 'off') return { text: `${n} turned off`, icon: k }
+    return null
+  }
+  if (k === 'camera') return s === 'recording' ? { text: `${n} started recording`, icon: k } : null
+  if (k === 'motion') return s === 'on' ? { text: motionText(d), icon: k } : null
+  if (k === 'contact') return s === 'on' ? { text: `${n} opened`, icon: k } : s === 'off' ? { text: `${n} closed`, icon: k } : null
+  if (k === 'lock') return s === 'locked' || s === 'unlocked' ? { text: `${n} ${s}`, icon: k } : null
+  if (k === 'cover') return s === 'open' || s === 'closed' ? { text: `${n} ${s === 'open' ? 'opened' : 'closed'}`, icon: k } : null
+  return null
+}
+/** "Motion in the Kitchen" when the sensor is just called Motion; the sensor's own name when it has one. */
+function motionText(d: Device): string {
+  const r = roomOf(d)
+  const rest = r && norm(d.name).startsWith(norm(r.name) + ' ') ? d.name.slice(r.name.length + 1) : d.name
+  return r && /^((motion|sensor|detector)\s*)+$/i.test(rest.trim()) ? `Motion in the ${r.name}` : `Motion at ${d.name}`
+}
+export function ago(ts: number, now = Date.now()): string {
+  const s = Math.max(0, (now - ts * 1000) / 1000)
+  if (s < 60) return 'Just now'
+  if (s < 3600) return `${Math.round(s / 60)} min ago`
+  if (s < 86400) return `${Math.round(s / 3600)} h ago`
+  return new Date(ts * 1000).toLocaleDateString(locale(), { weekday: 'short', hour: 'numeric', minute: '2-digit' })
+}
+let eventsTimer: number | undefined
+export async function refreshEvents() {
+  try { store.events = await getEvents(60) } catch {}
+}
+function eventsSoon() { clearTimeout(eventsTimer); eventsTimer = window.setTimeout(refreshEvents, 1500) }
+
+/* ---------- routines: what the house does on its own, and why a room is the way it is ---------- */
+/* The catch-up. Asked for when the page opens rather than watched: a span only changes as the clock
+   moves, so nothing on the stream could push it, and a house that recomputed it on every state change
+   would spend the evening measuring how long the kitchen light has been on. */
+export async function loadHappened() {
+  try { store.happened = await getHappened() } catch {}
+}
+/* Behind the code, so this one is allowed to throw: `request` puts up the prompt, and a person who
+   waves it away should see the page stay empty rather than a toast about a 401 they caused. */
+export async function loadChanges() {
+  try { store.changes = await getChanges() } catch { store.changes = null }
+}
+export async function loadRoutines() {
+  try { const f = await getRoutines(); store.routines = f.rules ?? []; store.routineErrors = f.errors ?? []; store.drafts = f.drafts ?? [] } catch {}
+}
+/* What the lights tell you. A try that has just finished leaves its line on its row -- "Tried 8:14 pm ·
+   everything answered" -- through the same `done` map a card somebody just quieted stays in, so it goes
+   when the panel looks away and not on a timer of its own (AGENTS.md section 4). Keyed `signal:<row>`,
+   which no device id can be, so Home's kept cards never see it. */
+const triesKept = new Set<string>()
+export async function loadSignals() {
+  try {
+    const page = await getSignals()
+    store.signals = page
+    const t = page.trying
+    if (t && t.ended && (t.state === 'passed' || t.state === 'failed') && !triesKept.has(t.id)) {
+      triesKept.add(t.id)
+      const bad = t.steps.find(s => s.state === 'no')
+      keepDone(`signal:${t.of}`, t.state === 'passed' ? 'everything answered' : bad ? bad.text.charAt(0).toLowerCase() + bad.text.slice(1) : 'it did not finish', t.ended * 1000)
+    }
+  } catch {}
+}
+export async function loadAssistant() {
+  try { store.assistant = await getAssistant() } catch {}
+}
+export async function loadPresence() {
+  try { store.presence = await getPresence() } catch {}
+}
+export async function loadSounds() {
+  try { store.sounds = (await getSounds()).sounds } catch {}
+}
+export async function loadHealth() {
+  if (store.status?.driver !== 'ready') return
+  try { store.notes = (await getHealth()).notes } catch {}
+  /* ?held= draws a strip held dark without a controller in the room, and its row is the first one. */
+  const held = HELD_PARAM && previewHeldNote(HELD_PARAM)
+  if (held && !store.notes.some(n => n.subject === held.subject)) store.notes = [held, ...store.notes]
+}
+
+/* ---------- the strip controller and the roofline, previewed (AGENTS.md §4) ----------
+   ?held=supply|range|trips|wiring|hot|full puts the brain's words for that reason on the mock house's
+   Under-cabinet strip, and ?roofline=christmas|dark|ask|yard|done|halloween|still|none puts the boards'
+   three-box roofline in the Backyard. Both are the only way to hold these screens still beside the
+   boards they were drawn from: a real controller holds a strip dark for a reason nobody stages. */
+const HELD_PARAM = new URLSearchParams(location.search).get('held')
+const ROOF_PARAM = new URLSearchParams(location.search).get('roofline')
+function previewHouse() {
+  if (HELD_PARAM) previewHeld(store.rooms, HELD_PARAM)
+  if (ROOF_PARAM) {
+    const yard = store.rooms.find(r => r.id === 'backyard') ?? store.rooms.find(r => r.id !== 'unassigned')
+    if (yard && !yard.devices.some(d => d.id === 'roofline')) yard.devices.unshift({ ...previewRoofDevice(), room_id: yard.id })
+  }
+}
+export async function loadRoofline() {
+  if (ROOF_PARAM) { store.roofline = previewRoofline(ROOF_PARAM); store.yard ||= !!store.roofline.exists && !!store.roofline.yard; return }
+  try { store.roofline = await getRoofline() } catch { store.roofline = null }
+}
+/* ---------- 3D printers ---------- */
+/*
+ * The printer status, from the boot read or the stream. Before it is put in place, any print card the
+ * house is about to stop having -- OBI1 Ready again, the part lifted off -- is kept: its last view in
+ * `printsKept`, and its place in `done`, which App.vue sweeps when nobody is looking. Nothing vanishes
+ * under the finger, and a print finishing is not a finger, but it IS somebody glancing at the wall to see
+ * whether it is done -- and the card they were looking for should still be where it was.
+ */
+export function applyPrinters(next: Printers) {
+  for (const was of store.printers?.printers ?? []) {
+    const now = next.printers.find(p => p.id === was.id)
+    if (hasCard(was) && (!now || !hasCard(now))) { store.printsKept[was.id] = was; keepDone(`printer:${was.id}`, 'Ready') }
+    if (now && hasCard(now)) { delete store.printsKept[now.id]; delete done[`printer:${now.id}`] }
+  }
+  store.printers = next
+}
+/** The kept cards that are still owed their place. */
+export const keptPrints = () => Object.values(store.printsKept).filter(p => done[`printer:${p.id}`])
+/** Things found nearby and not in the house yet: on the network, and 3D printers on the Wi-Fi. */
+export const foundCount = () => store.found.length + (store.printers?.found.length ?? 0)
+export const printerById = (id: string | null) => store.printers?.printers.find(p => p.id === id) ?? null
+let printersPoll: number | undefined
+export async function loadPrinters() {
+  try { applyPrinters(await getPrinters()) } catch { store.printers = null }
+  /* While an ask is waiting at a printer, read again every few seconds as well as listening. The answer
+     happens at the printer and arrives on the stream; if the stream blinked in those two minutes, the row
+     that asked would be counting down to nothing. */
+  clearTimeout(printersPoll)
+  if (Object.values(store.printers?.asking ?? {}).includes('waiting')) printersPoll = window.setTimeout(loadPrinters, 3000)
+}
+export const routineById = (id: string) => store.routines.find(r => r.id === id)
+/** An update the hub should raise by itself, and nothing is already installing it. `offer` rather
+    than `available` so a version that was tried and rolled back is not pushed at anybody again; it
+    is still installable from This hub, where a person is the one choosing. */
+export function updateReady(): boolean { const u = store.status?.update; return !!u?.offer && u.state?.state !== 'running' && !u.requested && !store.updating }
+/** Install the update that is waiting, from wherever it is offered: the nudge in the band and the
+    Needs a look page both ask for the same one thing, and the host does the work. */
+export async function installUpdate(): Promise<boolean> {
+  try {
+    const u = await requestUpdate()
+    if (store.status) store.status.update = u
+    beginUpdate(u.dark_seconds)
+    notify('Installing. Lights and switches keep working.')
+    return true
+  } catch (e: any) { notify(e.message, 'error'); return false }
+}
+/** Seconds as a household says them. The same rounding as the brain's `plainly`, because the two
+    quote the same figures at people and disagreeing about them would be worse than either. */
+export const plainly = (s: number) => s < 90 ? `about ${Math.round(s / 10) * 10} seconds` : `about ${Math.round(s / 60)} minutes`
+let updateTick: number | undefined
+/** An update is under way: this screen asked for it, or the hub started one in the night and the
+    status said so on the way past. Either way the panel has to be able to draw the wait.
+
+    The number counts the DARK stretch and nothing else, and it does not start running until the
+    brain has actually gone. Before that the phase the hub is reporting is a better answer than any
+    number, because it is true: for most of an update the house is entirely usable and the honest
+    thing to show is a line saying what is being downloaded, not a screen saying come back later. */
+export function beginUpdate(dark?: number) {
+  const secs = dark || store.status?.update?.dark_seconds || 60
+  if (store.updating) { store.updating.dark = secs; return }
+  store.updating = { at: Date.now(), dark: secs, left: secs, lost: false }
+  clearInterval(updateTick)
+  updateTick = window.setInterval(() => { if (store.updating?.lost) store.updating.left = Math.max(0, store.updating.left - 1) }, 1000)
+}
+export function endUpdate() { store.updating = null; clearInterval(updateTick) }
+/** The live stream going down while an update is in the air: from here on the hub cannot be asked
+    anything, so the countdown takes over from the phase. Coming back is not handled here -- an
+    update ends by the brain answering as a new build, which the status handler reads. */
+export function updateLink(up: boolean) { if (store.updating && !up) store.updating.lost = true }
+/* ---------- turning it off and on again ---------- */
+let restartTick: number | undefined
+/** Restart, at the rung the hub chose. The panel keeps its own stopwatch rather than asking the hub
+    how long it was gone: the hub cannot answer that question while it is the thing that is away. */
+export async function restartHub(rung: Rung = 'hub', understood = false): Promise<boolean> {
+  try {
+    const r = await doRestart(rung, understood)
+    /* The sheet that asked closes, because the waiting screen IS the answer to the tap and a page
+       about the hub is not a thing to read while the hub is leaving. Where it was is kept, and the
+       panel comes back to it: the person was on This hub, so that is where they are when it returns. */
+    store.restarting = { rung, at: Date.now(), seconds: r.seconds, left: r.seconds, lost: false, from: store.sheet }
+    store.sheet = null
+    clearInterval(restartTick)
+    restartTick = window.setInterval(() => { if (store.restarting) store.restarting.left = Math.max(0, store.restarting.left - 1) }, 1000)
+    return true
+  } catch (e: any) { notify(e.message, 'error'); return false }
+}
+/** The live stream going down and coming back, while a restart is in the air. Returns true when that
+    was the hub RETURNING, so the caller knows this link event has been spoken for.
+
+    The guard is the whole of it: the brain answers the request and then waits a beat before it goes,
+    so the link is still up when the tap finishes. Nothing counts as coming back until it has first
+    gone away, or the overlay clears while the hub is still on its way down. */
+export function restartLink(up: boolean): boolean {
+  if (!store.restarting) return false
+  if (!up) { store.restarting.lost = true; return false }
+  if (!store.restarting.lost) return false
+  /* Says how long it took, once and quietly: nobody should have to guess whether the restart they
+     asked for actually happened, and a household that watches it take three minutes twice has
+     learned something about their hardware. */
+  const took = Math.max(1, Math.round((Date.now() - store.restarting.at) / 1000))
+  const from = store.restarting.from
+  store.restarting = null
+  store.sheet = from
+  clearInterval(restartTick)
+  notify(took < 90 ? `Back. That took ${took} seconds.` : `Back. That took ${Math.round(took / 60)} minutes.`)
+  return true
+}
+
+/* WHEN THE HUB GOES AWAY, EVERYTHING OPEN OVER THE HOUSE GOES WITH IT. The waiting screen ("Updating
+   the hub", "Restarting...") is drawn on the page under the panes and sheets, so anything left open
+   covered the one thing worth reading, and every control on it answers to a hub that is not there.
+   This is the moment `nothing vanishes under a tap` allows: what the person is looking at now is the
+   countdown, not the card. Only the panel's own copies go. A bridge or strip still being set up is
+   read back from the hub when it returns and reopens where it was, a phone asking to join asks again,
+   and a restart still puts the person back on the page they asked from (`restarting.from`). */
+export const hubAway = () => !!(store.restarting?.lost || store.updating?.lost || (store.restoring && store.linkLost))
+export function clearForAway() {
+  store.sheet = null
+  store.opened = null
+  store.outside = false
+  store.viewer = null
+  store.bridge = null
+  store.strip = null
+  store.stripAsked = false
+  store.askAside = true
+  if (lock.prompt) { lock.prompt.resolve(false); lock.prompt = null }
+}
+watch(hubAway, away => { if (away) clearForAway() })
+
+export function openWhy(roomId: string) { store.whyRoom = roomId; store.sheet = 'why' }
+/** Pick up a conversation the house already has open, on the sheet that draws every other one. */
+export function openFlow(flowId: string, name = '') { store.resume = flowId; store.resumeName = name; store.sheet = 'add' }
+
+/* ---------- setup and things found nearby ---------- */
+/** True while the panel should show the setup flow instead of the house. */
+export const needsSetup = () => !store.status || !store.status.setup_done   // once finished, an engine hiccup shows the calm offline note, not the welcome
+export async function refreshStatus() {
+  try { store.status = await getStatus() } catch { if (!store.status && !lock.unpaired) store.error = 'The hub is not answering.' }
+}
+export async function loadAccounts() {
+  try { store.accounts = await getAccounts() } catch {}
+}
+/* Whether a thing is one the other apps can see, and whether it could be. The hub decides both --
+   the kind has to be one this house shares and one the bridge can carry -- and the panel only ever
+   asks about the device in front of somebody. docs/matter.md. */
+export const canShare = (d: Device) => {
+  const s = store.share
+  /* The WHOLE kind, not cap()'s first word: a reading is `sensor.temperature` to the hub and cap()
+     would hand it `sensor`, which is in nobody's list -- so every sensor would quietly say it cannot
+     be shared while the hub was busy sharing it. */
+  return !!s?.on && !!s.ready && s.kinds.includes(d.kind || d.guess || d.capability)
+}
+export const isShared = (d: Device) => canShare(d) && !(store.share?.left_out ?? []).includes(d.id)
+
+export async function loadShare() {
+  try { store.share = await getShare() } catch { /* an older hub: the door simply does not appear */ }
+}
+/* The phones this screen is allowed to know about, and the knocks it is allowed to answer -- which is
+   not the same list on every phone in the house, so it is always the hub's answer to THIS phone rather
+   than anything worked out here. A screen that holds no keys gets itself and no asks, and the pane that
+   rises on asks therefore never rises on it.
+
+   `tell` is the live nudge rather than a page load: say who just joined, and let the row of events know. */
+export async function loadPhones(tell = false) {
+  if (!store.status?.locked) { store.phones = []; store.asks = []; return }
+  const known = new Set(store.phones.map(x => x.id))
+  try { const p = await getPhones(); store.phones = p.phones; store.asks = p.asks } catch { return }
+  if (!tell) return
+  eventsSoon()
+  for (const x of store.phones) if (!known.has(x.id) && !x.me && known.size) notify(`${x.kind === 'wall' && x.name === 'This wall' ? 'Wall screen' : x.name} was added.`)   // told on every screen that can see them; the newcomer already knows
+}
+/** May this screen decide who else gets in? The house's answer, in the row it keeps for this phone. */
+export const holdsKeys = () => !store.status?.locked || ['setup', 'code'].includes(store.phones.find(p => p.me)?.how ?? '')
+/* ---------- a bridge being set up ----------
+
+   Asked for rather than streamed, because it only matters while somebody is standing there: the poll
+   runs every couple of seconds while a bridge is mid-job and backs off to a minute when there is
+   nothing to say. A hub with no bridge support at all answers 404 and the panel simply never shows
+   the sheet -- that is why this swallows its errors instead of raising them. */
+let bridgeTimer: number | undefined
+export async function refreshBridge() {
+  clearTimeout(bridgeTimer)
+  try {
+    store.bridge = await getBridge()
+  } catch { store.bridge = null }
+  /* A move is a job too, and it is one nobody is holding a puck for -- it happens while eleven of
+     them restart in eleven rooms. Without it here the sheet asks once a minute and draws a progress
+     bar that does not move, which is worse than no progress bar. docs/network.md, piece 3. */
+  const moving = store.bridge?.moving?.state === 'moving'
+  const live = !!store.bridge && (moving || !['none', 'ready'].includes(store.bridge.state))
+  bridgeTimer = window.setTimeout(refreshBridge, live ? 2000 : 60000)
+}
+
+/* ---------- a light strip being set up ----------
+
+   The same poll as a bridge and for the same reason: it matters only while somebody is standing in
+   front of the thing. A hub too old to know what a strip is answers 404 and the sheet simply never
+   appears, which is why this swallows rather than raises. */
+let stripTimer: number | undefined
+/* ?strip=knocking|press|rhythm|working|order|which|length|room|ready draws one beat without a strip in the room,
+   the way ?sheet= and ?setup=1 draw the others (AGENTS.md §4). It is the only way to hold a screen
+   still beside the board it was drawn from, since every real beat is over in seconds. */
+const STRIP_PREVIEW = new URLSearchParams(location.search).get('strip')
+const STRIP_BACK = new URLSearchParams(location.search).get('back')   // &back=colors|length
+const previewStrip = (beat: string): Strip => ({
+  revisit: (STRIP_BACK as Strip['revisit']) || undefined,
+  state: (beat === 'which' ? 'order' : beat) as Strip['state'],
+  name: 'A light strip',
+  step: beat === 'working' ? 'letting' : undefined,
+  asking: beat === 'which' ? 'which' : beat === 'order' ? 'red' : undefined,
+  count: 186,
+  groups: beat === 'rhythm' ? 4 : undefined,   // four counts of one to six, read off the light
+  most: beat === 'rhythm' ? 6 : undefined,
+  rooms: store.rooms.length
+    ? store.rooms.map(r => ({ id: r.id, name: r.name }))
+    : [{ id: 'living', name: 'Living room' }, { id: 'kitchen', name: 'Kitchen' },
+       { id: 'bedroom', name: 'Bedroom' }, { id: 'study', name: 'Study' }],
+})
+/* HOW OFTEN TO ASK, AND IT IS THREE SPEEDS RATHER THAN TWO.
+   The idle one used to be sixty seconds, and it was sixty of the hundred and eight a household
+   measured between plugging a strip in and the wall saying anything (docs/strip.md item 34). It is
+   not the fast path any more -- Add is -- but it was also the cheapest of those seconds to give
+   back, so: fast while a conversation is running, fast while somebody is on Add and waiting for
+   something to turn up, and half a minute otherwise. */
+export async function refreshStrip() {
+  clearTimeout(stripTimer)
+  /* ?strip= is asking to LOOK AT a beat, which is the asking (AGENTS.md §4). Without this the one
+     documented way to hold a strip screen still would draw the band's line and nothing else. */
+  if (STRIP_PREVIEW) {
+    const base = previewStrip(STRIP_PREVIEW)
+    store.strip = previewStripBeat(STRIP_PREVIEW, base) ?? base
+    store.stripAsked = true; return
+  }
+  try { store.strip = await getStrip() } catch { store.strip = null }
+  /* A tap belongs to the knock it answered. A strip that stops knocking while nobody is looking
+     ends the job, and leaving this set would open the NEXT one by itself -- which is the whole of
+     what design/knock/ took away. */
+  if (!store.strip || store.strip.state === 'none') { store.stripAsked = false; store.stripPutDown = false }
+  const live = !!store.strip && !['none', 'ready'].includes(store.strip.state)
+  stripTimer = window.setTimeout(refreshStrip, live || store.sheet === 'add' ? 2000 : 30000)
+}
+
+/* KEEP THE HUB LOOKING WHILE ADD IS OPEN.
+   The brain holds one of these for a few seconds only, so this has to keep saying it -- which is
+   the point: a wall that goes to rest, gets closed or is unplugged simply stops, and the hub goes
+   quiet on its own rather than scanning for ever because a page was left open. It is also the one
+   moment when a Bluetooth scan costs only the person who asked for it. design/knock/Look.dc.html. */
+let lookTimer: number | undefined
+export function keepLooking(on: boolean) {
+  clearInterval(lookTimer)
+  store.looking = false
+  if (!on) return
+  /* The answer is a free, fresh status -- but only if it IS one. A hub older than this route, or
+     anything else standing in for one, can answer 200 with something that is not a strip, and
+     taking it would wipe the knock this page exists to show. The mock brain answers every POST it
+     does not know with {ok:true}, which is how this was found: the row vanished from Add the moment
+     the page opened it. */
+  const tick = () => {
+    stripLooking()
+      .then(v => { store.looking = true; if (v && typeof v.state === 'string') store.strip = v })
+      /* A hub older than this route answers 404, and a page that says it is listening when nothing
+         is listening is the panel telling the household a comfortable lie. Say nothing instead. */
+      .catch(() => { store.looking = false })
+  }
+  tick()
+  lookTimer = window.setInterval(tick, 5000)
+}
+
+let foundTimer: number | undefined
+export async function refreshFound() {
+  if (store.status?.driver !== 'ready') return
+  try { store.found = await getDiscovered() } catch {}
+}
+function foundSoon() { clearTimeout(foundTimer); foundTimer = window.setTimeout(refreshFound, 2500) }
+
+/* ---------- lifecycle ---------- */
+function applyHome(h: Home) { store.rooms = h.rooms; previewHouse(); store.entry = h.entry ?? []; store.homeName = h.name || ''; store.tempUnit = h.temp_unit || ''; store.loaded = true; store.error = ''; foundSoon(); if (store.homeName) document.title = store.homeName }
+/** A room was set to a state by a rule or by another screen: keep the chip honest without a reload. */
+function applyIntent(i: Intent) {
+  const r = store.rooms.find(r => r.id === i.room)
+  if (r) { r.intent = i.intent; r.set_by = i.set_by; r.hold_until = i.hold_until; eventsSoon() }
+}
+function applyDevice(d: Device) {
+  for (const r of store.rooms) {
+    const i = r.devices.findIndex(x => x.id === d.id)
+    if (i >= 0) { r.devices[i] = d; delete store.pending[d.id]; if (store.viewer?.id === d.id) store.viewer = d; if (store.opened?.id === d.id) store.opened = d; eventsSoon(); return }
+  }
+}
+let stop: (() => void) | undefined, lostTimer: number | undefined, skyTimer: number | undefined
+/* The house again, on its own: the rooms and what is in them. Something that has just joined a radio
+   lands in the house a second or two later under no room at all, and this is how the screen that let
+   it in gets to see it -- so it can ask which room while somebody is still standing next to it. */
+export async function reloadHome() { try { applyHome(await getHome()) } catch {} }
+
+/* A move arrives as <address>/?move=<code> (design/away/, C): pick up this phone's token on this name before
+   anything asks the hub for anything, then take the code out of the address so nothing carries a spent one. */
+async function landMove() {
+  const code = moveCode(location.search)
+  if (!code) return
+  history.replaceState(null, '', withoutCode(location.href))
+  try {
+    const got = await claimMove(code)
+    moved(got.token, got.lan)
+    notify('This phone has moved. Add it to your home screen, then remove the old icon.')
+  } catch (e: any) { notify(e.message, 'error') }
+}
+/* What the hub says about this phone, and where to reach it: the name at home it gave, looked for at once. */
+export async function loadMe() {
+  try { store.me = await getMe(); learnLan(store.me.lan) } catch { return }
+  await look()
+}
+let doorWatched = false
+export async function load() {
+  await carried()
+  await landMove()
+  await loadMe()
+  if (!doorWatched) { doorWatched = true; watchDoor(kickStream) }
+  await refreshStatus()
+  if (lock.unpaired) return                    // the join screen is up; the house answers once this phone is in
+  try { applyHome(await getHome()) } catch { store.error = 'The hub is not answering.' }
+  loadAmbient(); loadRules(); loadRoutines(); loadAssistant(); loadPresence(); loadHealth(); loadSounds(); loadPhones(); loadAccounts(); loadShare(); loadRoofline(); loadPrinters()
+}
+let foundPoll: number | undefined
+/* The hub came back on a different build from the one this page was reading. Until it reloads, the
+   page IS the old build: the "Updated to" toast used to be the whole of it, and a wall or a phone kept
+   running last week's panel against this week's brain until somebody thought to pull down on it.
+   index.html is served no-cache and the assets are named by their hash, so a reload is the new panel
+   and not a stale one. The moment is the right one too: a new version only ever arrives with the
+   link coming back after the brain restarted, when the screen was saying "Updating the hub" or
+   "Reconnecting" -- never under somebody's finger. The version is kept for the page that comes next,
+   because a toast does not survive the reload and the screen should still say what happened. */
+export function newBuild(was: string | undefined, now: string | undefined): boolean {
+  return !!was && !!now && was !== now && now !== 'dev'
+}
+export function reloadOnto(version: string, took = 0) {
+  try { sessionStorage.setItem('hub.updated', took ? `${version}|${took}` : version) } catch { /* a private window keeps nothing; the reload still happens */ }
+  location.reload()
+}
+/** The page after the reload: say what the one before it saw, and how long it stood there.
+
+    The figure is worth the words. A household that watched an update take four minutes twice has
+    learned something about their own hardware, and it is the same figure the hub is now quoting back
+    at them next time -- so the two had better agree. */
+export function sayUpdated() {
+  let v = ''
+  try { v = sessionStorage.getItem('hub.updated') || ''; if (v) sessionStorage.removeItem('hub.updated') } catch { /* nothing kept */ }
+  if (!v) return
+  const [version, took] = v.split('|')
+  const n = Number(took || 0)
+  notify(n >= 5 ? `Updated to ${version}. That took ${n < 90 ? `${Math.round(n / 10) * 10} seconds` : `${Math.round(n / 60)} minutes`}.`
+                : `Updated to ${version}.`)
+}
+
+export async function start() {
+  await load()
+  sayUpdated()
+  if (lock.unpaired) { updateSky(); return }   // the sky still follows the clock; nothing to stream to until this phone is in, and rejoin() starts again
+  updateSky(); clearInterval(skyTimer); skyTimer = window.setInterval(updateSky, 30000)
+  clearInterval(foundPoll); foundPoll = window.setInterval(refreshFound, 60000)
+  refreshBridge()
+  refreshStrip()
+  stop = connect({ device: applyDevice, home: applyHome, intent: applyIntent, drafts: d => { store.drafts = d; eventsSoon() }, presence: p => { store.presence = p; eventsSoon() }, phones: () => loadPhones(true), share: () => { store.shareTick++; loadShare() }, signals: t => { store.signalTry = t; if (store.signals) loadSignals() }, roofline: r => { if (!ROOF_PARAM) store.roofline = r }, printers: applyPrinters, ambient: a => { store.ambient = a; updateSky() }, status: s => {
+    const was = store.status?.driver, version = store.status?.version
+    store.status = s
+    if (newBuild(version, s.version)) {
+      const took = store.updating ? Math.round((Date.now() - store.updating.at) / 1000) : 0
+      endUpdate(); reloadOnto(s.version!, took); return
+    }
+    /* An update nobody on this screen asked for -- the hub's own, at twenty to three, or somebody
+       else's tap on another phone. The wall should say what is happening either way, and it can:
+       the phase is in the status it just received. */
+    const u = s.update
+    if (u && (u.requested || u.state?.state === 'running')) beginUpdate(u.dark_seconds)
+    else if (store.updating && u && !u.requested) endUpdate()
+    if (s.driver === 'ready' && was !== 'ready') { load() }   // the engine just came up: read the house
+  }, link: v => {
+    store.linkUp = v
+    tell('houses:status', { connected: v })   // the app keeps its own word for whether this house is answering
+    clearTimeout(lostTimer)
+    const back = restartLink(v)     // a restart this screen asked for, going or coming back
+    updateLink(v)                   // ...and an update, which only ever needs to know it went
+    if (v) {
+      store.linkLost = false
+      if (back) load()
+      else if (store.restoring && store.linkLost === false && store.loaded) { store.restoring = false; notify('Restored. Welcome back.'); load() }
+      else if (!store.loaded) load()
+    }
+    else lostTimer = window.setTimeout(() => (store.linkLost = true), 4000)   // a blink on startup is not worth a banner
+  } })
+}
+export function halt() { stop?.(); clearInterval(skyTimer); clearInterval(foundPoll); clearTimeout(bridgeTimer); clearTimeout(stripTimer); clearTimeout(printersPoll) }

@@ -1,0 +1,157 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Instrument Sans", -apple-system, "SF Pro Text", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      /* the panel's own tokens, unchanged -- app/src/panel.css */
+      --bg: #0c0d10; --surface: rgba(26,28,34,.68); --surface-hi: rgba(255,255,255,.08);
+      --edge: rgba(255,255,255,.1); --edge-hi: rgba(255,255,255,.18);
+      --ink: #f1eee8; --ink-2: #b9b5ad; --muted: #7f7d77;
+      --lamp: #e9b872; --lamp-ink: #2a1c07; --live: #74c69d; --danger: #e08a8a;
+    }
+    .dsp { font-weight: 400; letter-spacing: -.025em; text-wrap: balance; }
+    .cap { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .row { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px;
+           padding: 12px 14px; border-radius: 16px; background: var(--surface); border: 1px solid var(--edge); }
+    .row.lit { border-color: rgba(233,184,114,.35);
+               background: linear-gradient(rgba(233,184,114,.1), rgba(233,184,114,.1)), var(--surface); }
+    .ic { width: 36px; height: 36px; border-radius: 12px; display: grid; place-items: center;
+          background: var(--surface-hi); color: var(--ink-2); }
+    .ic.on { background: var(--lamp); color: var(--lamp-ink); }
+    .t1 { font-size: 15.5px; font-weight: 500; }
+    .t2 { font-size: 13px; color: var(--muted); }
+    .btn { display: inline-flex; align-items: center; gap: 8px; padding: 13px 24px; border-radius: 999px;
+           background: var(--ink); color: var(--bg); font-weight: 500; font-size: 16px; }
+    .btn.ghost { background: var(--surface-hi); color: var(--ink); border: 1px solid var(--edge);
+                 padding: 12px 20px; font-size: 15px; }
+    .btn.sm { padding: 9px 17px; font-size: 14px; }
+    .sheet { border-radius: 26px; background: rgba(22,24,30,.94); border: 1px solid var(--edge-hi);
+             box-shadow: 0 40px 100px -30px rgba(0,0,0,.9); overflow: hidden; }
+    .bar { height: 6px; border-radius: 999px; background: rgba(255,255,255,.1); overflow: hidden; }
+    .bar i { display: block; height: 100%; border-radius: 999px; background: var(--lamp); }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--lamp); }
+    .note { padding: 13px 16px 14px; border-radius: 18px; background: var(--surface); border: 1px solid var(--edge); }
+    .chip { display: inline-flex; padding: 8px 14px; border-radius: 999px; border: 1px solid var(--edge);
+            background: var(--surface-hi); font-size: 14px; }
+    .bad { color: var(--danger); }
+    .sw { fill: #ded8cc; stroke: rgba(0,0,0,.22); stroke-width: 2; }
+    .swf { fill: #fbf8f2; stroke: rgba(0,0,0,.12); stroke-width: 1.4; }
+  </style>
+</helmet>
+
+<div style="position: relative; width: 1440px; height: 900px; overflow: hidden; background: #0c0d10; color: var(--ink); font-size: 17px; line-height: 1.4;">
+  <div style="position: absolute; inset: 0; background: radial-gradient(64% 54% at 22% 18%, rgba(72,63,135,.22), transparent 70%), radial-gradient(56% 48% at 86% 88%, rgba(92,63,57,.2), transparent 72%);"></div>
+
+  <div style="position: absolute; top: 44px; left: 56px; right: 56px;">
+    <h1 class="dsp" style="margin: 0; font-size: 42px;">Beat two: four proofs, one shell.</h1>
+    <p style="margin: 10px 0 0; font-size: 17px; color: var(--ink-2); max-width: 106ch;">The middle of each of these is genuinely different, because the object is. Everything around the middle is identical: the same heading size, one sentence of lede, one live line, one dark button, and &ldquo;Not now&rdquo; last &mdash; never Back, never Cancel, never Stop.</p>
+  </div>
+
+  <!-- 1 -->
+  <div class="cap" style="position: absolute; top: 198px; left: 56px;">it blinks</div>
+  <div class="sheet" style="position: absolute; top: 230px; left: 56px; width: 316px; height: 512px; padding: 22px 20px;">
+    <div class="dsp" style="font-size: 26px; margin-bottom: 8px;">Which one is yours?</div>
+    <p style="margin: 0 0 16px; color: var(--ink-2); font-size: 14.5px;">Three switches are waiting. One of them is blinking now.</p>
+    <div style="display: grid; place-items: center; margin-bottom: 14px;">
+      <svg width="118" height="126" viewBox="0 0 152 164" fill="none">
+        <circle cx="76" cy="78" r="66" fill="none" stroke="rgba(233,184,114,.16)" stroke-width="2"/>
+        <circle cx="76" cy="78" r="52" fill="none" stroke="rgba(233,184,114,.3)" stroke-width="2"/>
+        <rect x="42" y="36" width="68" height="84" rx="11" class="sw"/>
+        <rect x="53" y="47" width="46" height="34" rx="7" class="swf"/>
+        <rect x="60" y="96" width="32" height="9" rx="4.5" fill="#c8c1b3"/>
+        <circle cx="76" cy="62" r="9" fill="var(--lamp)"/>
+      </svg>
+    </div>
+    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 18px;"><span class="dot"></span><span class="t2">Blinking now &middot; 1 of 3</span></div>
+    <div style="display: grid; gap: 9px;">
+      <span class="btn" style="justify-content: center;">That&rsquo;s the one</span>
+      <span class="btn ghost" style="justify-content: center;">Try the next one</span>
+      <span class="btn ghost" style="justify-content: center;">Not now</span>
+    </div>
+  </div>
+
+  <!-- 2 -->
+  <div class="cap" style="position: absolute; top: 198px; left: 392px;">press it</div>
+  <div class="sheet" style="position: absolute; top: 230px; left: 392px; width: 316px; height: 512px; padding: 22px 20px;">
+    <div class="dsp" style="font-size: 26px; margin-bottom: 8px;">Press its button now.</div>
+    <p style="margin: 0 0 16px; color: var(--ink-2); font-size: 14.5px;">Most of them want one long press, or switching off and on three times. The box will say.</p>
+    <div style="display: grid; place-items: center; margin-bottom: 14px;">
+      <svg width="118" height="126" viewBox="0 0 152 164" fill="none">
+        <circle cx="76" cy="84" r="64" fill="none" stroke="rgba(233,184,114,.14)" stroke-width="2"/>
+        <circle cx="76" cy="84" r="50" fill="none" stroke="rgba(233,184,114,.26)" stroke-width="2"/>
+        <rect x="46" y="48" width="60" height="72" rx="14" class="sw"/>
+        <circle cx="76" cy="84" r="14" class="swf"/>
+        <circle cx="76" cy="84" r="6" fill="var(--lamp)"/>
+      </svg>
+    </div>
+    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 8px;"><span class="dot"></span><span class="t2">The house is listening</span></div>
+    <div class="bar" style="margin-bottom: 8px;"><i style="width: 66%"></i></div>
+    <div class="t2" style="margin-bottom: 18px;">2:00 left. It stops on its own.</div>
+    <div style="display: grid; gap: 9px;">
+      <span class="btn ghost" style="justify-content: center;">Not now</span>
+    </div>
+  </div>
+
+  <!-- 3 -->
+  <div class="cap" style="position: absolute; top: 198px; left: 728px;">read its code</div>
+  <div class="sheet" style="position: absolute; top: 230px; left: 728px; width: 316px; height: 512px; padding: 22px 20px;">
+    <div class="dsp" style="font-size: 26px; margin-bottom: 8px;">Point it at the code.</div>
+    <p style="margin: 0 0 16px; color: var(--ink-2); font-size: 14.5px;">The little square of dots &mdash; on the back of it, or on the card from the box.</p>
+    <div style="position: relative; height: 176px; border-radius: 18px; background: #1a1c22; border: 1px solid var(--edge); overflow: hidden; margin-bottom: 14px;">
+      <div style="position: absolute; inset: 0; background: radial-gradient(60% 60% at 50% 46%, rgba(255,255,255,.08), transparent 70%);"></div>
+      <svg style="position: absolute; inset: 0;" width="100%" height="100%" viewBox="0 0 100 100" fill="none" stroke="rgba(255,255,255,.9)" stroke-width="2.4" stroke-linecap="round" preserveAspectRatio="none">
+        <path d="M22 34v-8a4 4 0 0 1 4-4h8"/><path d="M66 22h8a4 4 0 0 1 4 4v8"/>
+        <path d="M22 66v8a4 4 0 0 0 4 4h8"/><path d="M78 66v8a4 4 0 0 1-4 4h-8"/>
+      </svg>
+    </div>
+    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 18px;"><span class="dot"></span><span class="t2">Looking&hellip;</span></div>
+    <div style="display: grid; gap: 9px;">
+      <span class="btn ghost" style="justify-content: center;">No code on the back?</span>
+      <span class="btn ghost" style="justify-content: center;">Not now</span>
+    </div>
+  </div>
+
+  <!-- 4 -->
+  <div class="cap" style="position: absolute; top: 198px; left: 1064px;">sign in to it</div>
+  <div class="sheet" style="position: absolute; top: 230px; left: 1064px; width: 316px; height: 512px; padding: 22px 20px;">
+    <div class="dsp" style="font-size: 26px; margin-bottom: 8px;">Hue wants signing in to.</div>
+    <p style="margin: 0 0 16px; color: var(--ink-2); font-size: 14.5px;">This one finishes on Philips&rsquo; own page. Sign in there and allow it; it comes back here by itself.</p>
+    <div style="display: grid; place-items: center; margin-bottom: 14px;">
+      <svg width="118" height="126" viewBox="0 0 152 164" fill="none">
+        <rect x="30" y="44" width="92" height="66" rx="12" fill="#1b1e25" stroke="rgba(255,255,255,.16)" stroke-width="2"/>
+        <rect x="30" y="44" width="92" height="17" rx="8" fill="rgba(255,255,255,.07)"/>
+        <rect x="44" y="72" width="64" height="7" rx="3.5" fill="rgba(255,255,255,.2)"/>
+        <rect x="44" y="86" width="42" height="7" rx="3.5" fill="rgba(255,255,255,.14)"/>
+        <path d="M76 124v18M76 142l-7-7M76 142l7-7" stroke="var(--lamp)" stroke-width="3" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 18px;"><span class="dot" style="background: var(--muted)"></span><span class="t2">Waiting for that page</span></div>
+    <div style="display: grid; gap: 9px;">
+      <span class="btn" style="justify-content: center;">Open their page</span>
+      <span class="btn ghost" style="justify-content: center;">I&rsquo;ve done that</span>
+      <span class="btn ghost" style="justify-content: center;">Not now</span>
+    </div>
+  </div>
+
+  <!-- what is fixed -->
+  <div style="position: absolute; top: 772px; left: 56px; right: 56px; display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 18px;">
+    <div class="note"><div class="t1" style="margin-bottom: 5px;">One heading, one lede</div><div class="t2">A short question at 26px, then one sentence. No second paragraph, ever.</div></div>
+    <div class="note"><div class="t1" style="margin-bottom: 5px;">One live line</div><div class="t2">A dot and what is happening. A countdown only where there is a real deadline.</div></div>
+    <div class="note"><div class="t1" style="margin-bottom: 5px;">One dark button, at most</div><div class="t2">The thing you came to do. If there is nothing to tap, there is no dark button &mdash; the house is working.</div></div>
+    <div class="note"><div class="t1" style="margin-bottom: 5px;">&ldquo;Not now&rdquo; is last, always</div><div class="t2">The same words in the same place in every route, so leaving never needs reading.</div></div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

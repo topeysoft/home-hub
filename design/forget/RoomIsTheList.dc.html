@@ -1,0 +1,163 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Instrument Sans", -apple-system, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      --ink: #f1eee8; --ink-2: #b9b5ad; --muted: #7f7d77;
+      --lamp: #e9b872; --lamp-ink: #2a1c07;
+      --live: #74c69d; --danger: #e08a8a;
+      --edge: rgba(255,255,255,.10); --edge-hi: rgba(255,255,255,.18);
+      --surface-hi: rgba(255,255,255,.08);
+      --mark: #e0685f;
+    }
+    .dsp { font-family: inherit; font-weight: 400; letter-spacing: -.025em; }
+    .lbl { font-size: 12.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    /* SortView, at its own sizes (panel.css .sort-*) */
+    .sort-row { display: grid; grid-template-columns: 40px minmax(0,1fr) 200px auto; gap: 12px; align-items: start; padding: 10px 12px; border-radius: 16px; }
+    .sort-icon { width: 40px; height: 40px; border-radius: 13px; display: grid; place-items: center; background: var(--surface-hi); color: var(--ink-2); margin-top: 2px; }
+    .sort-name { height: 44px; display: flex; align-items: center; padding: 0 12px; border-radius: 12px; background: var(--surface-hi); border: 1px solid var(--edge); color: var(--ink); font-size: 16px; }
+    .sort-room { height: 44px; display: flex; align-items: center; justify-content: space-between; padding: 0 12px; border-radius: 12px; background: transparent; border: 1px solid transparent; color: var(--ink); font-size: 16px; }
+    .sort-parts { margin: 4px 0 0 12px; font-size: 13.5px; color: var(--muted); }
+    .btn { display: inline-flex; align-items: center; height: 36px; padding: 0 16px; border-radius: 999px; background: transparent; border: 1px solid var(--edge); color: var(--ink-2); font-size: 15px; margin-top: 4px; white-space: nowrap; min-width: 96px; justify-content: center; }
+    .btn.warn { border-color: rgba(224,138,138,.55); color: var(--danger); }
+    .btn.solid { background: var(--lamp); border-color: transparent; color: var(--lamp-ink); font-weight: 500; }
+    .ask { grid-column: 1 / -1; margin: 2px 0 0; font-size: 14px; color: var(--ink-2); }
+    .ask b { color: var(--ink); font-weight: 500; }
+    .crop { border-radius: 16px; border: 1px solid var(--edge); background: linear-gradient(rgba(26,28,34,.8), rgba(16,17,21,.94)); padding: 20px 22px 22px; }
+    .crop-n { font-size: 12.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--lamp); }
+    .note { font-size: 14.5px; color: var(--ink-2); line-height: 1.6; }
+    .note b { color: var(--ink); font-weight: 500; }
+  </style>
+</helmet>
+
+<!-- B -- the room is the list, and the list is made honest and reachable. -->
+<div style="position: relative; width: 1440px; height: 900px; overflow: hidden; background: #0c0d10; color: var(--ink); font-size: 17px; line-height: 1.4;">
+
+  <div style="position: absolute; inset: 0; background: linear-gradient(rgb(20,23,38) 0%, rgb(35,36,58) 42%, rgb(78,55,52) 86%, rgb(54,40,40) 100%);"></div>
+  <div style="position: absolute; inset: 0; background: radial-gradient(90% 70% at 62% 78%, rgba(233,184,114,.10), transparent 66%);"></div>
+  <div style="position: absolute; inset: 0; opacity: .5; background-image: url(&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.035'/%3E%3C/svg%3E&quot;);"></div>
+
+  <div style="position: absolute; left: 48px; top: 40px; width: 900px;">
+    <div class="lbl">Direction B</div>
+    <h1 class="dsp" style="margin: 10px 0 0; font-size: 44px; line-height: 1.06;">The room is the list</h1>
+    <p style="margin: 11px 0 0; font-size: 16.5px; color: var(--ink-2); max-width: 880px; line-height: 1.5;">Keep the one screen that already lists what a household owns and put its three faults right: the door in is an unlabeled pencil, the list leaves out everything with no tile, and the thing's own pane never points at it.</p>
+  </div>
+
+  <!-- the room, in edit, with everything in it -->
+  <div style="position: absolute; left: 48px; top: 206px; width: 803px; height: 442px; overflow: hidden; border-radius: 18px; border: 1px solid var(--edge); background: rgba(12,13,16,.42);">
+    <div style="position: absolute; left: 0; top: 0; width: 1116px; transform: scale(.72); transform-origin: 0 0; padding: 30px 40px 36px;">
+
+      <div style="display: flex; align-items: center; gap: 16px;">
+        <div style="width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; background: var(--surface-hi); border: 1px solid var(--edge); color: var(--lamp);"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></div>
+        <div>
+          <h2 class="dsp" style="margin: 0; font-size: 42px; line-height: 1.05;">Living room</h2>
+          <p style="margin: 7px 0 0; font-size: 16px; color: var(--ink-2);">Rename anything, move it to another room, or take it out of the house. Tap the tick when you are done.</p>
+        </div>
+      </div>
+
+      <div style="margin-top: 26px; display: flex; flex-direction: column; gap: 4px;">
+
+        <div class="sort-row">
+          <div class="sort-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.4.3.5.7.5 1.1h6c0-.4.1-.8.5-1.1A6 6 0 0 0 12 3z"/></svg></div>
+          <div><div class="sort-name">Ceiling light</div></div>
+          <div class="sort-room"><span>Living room</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#b9b5ad" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9.5l6 6 6-6"/></svg></div>
+          <div class="btn">Take it out</div>
+        </div>
+
+        <!-- the armed row: what goes, said before it does -->
+        <div class="sort-row" style="background: rgba(224,138,138,.07);">
+          <div class="sort-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6.5 3.5h11a1 1 0 0 1 1 1v15a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1v-15a1 1 0 0 1 1-1zM12 17a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4z"/></svg></div>
+          <div>
+            <div class="sort-name">Walkway Pathlight</div>
+            <div class="sort-parts">Its light &middot; its motion &middot; its brightness</div>
+          </div>
+          <div class="sort-room"><span>Living room</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#b9b5ad" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9.5l6 6 6-6"/></svg></div>
+          <div class="btn warn">Take it out?</div>
+          <p class="ask"><b>Walkway Pathlight</b>, all three of its parts, goes from the house and from Ring with it. Tap again to do it.</p>
+        </div>
+
+        <!-- the rows this screen does not have today -->
+        <div class="sort-row">
+          <div class="sort-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v5M12 20v-3M4.9 7.5l4.3 2.5M19.1 16.5l-4.3-2.5M4.9 16.5l4.3-2.5M19.1 7.5l-4.3 2.5"/></svg></div>
+          <div><div class="sort-name">Hallway motion</div><div class="sort-parts">No tile on the wall &mdash; it is only ever a reason</div></div>
+          <div class="sort-room"><span>Living room</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#b9b5ad" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9.5l6 6 6-6"/></svg></div>
+          <div class="btn">Take it out</div>
+        </div>
+
+        <div class="sort-row">
+          <div class="sort-icon" style="color: var(--lamp);"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12h18M6 9v6M10 9v6M14 9v6M18 9v6"/></svg></div>
+          <div><div class="sort-name">Shelf strip</div><div class="sort-parts">A light strip, set up in here</div></div>
+          <div class="sort-room"><span>Living room</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#b9b5ad" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9.5l6 6 6-6"/></svg></div>
+          <div class="btn">Take it out</div>
+        </div>
+
+        <div class="sort-row">
+          <div class="sort-icon" style="color: var(--lamp);"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4h10v16H7zM12 9.5v.01M9.5 14h5"/></svg></div>
+          <div><div class="sort-name">Stairway switch</div><div class="sort-parts">On the bridge in here &mdash; and its partner upstairs</div></div>
+          <div class="sort-room"><span>Living room</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#b9b5ad" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9.5l6 6 6-6"/></svg></div>
+          <div class="btn">Take it out</div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <div style="position: absolute; left: 48px; top: 666px; width: 803px;" class="note">
+    Four of those five rows are new. <b>Hallway motion</b> has no tile, so today it is in no list anywhere; <b>Shelf strip</b> and <b>Stairway switch</b> are in the room the household put them in and have never appeared on this screen.
+  </div>
+
+  <!-- the two smaller changes that make it reachable -->
+  <div class="lbl" style="position: absolute; left: 890px; top: 186px;">And the two doors into it</div>
+  <div style="position: absolute; left: 890px; top: 208px; width: 502px; display: flex; flex-direction: column; gap: 14px;">
+
+    <div class="crop">
+      <div class="crop-n">The room&rsquo;s own header, today and instead</div>
+      <div style="margin-top: 14px; display: flex; align-items: center; gap: 12px;">
+        <span style="font-size: 13px; color: var(--muted); width: 58px;">today</span>
+        <div style="width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; background: var(--surface-hi); border: 1px solid var(--edge); color: var(--ink-2);"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4l10-10-4-4L4 16zM14.5 5.5l4 4"/></svg></div>
+        <span style="font-size: 13.5px; color: var(--mark);">a pencil, and a title attribute a finger cannot hover</span>
+      </div>
+      <div style="margin-top: 12px; display: flex; align-items: center; gap: 12px;">
+        <span style="font-size: 13px; color: var(--muted); width: 58px;">instead</span>
+        <span style="display: inline-flex; align-items: center; gap: 9px; height: 40px; padding: 0 17px; border-radius: 999px; background: var(--surface-hi); border: 1px solid var(--edge); font-size: 15px; color: var(--ink-2);"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4l10-10-4-4L4 16zM14.5 5.5l4 4"/></svg>What&rsquo;s in here</span>
+      </div>
+      <p style="margin: 12px 0 0; font-size: 13px; color: var(--muted); line-height: 1.45;">It is not only renaming, so it is not only a pencil. The words say what the screen behind it is: everything this room has.</p>
+    </div>
+
+    <div class="crop">
+      <div class="crop-n">The thing&rsquo;s own pane, pointing at it</div>
+      <div style="margin-top: 14px;">
+        <span style="font-size: 14px; color: var(--muted); text-decoration: underline dotted; text-decoration-color: var(--edge-hi); text-underline-offset: 4px;">Taking it out of the house? It goes from What&rsquo;s in here.</span>
+      </div>
+      <p style="margin: 12px 0 0; font-size: 13px; color: var(--muted); line-height: 1.45;">One line under the edit form, in the quiet row's own voice, naming the screen it means. The pane keeps its promise &mdash; rename and move &mdash; and stops being a dead end for the third thing.</p>
+    </div>
+
+  </div>
+
+  <div class="lbl" style="position: absolute; left: 48px; top: 744px;">The case</div>
+  <div style="position: absolute; left: 48px; top: 770px; width: 803px;" class="note">
+    A household thinks room by room, and a room is the only container that already holds a lamp, a sensor with no tile, a light strip and a wall switch at the same time. It is far and away the least new code &mdash; the screen exists, the two-tap ask exists and is good &mdash; and the words on it are already the best words anywhere in this feature.
+  </div>
+
+  <div class="lbl" style="position: absolute; left: 890px; top: 660px; color: var(--mark);">Against</div>
+  <div style="position: absolute; left: 890px; top: 686px; width: 502px;" class="note">
+    Ending a thing stays two screens away from the thing. &ldquo;What&rsquo;s in here&rdquo; is a mode you enter and leave, and the panel has almost none of those. And a puck and an account are still somewhere else, so this does not close the question either.
+    <br><br>
+    <b>If only one of the three gets built, build this one.</b> It turns the report from &ldquo;there is no way&rdquo; into &ldquo;there is a way, and it is signposted&rdquo;.
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>

@@ -1,0 +1,429 @@
+// SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+// SPDX-License-Identifier: AGPL-3.0-or-later
+//
+// What goes down the wire, and the two things about a strip nobody can ask it.
+//
+// A WS2812-family strip has one data line and no way back: it is write-only, on every part in this
+// family. So the controller cannot discover how long the strip is, and cannot discover which order
+// the strip wants its colors in. Both are settled by SHOWING something and having a person say what
+// they can see (design/strip/Order.dc.html, design/strip/Fill.dc.html), and both answers arrive here
+// over MQTT from the hub and live in NVS afterwards.
+//
+// EVERYTHING IN THIS HEADER IS FREE OF Arduino, ON PURPOSE. It is the part that is easy to get subtly
+// wrong and impossible to notice on a bench -- a strip with its red and green swapped looks like it
+// is working -- so it compiles on a Mac and is checked against the brain's own arithmetic
+// (test_pixels_native.cpp, and brain/hub/strip.py). The RMT writing lives in pixels.cpp, which is
+// where the Arduino include is.
+#pragma once
+
+#include <stddef.h>
+#include <stdint.h>
+#include <string.h>
+
+#include "board.h"
+
+// The most lights one controller will drive. Not a software limit and not a limit anybody should
+// meet: a 5 m strip at 60/m is 300, and somewhere past that the 5 V rail is what gives out, not this.
+// It also sets the RMT symbol buffer in pixels.cpp -- 600 rgbw pixels is 76 KB of symbols, which is
+// already a lot to ask of a part that is holding Matter and Wi-Fi at the same time.
+// (Rev A sets its own, per output, in board.h, with the reasons.)
+#ifndef PX_MOST
+#define PX_MOST 600
+#endif
+
+// How many lights to write before the household has said. A strip shorter than this simply does not
+// receive the rest -- the surplus falls off the end of the wire and nobody ever sees it -- which is
+// what makes "never ask" a real design option rather than a shortcut (design/strip/Never.dc.html).
+#define PX_ASSUMED 300
+
+namespace px
+{
+
+    // Where each channel sits in the bytes that go out, for one of the six orderings in circulation.
+    // "grb" is WS2812B and is most of what anybody owns; "rgb" is WS2811 and APA106; the rest are clones.
+    // A separate white, when the strip has one, is always last -- SK6812 is "grbw" -- so it is a flag
+    // here rather than a fourth letter, and no ordering in the wild puts it anywhere else.
+    struct Order
+    {
+        uint8_t at[3] = {1, 0, 2}; // at[0] is where RED goes, at[1] green, at[2] blue. Default: grb.
+        bool white = false;
+
+        // Returns false and changes nothing if `s` is not three of r, g and b with none repeated. A
+        // strip left on its old ordering is wrong in a way somebody can see and fix; one left on a half
+        // applied ordering is wrong in a way nobody can describe.
+        bool set(const char *s)
+        {
+            if (!s)
+                return false;
+            uint8_t next[3];
+            bool got[3] = {false, false, false};
+            for (int i = 0; i < 3; i++)
+            {
+                int c = s[i] == 'r' ? 0 : s[i] == 'g' ? 1
+                                      : s[i] == 'b'   ? 2
+                                                      : -1;
+                if (c < 0 || got[c])
+                    return false;
+                got[c] = true;
+                next[c] = (uint8_t)i;
+            }
+            if (s[3] != '\0')
+                return false;
+            memcpy(at, next, sizeof(at));
+            return true;
+        }
+
+        // The three bytes for one pixel of this color, in the order this strip wants them.
+        void bytes(uint8_t r, uint8_t g, uint8_t b, uint8_t *out) const
+        {
+            out[at[0]] = r;
+            out[at[1]] = g;
+            out[at[2]] = b;
+        }
+
+        int per_pixel() const { return white ? 4 : 3; }
+    };
+
+    // The buffer, and what is currently being shown.
+    struct Pixels
+    {
+        uint8_t buf[PX_MOST * 4] = {0};
+        int count = PX_ASSUMED;
+        Order order;
+
+        size_t bytes_used() const { return (size_t)count * order.per_pixel(); }
+
+        void clear() { memset(buf, 0, bytes_used()); }
+
+        void solid(uint8_t r, uint8_t g, uint8_t b, uint8_t w = 0)
+        {
+            const int n = order.per_pixel();
+            for (int i = 0; i < count; i++)
+            {
+                order.bytes(r, g, b, &buf[i * n]);
+                if (order.white)
+                    buf[i * n + 3] = w;
+            }
+        }
+
+        // THE ORDER QUESTION, and the reason it is not just solid() with the mapping turned off.
+        //
+        // The hub works out which three bytes would be red IF the strip is what we are guessing, and
+        // sends those bytes. They go out exactly as given, because applying a mapping here would be
+        // applying the very guess that is being tested.
+        //
+        // It writes a REPEATING THREE-BYTE PATTERN across the whole buffer, and on a strip that carries
+        // a separate white that is the point rather than a bug: three bytes per pixel fed to a part that
+        // eats four misaligns by one byte per pixel and comes out as a candy-stripe instead of one
+        // color. That is the household's "stripes of color" answer, and it tells the hub how many
+        // channels the strip has without anybody having to know the word. So this deliberately ignores
+        // order.white and always strides three.
+        void raw3(uint8_t b0, uint8_t b1, uint8_t b2)
+        {
+            const uint8_t triple[3] = {b0, b1, b2};
+            const size_t span = (size_t)count * (size_t)order.per_pixel();
+            for (size_t i = 0; i < span; i++)
+                buf[i] = triple[i % 3];
+        }
+
+        void set_count(int n) { count = n < 1 ? 1 : n > PX_MOST ? PX_MOST
+                                                                : n; }
+    };
+
+    // THE FILL, and the one thing it must get right.
+    //
+    // Lights come on one at a time from the plug end and the household taps when the far end lights. The
+    // moment the strip is past the real end it is writing to pixels that do not exist, so nothing visible
+    // changes -- which is exactly why it is a fill and not a travelling dot: a dot would simply vanish
+    // and there would be nothing left to tap.
+    //
+    // STOP LATCHES HERE, in the firmware, at the instant the message arrives. Reading a number back to
+    // the hub and letting the hub decide would add however busy the Wi-Fi is to an answer whose only
+    // other error is a person's reaction time -- so a strip would measure short on a busy evening and
+    // right on a quiet one, which is the worst kind of wrong.
+    struct Fill
+    {
+        bool running = false;
+        int at = 0;         // how many are lit
+        uint32_t last = 0;  // when the last one came on
+        uint32_t step = 28; // ms between lights: about eleven seconds for a 5 m strip
+
+        void start(uint32_t now)
+        {
+            running = true;
+            at = 0;
+            last = now;
+        }
+
+        // Advances by however many steps have elapsed, so a loop that stalls does not fall behind. Wraps
+        // to empty when it runs off the end, because missing it has to cost nothing but another pass.
+        void tick(uint32_t now, int most)
+        {
+            if (!running || most < 1)
+                return;
+            while (now - last >= step)
+            {
+                last += step;
+                if (++at > most)
+                    at = 0;
+            }
+        }
+
+        int stop()
+        {
+            running = false;
+            return at < 1 ? 1 : at;
+        }
+    };
+
+    // A SIGNAL: SOMETHING THAT HAPPENS ALONG THE STRIP, MEANS ONE THING, AND IS OVER (design/signal/).
+    //
+    // Not an effect. An effect takes the household's color away to show off; a signal tells somebody
+    // something -- which way to go, that a door is open, how far along a thing is -- and then hands the
+    // light back exactly as it was. Four of them and no fifth without a meaning:
+    //
+    //   WAY    a run of light from one end to the other, `times` passes of `ms` each. `dir` 1 runs away
+    //          from the plug end, -1 toward it; the hub turns "toward the house" into one of those.
+    //   CALL   the whole strip breathing, period `ms`, for `times` breaths -- a door left open.
+    //   FILL   lit from the plug end to `level` of the way along, then gone, `times` over -- how far.
+    //   END    one end lit, `end` 0 the plug end and 1 the far one; blinking at `ms`, or steady when
+    //          `ms` is 0 -- which is how "which end is nearer the house?" is asked.
+    //
+    // DRAWN ON THE STRIP, NOT STREAMED TO IT. A run down a drive is fast motion somebody watches with
+    // intent, and a Wi-Fi hiccup halfway through reads as a broken light. So the hub sends one message
+    // and this draws every frame from a clock on the part.
+    //
+    // `step()` is the reason the caller can obey the WS2812 rule (AGENTS.md section 4): it changes only
+    // when the picture would, so a frame is written only when there is a different one to write.
+    struct Signal
+    {
+        enum Kind : uint8_t { NONE, WAY, CALL, FILL, END };
+        Kind kind = NONE;
+        int8_t dir = 1;
+        uint8_t r = 0, g = 0, b = 0;
+        uint32_t ms = 2200;
+        uint16_t times = 3;
+        uint8_t level = 255; // FILL: how far, out of 255
+        uint8_t end = 0;     // END: 0 the plug end, 1 the far end
+        uint32_t began = 0;
+        bool running = false;
+
+        static Kind kind_of(const char *s)
+        {
+            if (!s) return NONE;
+            if (!strcmp(s, "way")) return WAY;
+            if (!strcmp(s, "call")) return CALL;
+            if (!strcmp(s, "fill")) return FILL;
+            if (!strcmp(s, "end")) return END;
+            return NONE;
+        }
+
+        void start(uint32_t now)
+        {
+            began = now;
+            running = kind != NONE;
+            if (times < 1) times = 1;
+            if (kind != END && ms < 200) ms = 200; // a signal nobody can see is not a signal
+        }
+
+        // Past its last pass. A steady END lasts until something else is shown.
+        bool over(uint32_t now) const
+        {
+            if (!running) return true;
+            if (kind == END && ms == 0) return false;
+            return (now - began) >= (uint64_t)ms * times;
+        }
+
+        // How long the run's glowing tail is: a quarter of the strip, never under three lights, so a
+        // short strip still shows a direction rather than a dot.
+        static int tail(int count) { const int t = count / 4; return t < 3 ? 3 : t; }
+
+        // A number that changes when, and only when, the picture does.
+        uint32_t step(uint32_t now, int count) const
+        {
+            if (!running || count < 1) return 0;
+            const uint32_t t = now - began;
+            const uint32_t pass = kind == END && ms == 0 ? 0 : t / ms, in = kind == END && ms == 0 ? 0 : t % ms;
+            switch (kind)
+            {
+            case WAY: return pass * 100000u + head(in, count) + 1;
+            case CALL: return pass * 1000u + breath(in) / 4 + 1; // 64 levels: smooth, and not a frame a millisecond
+            case FILL: { const int lit = filled(in, count); return pass * 100000u + (uint32_t)lit * 64u + fade(in) / 4 + 1; }
+            case END: return ms == 0 ? 1 : pass * 2 + (in < ms / 2 ? 1 : 2);
+            default: return 0;
+            }
+        }
+
+        // The frame at `now`, into `p`. Everything not part of the signal is dark: a signal is shown on
+        // its own and the household's light comes back whole when it ends, rather than being mixed into.
+        void draw(Pixels &p, uint32_t now) const
+        {
+            p.clear();
+            if (!running || p.count < 1) return;
+            const uint32_t t = now - began;
+            const uint32_t in = kind == END && ms == 0 ? 0 : t % ms;
+            const int n = p.order.per_pixel(), count = p.count;
+            switch (kind)
+            {
+            case WAY:
+            {
+                const int h = head(in, count), tl = tail(count);
+                for (int k = 0; k < tl; k++)
+                {
+                    const int at = h - k;              // in run order: 0 is where the run starts
+                    if (at < 0 || at >= count) continue;
+                    const int i = dir < 0 ? count - 1 - at : at;
+                    const int amt = 255 * (tl - k) / tl;   // brightest at the head, fading behind it
+                    put(p, i, n, amt, k == 0);
+                }
+                break;
+            }
+            case CALL:
+            {
+                const int amt = breath(in);
+                for (int i = 0; i < count; i++) put(p, i, n, amt, false);
+                break;
+            }
+            case FILL:
+            {
+                const int lit = filled(in, count), amt = fade(in);
+                for (int i = 0; i < lit && i < count; i++) put(p, i, n, amt, false);
+                break;
+            }
+            case END:
+            {
+                if (ms != 0 && in >= ms / 2) break;
+                int span = count / 8; if (span < 3) span = 3; if (span > count) span = count;
+                for (int k = 0; k < span; k++) put(p, end ? count - 1 - k : k, n, 255, false);
+                break;
+            }
+            default: break;
+            }
+        }
+
+    private:
+        // Where the head of the run is, in run order. It enters before the first light and leaves past
+        // the last, so the tail runs off the far end rather than stopping on it -- a run that stops is a
+        // bar, and a bar has no direction.
+        int head(uint32_t in, int count) const { return (int)((uint64_t)in * (uint64_t)(count + tail(count)) / ms); }
+        // 0..255 and back, eased, once per `ms`.
+        int breath(uint32_t in) const
+        {
+            const uint32_t half = ms / 2;
+            const uint32_t x = in < half ? in : ms - in;          // 0..half..0
+            const uint64_t lin = (uint64_t)x * 255 / (half ? half : 1);
+            return (int)(lin * lin / 255);                        // squared: a breath dwells low and rises
+        }
+        // A fill rises over the first 70% of a pass, holds, and fades over the last 15%.
+        int filled(uint32_t in, int count) const
+        {
+            const int most = (int)((uint32_t)count * level / 255);
+            const uint32_t rise = ms * 7 / 10;
+            return in >= rise ? most : (int)((uint64_t)most * in / rise);
+        }
+        int fade(uint32_t in) const
+        {
+            const uint32_t from = ms * 85 / 100;
+            if (in < from) return 255;
+            const uint32_t left = ms - in, span = ms - from;
+            return (int)((uint64_t)255 * left / (span ? span : 1));
+        }
+        // One light at `amt` of the signal's color. The head of a run goes white-hot, which is what
+        // makes the direction readable from across a drive rather than only up close.
+        void put(Pixels &p, int i, int n, int amt, bool hot) const
+        {
+            uint8_t rr = (uint8_t)(r * amt / 255), gg = (uint8_t)(g * amt / 255), bb = (uint8_t)(b * amt / 255);
+            if (hot) { rr = (uint8_t)((rr + 255) / 2); gg = (uint8_t)((gg + 255) / 2); bb = (uint8_t)((bb + 255) / 2); }
+            p.order.bytes(rr, gg, bb, &p.buf[i * n]);
+        }
+    };
+
+    // TWO KINDS OF WIRE. A one-wire strip (WS2812, SK6812, WS2811, WS2815) takes its timing from the
+    // data line alone and goes out on RMT. A two-wire strip (APA102, SK9822) has a clock beside its
+    // data, takes any speed it is given, and goes out on SPI. Nothing about a strip says which it is:
+    // the hub says so, and the answer lives in NVS like the order and the length.
+    enum class Wire : uint8_t { ONE = 1, TWO = 2 };
+
+    // WHAT GOES DOWN THE WIRE IS NOT ALWAYS THE PICTURE. On a board that measures its own current the
+    // picture is sent dimmed when it would draw more than a run may carry, and a two-wire strip wants
+    // its bytes framed. Either way it is a COPY: the picture stays as it was drawn, so dimming it
+    // twice is impossible and lifting the dimming later puts back exactly what was there.
+    //
+    // `scale` is out of 256, and 256 is the picture untouched -- byte for byte, not merely close.
+    static inline uint8_t dim(uint8_t b, uint16_t scale)
+    {
+        return scale >= 256 ? b : (uint8_t)(((uint32_t)b * scale + 128) >> 8);
+    }
+
+    // The size a copy has to be for `count` lights on either wire: the two-wire framing is the larger.
+    static inline size_t wire_most(int count)
+    {
+        return 4 + (size_t)count * 4 + 4 + ((size_t)count + 15) / 16;
+    }
+
+    // One-wire: the picture's own bytes, dimmed.
+    static inline size_t one_wire(const Pixels &p, uint16_t scale, uint8_t *out)
+    {
+        const size_t n = p.bytes_used();
+        for (size_t i = 0; i < n; i++)
+            out[i] = dim(p.buf[i], scale);
+        return n;
+    }
+
+    // Two-wire, which is the APA102 frame and also the SK9822's, because the SK9822 differs in one
+    // place and this covers both:
+    //   four bytes of zeros                    the start of a frame
+    //   per light: 0xFF, then three colors     0xE0 and a five-bit brightness, here always the most;
+    //                                          the colors in the order this strip wants them, which
+    //                                          is the same question and the same answer as one-wire
+    //   four bytes of zeros                    the SK9822's latch: without it, it shows each frame
+    //                                          one frame late. An APA102 reads it as nothing
+    //   a zero bit per two lights, rounded up  the clock edges the last lights need to pass the data on
+    // A white byte, if the strip was ever told it had one, is skipped: no two-wire part carries one.
+    static inline size_t two_wire(const Pixels &p, uint16_t scale, uint8_t *out)
+    {
+        size_t at = 0;
+        for (int i = 0; i < 4; i++)
+            out[at++] = 0;
+        const int n = p.order.per_pixel();
+        for (int i = 0; i < p.count; i++)
+        {
+            out[at++] = 0xFF;
+            for (int c = 0; c < 3; c++)
+                out[at++] = dim(p.buf[i * n + c], scale);
+        }
+        const size_t tail = 4 + ((size_t)p.count + 15) / 16;
+        for (size_t i = 0; i < tail; i++)
+            out[at++] = 0;
+        return at;
+    }
+
+    // HOW MUCH LIGHT A PICTURE ASKS FOR: every color byte that will go out, summed. A strip's current
+    // is very nearly this times what one full channel draws, plus what its chips draw dark, which is
+    // what the limiter on rev A predicts from (guard.h).
+    static inline uint32_t load(const Pixels &p, Wire w)
+    {
+        uint32_t sum = 0;
+        const int n = p.order.per_pixel();
+        const int used = w == Wire::TWO ? 3 : n;
+        for (int i = 0; i < p.count; i++)
+            for (int c = 0; c < used; c++)
+                sum += p.buf[i * n + c];
+        return sum;
+    }
+
+    // The ones that touch hardware, declared here and defined in pixels.cpp. Declarations only, so
+    // nothing above them needs a framework and the native test still compiles this header on a Mac --
+    // which is the whole reason the rest of the file is written the way it is.
+    //
+    // `out` is which output, 0 first. An output starts as one-wire; rewire() moves it to the other
+    // peripheral, and refuses on an output with no clock pin.
+    bool begin(int out, const board::Run &pins);
+    bool rewire(int out, Wire w);
+    Wire wire(int out);
+    // EVERY OUTPUT AT ONCE: each one's frame is started, and only then are they waited for, so two
+    // runs cost the longer of the two rather than both. `ps[i]` null sends nothing on output i (its
+    // run is off); `scale[i]` is out of 256 as above.
+    void show(const Pixels *const ps[], const uint16_t scale[], int n);
+
+} // namespace px

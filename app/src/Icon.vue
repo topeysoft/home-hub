@@ -1,0 +1,87 @@
+<!--
+  SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+  SPDX-License-Identifier: AGPL-3.0-or-later
+-->
+<script setup lang="ts">
+const PATHS: Record<string, string> = {
+  globe: 'M12 3.5a8.5 8.5 0 1 0 0 17 8.5 8.5 0 0 0 0-17zM3.5 12h17M12 3.5c2.4 2.4 3.6 5.2 3.6 8.5s-1.2 6.1-3.6 8.5c-2.4-2.4-3.6-5.2-3.6-8.5s1.2-6.1 3.6-8.5z',
+  light: 'M9.5 18h5M10.5 21h3M12 3a6 6 0 0 0-3.7 10.7c.7.6 1.1 1.4 1.2 2.3h5c.1-.9.5-1.7 1.2-2.3A6 6 0 0 0 12 3z',
+  media: 'M6.5 3.5h11a1 1 0 0 1 1 1v15a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1v-15a1 1 0 0 1 1-1zM12 17a3.2 3.2 0 1 0 0-6.4 3.2 3.2 0 0 0 0 6.4zM12 8h.01',
+  tv: 'M3.5 6h17a1 1 0 0 1 1 1v9.5a1 1 0 0 1-1 1h-17a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1zM8.5 21h7',
+  camera: 'M3.5 8.5h17v10h-17zM12 16.5a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM8.5 8.5l1.5-3h4l1.5 3',
+  lock: 'M6 11h12v9.5H6zM9 11V8a3 3 0 0 1 6 0v3M12 15v2',
+  cover: 'M4 4h16v3.5H4zM4 7.5h16M4 11.5h16M4 15.5h16M4 19.5h16M12 7.5v12',
+  fan: 'M12 13.8a1.8 1.8 0 1 0 0-3.6 1.8 1.8 0 0 0 0 3.6zM12 10.2c0-3.2 1.4-5.2 3.6-5.2 1.8 0 2.4 1.6 1 3.2-1.2 1.4-2.8 2-4.6 2zM12 13.8c0 3.2-1.4 5.2-3.6 5.2-1.8 0-2.4-1.6-1-3.2 1.2-1.4 2.8-2 4.6-2zM10.2 12c-3.2 0-5.2-1.4-5.2-3.6 0-1.8 1.6-2.4 3.2-1 1.4 1.2 2 2.8 2 4.6zM13.8 12c3.2 0 5.2 1.4 5.2 3.6 0 1.8-1.6 2.4-3.2 1-1.4-1.2-2-2.8-2-4.6z',
+  sensor: 'M10 4.5a2 2 0 0 1 4 0v8.8a4 4 0 1 1-4 0zM12 9.5v8',
+  motion: 'M12 13.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3zM7.5 7.5a6.5 6.5 0 0 0 0 9M16.5 7.5a6.5 6.5 0 0 1 0 9M4.5 4.5a10.5 10.5 0 0 0 0 15M19.5 4.5a10.5 10.5 0 0 1 0 15',
+  contact: 'M5 3.5h10.5v17H5zM12.5 12h.01M15.5 3.5h3.5v17h-3.5',
+  switch: 'M12 3.5v8.5M6.6 6.6a7.6 7.6 0 1 0 10.8 0',
+  plug: 'M9 3.5v5M15 3.5v5M6.5 8.5h11v3.5a5.5 5.5 0 0 1-11 0zM12 17.5v3',
+  alarm: 'M12 4.5a5 5 0 0 0-5 5v3.2L5.5 16h13L17 12.7V9.5a5 5 0 0 0-5-5zM12 4.5V2.8M10 19a2 2 0 0 0 4 0',
+  appliance: 'M6.5 3.5h11a1 1 0 0 1 1 1v15a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1v-15a1 1 0 0 1 1-1zM5.5 10h13M9 6.5v1.5M9 12.5v3',
+  vacuum: 'M12 20a8 8 0 1 0 0-16 8 8 0 0 0 0 16zM12 14a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM12 4v2',
+  climate: 'M12 3.5v17M12 3.5l-3 3M12 3.5l3 3M12 20.5l-3-3M12 20.5l3-3M4.6 7.75l14.8 8.5M4.6 7.75l4.1-1.1M4.6 7.75l1.1 4.1M19.4 16.25l-4.1 1.1M19.4 16.25l-1.1-4.1M19.4 7.75l-14.8 8.5M19.4 7.75l-4.1-1.1M19.4 7.75l-1.1 4.1M4.6 16.25l4.1 1.1M4.6 16.25l1.1-4.1',
+  home: 'M3.5 11l8.5-7.5 8.5 7.5M5.5 9.5v10h13v-10',
+  back: 'M14.5 5.5l-6.5 6.5 6.5 6.5',
+  close: 'M6 6l12 12M18 6L6 18',
+  check: 'M5 12.5l4.5 4.5L19 7.5',
+  play: 'M8 5.5l10 6.5-10 6.5z',
+  pause: 'M7.5 5h3.5v14H7.5zM13 5h3.5v14H13z',
+  /* a 3D printer: its frame, the gantry, the nozzle, and the bed (design/printers/) */
+  printer: 'M4 21V4h16v17M2.5 21h19M4 7.5h16M10 7.5h4v3.2l-2 1.8-2-1.8zM8.5 17.5h7',
+  stop: 'M7.5 7.5h9v9h-9z',
+  swap: 'M4.5 8.5h14l-3.5-3.5M19.5 15.5h-14l3.5 3.5',
+  next: 'M6 5.5l9 6.5-9 6.5zM17 5v14',
+  prev: 'M18 5.5l-9 6.5 9 6.5zM7 5v14',
+  power: 'M12 3.5v8.5M6.6 6.6a7.6 7.6 0 1 0 10.8 0',
+  volume: 'M4 9.5v5h3.5l5 4v-13l-5 4zM16 9a4.5 4.5 0 0 1 0 6',
+  'volume-low': 'M4 9.5v5h3.5l5 4v-13l-5 4z',
+  mute: 'M4 9.5v5h3.5l5 4v-13l-5 4zM16.5 9.5l4 5M20.5 9.5l-4 5',
+  moon: 'M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z',
+  film: 'M3.5 5.5h17v13h-17zM3.5 9h17M3.5 15h17M7.5 5.5v13M16.5 5.5v13',
+  sparkle: 'M12 3.5l1.8 5.2 5.2 1.8-5.2 1.8L12 17.5l-1.8-5.2L5 10.5l5.2-1.8zM5 17.5l.7 1.8 1.8.7-1.8.7L5 22.5l-.7-1.8-1.8-.7 1.8-.7z',
+  leave: 'M9.5 20.5h-5v-17h5M9.5 12h11M17 8.5l3.5 3.5-3.5 3.5',
+  music: 'M9 18V6l10-2v12M9 18a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0zM19 16a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0z',
+  thermometer: 'M10 13.8V4.5a2 2 0 0 1 4 0v9.3a4 4 0 1 1-4 0zM12 11v5',
+  clock: 'M12 20.5a8.5 8.5 0 1 0 0-17 8.5 8.5 0 0 0 0 17zM12 7.5v5l3 2',
+  refresh: 'M20 12a8 8 0 1 1-2.3-5.6M20 4v4.5h-4.5',
+  sun: 'M12 16.5a4.5 4.5 0 1 0 0-9 4.5 4.5 0 0 0 0 9zM12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M5.6 18.4L7 17M17 7l1.4-1.4',
+  cloud: 'M7 18.5h10a4 4 0 0 0 .5-8 5.5 5.5 0 0 0-10.6 1.4A3.4 3.4 0 0 0 7 18.5z',
+  rain: 'M7 15.5h10a4 4 0 0 0 .5-8 5.5 5.5 0 0 0-10.6 1.4A3.4 3.4 0 0 0 7 15.5zM9 18l-1 2.5M13 18l-1 2.5M17 18l-1 2.5',
+  snow: 'M7 15.5h10a4 4 0 0 0 .5-8 5.5 5.5 0 0 0-10.6 1.4A3.4 3.4 0 0 0 7 15.5zM8.5 19h.01M12 20.5h.01M15.5 19h.01',
+  fog: 'M4 10h16M4 14h16M6 18h12M8 6h8',
+  bolt: 'M13 3L5.5 13.5H11l-1 7.5L18.5 10.5H13z',
+  wind: 'M3.5 9h11a2.5 2.5 0 1 0-2.5-2.5M3.5 13h15a2.5 2.5 0 1 1-2.5 2.5M3.5 17h8a2 2 0 1 1-2 2',
+  pin: 'M12 21s-6.5-6.2-6.5-11a6.5 6.5 0 0 1 13 0c0 4.8-6.5 11-6.5 11zM12 12.5a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5z',
+  search: 'M10.5 17.5a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM15.5 15.5l5 5',
+  plus: 'M12 5.5v13M5.5 12h13',
+  menu: 'M4 7h16M4 12h16M4 17h10',
+  people: 'M9.5 11.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7zM3.5 20.5a6 6 0 0 1 12 0M15.5 4.8a3.5 3.5 0 0 1 0 6.4M17.5 14.6a6 6 0 0 1 3 5.9',
+  minus: 'M5.5 12h13',
+  edit: 'M4 20h4l10.5-10.5a2.1 2.1 0 0 0-3-3L5 17v3zM13.5 8.5l2 2',
+  target: 'M12 19a7 7 0 1 0 0-14 7 7 0 0 0 0 14zM12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M12 13.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3z',
+  phone: 'M8 3.5h8a1.5 1.5 0 0 1 1.5 1.5v14A1.5 1.5 0 0 1 16 20.5H8A1.5 1.5 0 0 1 6.5 19V5A1.5 1.5 0 0 1 8 3.5zM10.5 17.5h3',
+  wifi: 'M2.6 8.7a15 15 0 0 1 18.8 0M6.1 12.5a10 10 0 0 1 11.8 0M9.5 16.3a5 5 0 0 1 5 0M12 19.9h.01',
+  /* The same aerial with its outer arcs missing. A list of networks where every row wears a full
+     signal is a list that has quietly stopped answering the question it is there to answer. */
+  'wifi-mid': 'M6.1 12.5a10 10 0 0 1 11.8 0M9.5 16.3a5 5 0 0 1 5 0M12 19.9h.01',
+  'wifi-low': 'M9.5 16.3a5 5 0 0 1 5 0M12 19.9h.01',
+  alert: 'M12 20.5a8.5 8.5 0 1 0 0-17 8.5 8.5 0 0 0 0 17zM12 7.8v5M12 16.2h.01',
+  share: 'M8.5 12a2.5 2.5 0 1 0-5 0 2.5 2.5 0 0 0 5 0zM20.5 6a2.5 2.5 0 1 0-5 0 2.5 2.5 0 0 0 5 0zM20.5 18a2.5 2.5 0 1 0-5 0 2.5 2.5 0 0 0 5 0zM8.3 10.8l7-3.5M8.3 13.2l7 3.5',
+  /* A strip the controller is keeping dark to protect it (design/controller-panel/InRoomA.dc.html):
+     being looked after rather than broken, so a shield and never a warning sign. */
+  shield: 'M12 3l7 3v5c0 4.4-3 8.3-7 10-4-1.7-7-5.6-7-10V6z',
+  /* Turned round: a run going the other way round the roof (design/roofline/TapA.dc.html). */
+  chevron: 'M9 5l7 7-7 7',
+  turn: 'M4 12a8 8 0 0 1 13.7-5.6L20 8.5M20 4v4.5h-4.5M20 12a8 8 0 0 1-13.7 5.6L4 15.5M4 20v-4.5h4.5',
+}
+const FILLED = new Set(['play', 'pause', 'next', 'prev'])
+defineProps<{ name: string; size?: number }>()
+</script>
+
+<template>
+  <svg :width="size ?? 22" :height="size ?? 22" viewBox="0 0 24 24" :fill="FILLED.has(name) ? 'currentColor' : 'none'"
+       stroke="currentColor" :stroke-width="FILLED.has(name) ? 0.8 : 1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <path :d="PATHS[name] ?? PATHS.switch" />
+  </svg>
+</template>

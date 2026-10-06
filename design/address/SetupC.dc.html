@@ -1,0 +1,164 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@200;300;400;500;600;700&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Plus Jakarta Sans", -apple-system, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      /* the panel's own tokens, from app/src/panel.css */
+      --ink: #f1eee8;
+      --ink-2: #b9b5ad;
+      --ink-3: #7f7d77;
+      --lamp: #e9b872;
+      --live: #74c69d;
+      --warn: #e08a8a;
+      --glass: linear-gradient(148deg, oklch(0.397 .014 281 / .34), oklch(0.327 .012 281 / .12) 46%, oklch(0.357 .014 281 / .24));
+      --rim: linear-gradient(158deg, rgba(255,255,255,0.69), rgba(255,255,255,.08) 34%, rgba(14,14,22,0.04) 62%, rgba(255,255,255,0.40));
+      --inner: inset 0 -46px 56px -48px rgba(20,23,31,0.9);
+      --drop: 0 27px 61px -26px rgba(15,17,26,0.67), 0 2px 10px rgba(15,17,26,0.32);
+      --sweep: .12;
+    }
+    a { color: #e9b872; } a:hover { color: #b8863e; }
+    .gl {
+      position: relative;
+      background: var(--glass);
+      backdrop-filter: blur(26px) saturate(1.6) brightness(1.04);
+      -webkit-backdrop-filter: blur(26px) saturate(1.6) brightness(1.04);
+      box-shadow: var(--inner), var(--drop);
+    }
+    .gl::after {
+      content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+      padding: 1.2px; background: var(--rim);
+      -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+      -webkit-mask-composite: xor; mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+      mask-composite: exclude;
+    }
+    .gl::before {
+      content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+      background: linear-gradient(112deg, transparent 26%, rgba(255,255,255,var(--sweep)) 45%, rgba(255,255,255,.02) 56%, transparent 64%);
+    }
+    .dsp { /* the titles, in the face the board is already in -- see app/src/panel.css */
+           font-family: inherit; font-weight: 400; letter-spacing: -.025em; }
+    .cap { font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3); }
+    .ic { flex: 0 0 auto; }
+    /* a thing the house wants you to decide, as the panel draws it */
+    .nudge {
+      display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 12px;
+      padding: 8px 18px 8px 8px; border-radius: 26px;
+      background: linear-gradient(rgba(233,184,114,.1), rgba(233,184,114,.1)), rgba(26,28,34,.82);
+      border: 1px solid rgba(233,184,114,.28);
+    }
+    .nudge-ic {
+      width: 40px; height: 40px; border-radius: 13px; display: grid; place-items: center;
+      background: rgba(233,184,114,.9); color: #2a1c10; flex: 0 0 auto;
+    }
+    .nudge-t { font-size: 15.5px; font-weight: 500; line-height: 1.3; }
+    .nudge-s { font-size: 13px; color: var(--ink-2); margin-top: 1px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  
+    /* --- for this collection: the panel's own values, from app/src/panel.css --- */
+    body { --surface: rgba(26,28,34,.68); --surface-hi: rgba(255,255,255,.08); --edge: rgba(255,255,255,.1);
+           --edge-hi: rgba(255,255,255,.18); --muted: oklch(0.594 0.01 269); --ink-2: oklch(0.76 0.006 269);
+           --lamp-ink: #2a1c07; --bg: #0c0d10; }
+    .toggle { position: relative; flex: 0 0 auto; width: 50px; height: 30px; border-radius: 999px;
+              background: var(--surface-hi); border: 1px solid var(--edge-hi); }
+    .toggle i { position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: var(--ink-2); }
+    .toggle.on { background: var(--lamp); border-color: transparent; }
+    .toggle.on i { transform: translateX(20px); background: var(--lamp-ink); }
+    .btn { display: inline-flex; align-items: center; gap: 8px; padding: 12px 20px; border-radius: 999px;
+           background: var(--ink); color: var(--bg); font-weight: 500; font-size: 17px; }
+    .btn.big { padding: 15px 28px; }
+    .btn.small { padding: 8px 14px; font-size: 14px; }
+    .btn.ghost { background: var(--surface-hi); color: var(--ink); border: 1px solid var(--edge); }
+    .rows > li { display: grid; grid-template-columns: 90px 1fr auto; align-items: center; gap: 14px; padding: 14px 0; border-bottom: 1px solid var(--edge); }
+    .hub-k { font-size: 11.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .hub-v { font-size: 14.5px; line-height: 1.4; }
+    .hub-sub { display: block; font-size: 13px; color: var(--muted); margin-top: 3px; }
+    .plist { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+    .plist li { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px; padding: 10px 12px;
+                border-radius: 16px; background: var(--surface); border: 1px solid var(--edge); }
+    .plist li.out4 { grid-template-columns: auto 1fr auto auto; }
+    .pic { width: 32px; height: 32px; border-radius: 10px; display: grid; place-items: center; background: var(--surface-hi); color: var(--ink-2); }
+    .pname { font-size: 15px; font-weight: 500; display: block; }
+    .psub { font-size: 13px; color: var(--muted); display: block; margin-top: 1px; }
+    .me { color: var(--lamp); font-weight: 400; }
+    .person { width: 32px; height: 32px; border-radius: 50%; display: grid; place-items: center; font-size: 13px; color: rgba(255,255,255,.85); }
+    .outside { display: inline-flex; align-items: center; gap: 10px; font-size: 13px; color: var(--ink-2); }
+    .setup-mark { width: 64px; height: 64px; border-radius: 22px; display: grid; place-items: center; background: var(--surface);
+                  border: 1px solid var(--edge-hi); color: var(--lamp); margin-bottom: 26px; }
+    .setup-lede { margin: 14px 0 22px; color: var(--ink-2); font-size: 18px; line-height: 1.4; }
+    .setup-foot { font-size: 13.5px; color: var(--muted); line-height: 1.45; }
+    .steps { list-style: none; margin: 0 0 24px; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+    .steps li { display: grid; grid-template-columns: 28px 1fr; gap: 12px; align-items: start; font-size: 15.5px; line-height: 1.35; }
+    .steps b { font-weight: 500; }
+    .steps .n { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-size: 13px;
+                background: var(--surface-hi); border: 1px solid var(--edge); color: var(--ink-2); }
+    .steps .s { display: block; font-size: 13.5px; color: var(--muted); margin-top: 2px; }
+    .icon-app { width: 60px; display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 11.5px; color: var(--ink-2); }
+    .icon-app i { width: 60px; height: 60px; border-radius: 15px; display: grid; place-items: center;
+                  background: linear-gradient(160deg, #2a2f4a, #14162a); border: 1px solid rgba(255,255,255,.12); }
+    .addr { font-variant-numeric: tabular-nums; color: var(--ink); font-weight: 500; }
+    .pulse { width: 8px; height: 8px; border-radius: 50%; background: var(--lamp); box-shadow: 0 0 0 5px rgba(233,184,114,.16); }
+
+    .input { height: 50px; padding: 0 14px; border-radius: 14px; background: var(--surface-hi); border: 1px solid var(--edge);
+             font-size: 17px; display: flex; align-items: center; }
+    .field-label { font-size: 13.5px; color: var(--ink-2); display: block; margin-bottom: 6px; }
+    .addr-in { display: flex; align-items: center; gap: 0; }
+    .addr-in .input { border-radius: 14px 0 0 14px; width: 220px; border-right: 0; color: var(--ink); }
+    .addr-in .tail { height: 50px; padding: 0 14px; display: flex; align-items: center; border-radius: 0 14px 14px 0;
+                     background: rgba(255,255,255,.03); border: 1px solid var(--edge); color: var(--ink-2); font-size: 17px; }
+    .caret { width: 1.5px; height: 22px; background: var(--lamp); margin-left: 1px; }
+    .ok { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; color: var(--live); }
+    .no { display: inline-flex; align-items: center; gap: 8px; font-size: 14px; color: var(--danger, #e08a8a); }
+    .chips { display: flex; gap: 8px; flex-wrap: wrap; }
+    .chip { height: 34px; padding: 0 14px; border-radius: 999px; display: inline-flex; align-items: center; font-size: 14px;
+            background: var(--surface-hi); border: 1px solid var(--edge-hi); }
+    .chip b { font-weight: 500; } .chip span { color: var(--muted); }
+    .note { display: flex; gap: 10px; align-items: flex-start; padding: 12px 14px; border-radius: 14px; background: var(--surface);
+            border: 1px solid var(--edge); color: var(--ink-2); font-size: 14px; line-height: 1.45; }
+    .note .ic { margin-top: 2px; color: var(--ink-2); }
+    .form { padding: 18px 20px 20px; border-radius: 22px; background: rgba(255,255,255,.035); border: 1px solid var(--edge-hi); }
+    .quiet-link { font-size: 13.5px; color: var(--muted); } .quiet-link u { color: var(--ink-2); text-underline-offset: 3px; }
+    .btn { white-space: nowrap; }
+    .quiet-link { flex: 1 1 auto; text-align: right; }
+    .setup-step { font-size: 11.5px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin: 0 0 12px; }
+  </style>
+</helmet>
+
+
+<!-- C -- IN SETUP. One more question at the end of the first ten minutes, after What's in the house? and before the house is ready: the address, already filled in from the name the house was just given, with Not now beside it. -->
+<div style="position: relative; width: 1440px; height: 900px; overflow: hidden; background: #101119; color: var(--ink); font-size: 17px; line-height: 1.4;">
+
+  <div style="position: absolute; inset: 0; background: linear-gradient(#191b2b 0%, #141623 55%, #101118 100%);"></div>
+  <div style="position: absolute; left: 1110px; top: 96px; width: 50px; height: 50px; border-radius: 50%; background: rgba(200,200,212,.45); box-shadow: 0 0 140px 70px rgba(160,170,200,.07);"></div>
+  <svg style="position: absolute; left: 0; bottom: 0;" width="1440" height="250" viewBox="0 0 1440 250"><path d="M0 60 C200 30 380 80 620 64 S 1000 30 1180 50 S 1380 60 1440 52 V250 H0Z" fill="rgba(10,10,14,.5)"/></svg>
+
+  <div style="position: absolute; left: 420px; top: 252px; width: 640px;">
+    <p class="setup-step">Step 6 of 6</p>
+    <div class="dsp" style="font-size: 54px; line-height: 1.02;">From outside, too?</div>
+    <p class="setup-lede" style="max-width: 560px;">Temi&rsquo;s house can have an address of its own, so the phones you choose can open it from anywhere. It can wait if you would rather.</p>
+    <div style="width: 620px;"><div class="form">
+        <span class="field-label">The house&rsquo;s address</span>
+        <div style="display: flex; align-items: center; gap: 18px;">
+          <span class="addr-in"><span class="input">temi<span class="caret"></span></span><span class="tail">.elyir.app</span></span>
+          <span class="ok"><svg class="ic" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.2 4.2L19 7"/></svg> temi.elyir.app is free</span>
+        </div>
+        <div class="note" style="margin-top: 16px;"><span class="ic"><svg class="ic" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11l8-6 8 6v8a1 1 0 01-1 1H5a1 1 0 01-1-1z"/></svg></span><span>Included with this hub until October 2028. If it ever lapses, or this service is down, the house works exactly as it does now on its own Wi&#8209;Fi; only reaching it from outside stops.</span></div>
+        <div style="display: flex; align-items: center; gap: 16px; margin-top: 18px;">
+          <span class="btn">Give it this address</span><span class="btn ghost">Not now</span>
+          <span class="quiet-link" style="margin-left: auto;">Have a server of your own? <u>Use it instead</u></span>
+        </div>
+      </div></div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

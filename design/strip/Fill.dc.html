@@ -1,0 +1,112 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Instrument Sans", -apple-system, "SF Pro Text", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      --bg: #0c0d10; --surface: rgba(26,28,34,.68); --surface-hi: rgba(255,255,255,.08);
+      --edge: rgba(255,255,255,.1); --edge-hi: rgba(255,255,255,.18);
+      --ink: #f1eee8; --ink-2: #b9b5ad; --muted: #7f7d77;
+      --lamp-rgb: 233,184,114; --lamp: rgb(var(--lamp-rgb)); --lamp-ink: #2a1c07;
+      --live-rgb: 116,198,157; --live: rgb(var(--live-rgb));
+    }
+    .dsp { font-weight: 400; letter-spacing: -.025em; text-wrap: balance; }
+    .cap { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .sheet { width: 560px; border-radius: 26px; background: rgba(22,24,30,.92);
+             border: 1px solid var(--edge-hi); box-shadow: 0 40px 100px -30px rgba(0,0,0,.9); overflow: hidden; }
+    .sheet h2 { margin: 0; font-size: 36px; line-height: 1.05; font-weight: 400; letter-spacing: -.025em; }
+    .lede { margin: 0 0 20px; color: var(--ink-2); font-size: 15px; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 15px 28px;
+           border-radius: 999px; background: var(--ink); color: var(--bg); font-weight: 500; font-size: 18px; }
+    .btn.ghost { background: var(--surface-hi); color: var(--ink); border: 1px solid var(--edge); font-size: 16px; padding: 12px 20px; }
+    .t1 { font-size: 15.5px; font-weight: 500; }
+    .t2 { font-size: 13px; color: var(--muted); }
+    /* the strip itself: real pixels, at a real pitch, drawn the way the thing is built */
+    .run { position: relative; width: 460px; height: 26px; }
+    .px { position: absolute; inset: 0; border-radius: 4px;
+          background: repeating-linear-gradient(90deg, rgba(255,255,255,.13) 0 4px, transparent 4px 7px); }
+    .px.lit { background: repeating-linear-gradient(90deg, var(--lamp) 0 4px, transparent 4px 7px); }
+  </style>
+</helmet>
+
+<div style="position: relative; width: 1440px; height: 900px; overflow: hidden; background: var(--bg); color: var(--ink); font-size: 17px; line-height: 1.4;">
+
+  <div style="position: absolute; inset: 0; background: linear-gradient(rgb(29,33,46) 0%, rgb(41,42,63) 44%, rgb(92,63,57) 84%, rgb(62,44,42) 100%);"></div>
+  <div style="position: absolute; left: -222px; top: -135px; width: 1855px; height: 1156px; background: radial-gradient(58% 54% at 30% 64%, rgba(72,63,135,.4), transparent 68%), radial-gradient(62% 52% at 54% 110%, rgba(55,51,100,.44), transparent 72%);"></div>
+
+  <div style="position: absolute; left: 40px; top: 104px; display: flex; gap: 20px; filter: blur(9px); opacity: .8;">
+    <div style="width: 300px; height: 422px; border-radius: 26px; background: rgba(var(--lamp-rgb),.16); border: 1px solid rgba(255,255,255,.12);"></div>
+    <div style="width: 300px; height: 422px; border-radius: 26px; background: rgba(26,28,34,.7); border: 1px solid rgba(255,255,255,.1);"></div>
+    <div style="width: 300px; height: 422px; border-radius: 26px; background: rgba(26,28,34,.7); border: 1px solid rgba(255,255,255,.1);"></div>
+    <div style="width: 300px; height: 422px; border-radius: 26px; background: rgba(26,28,34,.7); border: 1px solid rgba(255,255,255,.1);"></div>
+  </div>
+  <div style="position: absolute; inset: 0; background: rgba(6,7,9,.5);"></div>
+
+  <div class="cap" style="position: absolute; left: 60px; top: 44px;">A &mdash; it fills, and you stop it</div>
+
+  <!-- ================================ the sheet ================================ -->
+  <div class="sheet" style="position: absolute; left: 440px; top: 142px;">
+    <div style="display: flex; align-items: flex-start; gap: 14px; padding: 26px 22px 6px 28px;">
+      <h2 class="dsp" style="flex: 1;">How far does it go?</h2>
+      <div style="width: 38px; height: 38px; border-radius: 999px; background: var(--surface-hi); border: 1px solid var(--edge); display: grid; place-items: center;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink-2)" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </div>
+    </div>
+    <div style="padding: 4px 28px 26px;">
+      <p class="lede">It is lighting up one at a time, from the end it plugs in at. Tap the moment the far end of your strip comes on.</p>
+
+      <!-- the strip, mid-chase: lit behind the head, dark in front of it -->
+      <div style="position: relative; height: 238px; border-radius: 20px; background: rgba(255,255,255,.03); border: 1px solid var(--edge); margin-bottom: 20px; overflow: hidden;">
+
+        <!-- what the light is doing to the shelf it is taped under -->
+        <div style="position: absolute; left: 0; right: 0; top: 24px; height: 190px; background: radial-gradient(40% 58% at 27% 50%, rgba(var(--lamp-rgb),.26), transparent 72%);"></div>
+
+        <div style="position: absolute; left: 22px; top: 106px;">
+          <div class="run">
+            <div class="px"></div>
+            <!-- everything behind the leading edge is fully on: this is a fill, not a runner -->
+            <div style="position: absolute; left: 0; top: 0; width: 232px; height: 26px; overflow: hidden;
+                        filter: drop-shadow(0 0 9px rgba(var(--lamp-rgb),.75));">
+              <div class="px lit" style="width: 460px;"></div>
+            </div>
+            <!-- the leading edge, a moment before the next one lights -->
+            <div style="position: absolute; left: 230px; top: -3px; width: 4px; height: 32px; border-radius: 2px;
+                        background: #fff6e6; box-shadow: 0 0 20px 5px rgba(var(--lamp-rgb),.85);"></div>
+          </div>
+          <div style="display: flex; justify-content: space-between; width: 460px; margin-top: 12px;">
+            <span class="t2">Where it plugs in</span>
+            <span class="t2">&hellip; still dark, still filling</span>
+          </div>
+        </div>
+
+        <div style="position: absolute; left: 22px; bottom: 16px;">
+          <span class="t2" style="display: inline-flex; align-items: center; gap: 8px;">
+            <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--lamp); box-shadow: 0 0 10px rgba(var(--lamp-rgb),.9);"></span>
+            Missed it? It empties and fills again, as many times as you need
+          </span>
+        </div>
+      </div>
+
+      <span class="btn" style="width: 100%;">That&rsquo;s the whole of it</span>
+
+      <div style="display: flex; align-items: center; gap: 10px; margin-top: 14px;">
+        <span class="btn ghost" style="flex: 1;">Slower</span>
+        <span class="btn ghost" style="flex: 1;">Start again</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>

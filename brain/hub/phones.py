@@ -1,0 +1,328 @@
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
+"""The phones that belong to the house.
+
+Being on the Wi‑Fi gets a phone nothing on its own once the house has a code. A phone gets in one of
+three ways: the person types the code on it; someone at a paired screen taps Allow (and types the code)
+after the phone asks; or it is the screen that set the code during setup. Each phone holds a random
+token in a cookie; the hub keeps only the hash, so removing a phone deletes the hash and the phone is
+out, at once, with nothing on it worth keeping. Phones can be let in for a day or a weekend, and every
+one starts home-only: reaching the house from outside is a separate promotion (the relay, when it
+exists, checks `remote`). Without a code the house is open on the LAN, as it always was; the join
+screen never appears, and setting a code is what turns the door on.
+"""
+import hashlib, json, os, secrets, time, uuid
+from pathlib import Path
+
+from .settings import DATA
+
+COOKIE = "hub_phone"
+ASK_TTL = 10 * 60          # an unanswered ask fades after ten minutes
+SEEN_EVERY = 5 * 60        # last_seen is written at most this often
+SPANS = {"day": 24 * 3600, "weekend": 3 * 24 * 3600, "keep": None}
+
+# Which phones may decide who else gets in, by how they got in themselves.
+#
+# The screen that set the house up, and the phones whose owner typed the code on them. NOT a phone that
+# was let in at a wall -- `how` is "wall" for those, meaning "admitted by somebody at a wall", and being
+# admitted is not the same as being able to admit. That difference is the whole reason `how` is written
+# down, and until now nothing read it: the code was the only thing between a phone let in for the
+# afternoon and the door to the rest of the house.
+#
+# A second wall panel becomes one of these the way it already does -- somebody stands at it and types the
+# code -- rather than by being let in from the first wall, which would make it a guest that happens to be
+# screwed to a wall. `kind` is not consulted anywhere here on purpose: it is a guess from the user agent
+# (api.py), so it can say whatever the phone holding it wants it to say.
+KEYS = ("setup", "code")
+
+
+def holds_keys(p: dict | None) -> bool:
+    """May this phone hand out keys to the house, or only hold its own?"""
+    return bool(p) and p.get("how") in KEYS
+
+
+def _hash(token: str) -> str:
+    return hashlib.sha256(token.encode()).hexdigest()
+
+
+class Phones:
+    def __init__(self, hub, path: Path | None = None):
+        self.hub = hub
+        self.path = path or DATA / "phones.json"
+        self.moves: dict[str, tuple[str, float]] = {}   # in memory: a one-time move code -> (phone id, good until)
+        self.asks: dict[str, dict] = {}      # in memory: id -> {"id", "name", "asked", "token": str | None, "denied": bool, "expires"}
+        try: self.data = json.loads(self.path.read_text()) if self.path.exists() else []
+        except Exception: self.data = []
+
+    # ---- the list ----
+    def _save(self):
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        tmp = self.path.with_suffix(".tmp")
+        tmp.write_text(json.dumps(self.data, indent=1))
+        os.replace(tmp, self.path)
+
+    def _sweep(self):
+        """Drop phones whose stay is over and asks nobody answered."""
+        now = time.time()
+        gone = [p for p in self.data if p.get("expires") and p["expires"] < now]
+        if gone:
+            self.data = [p for p in self.data if p not in gone]
+            for p in gone: self.hub.log.add("phone", p["id"], None, "left", source="hub", detail={"name": p["name"], "why": "its stay was over"})
+            self._save(); self._changed()
+        for k, a in list(self.asks.items()):
+            if now - a["asked"] > ASK_TTL and not a.get("token"): self.asks.pop(k, None)
+
+    @staticmethod
+    def _public(p: dict, me: dict | None = None) -> dict:
+        return {k: p.get(k) for k in ("id", "name", "kind", "joined", "expires", "remote", "last_seen", "how")} | {
+            "me": bool(me and me["id"] == p["id"]), "moved": bool((p.get("moved_to") or {}).get("at")),
+            # in the Houses app: the move since 3 October. A phone that moved only to the house's own name is offered it once more.
+            "in_app": bool((p.get("moved_to") or {}).get("app"))}
+
+    def list(self, me: dict | None = None) -> dict:
+        """What this phone may see. A phone that holds no keys sees itself and nothing else.
+
+        Everyone in the house used to get the whole roster -- every name, how each one got in, when each
+        was last seen, and who was knocking right now. That is the household and its visitors, handed to
+        a phone let in for the afternoon. It is also what put the knock on their screen at all: the pane
+        rises on whatever is in `asks`, so a guest with no asks has nothing to answer.
+        """
+        self._sweep()
+        rows = sorted(self.data, key=lambda p: p.get("joined") or 0)
+        if me and not holds_keys(me):
+            return {"phones": [self._public(p, me) for p in rows if p["id"] == me["id"]], "asks": []}
+        return {"phones": [self._public(p, me) for p in rows],
+                "asks": [self._ask_public(a) for a in self.asks.values() if not a.get("token") and not a.get("denied")]}
+
+    def get(self, phone_id: str) -> dict | None:
+        return next((p for p in self.data if p["id"] == phone_id), None)
+
+    def identify(self, token: str | None) -> dict | None:
+        """The phone behind a cookie, or None. Touches last_seen now and then."""
+        if not token: return None
+        self._sweep()
+        h = _hash(token)
+        p = next((p for p in self.data if p.get("hash") == h or h in (p.get("moved_to") or {}).get("hashes", [])), None)
+        if not p: return None
+        if time.time() - (p.get("last_seen") or 0) > SEEN_EVERY:
+            p["last_seen"] = time.time(); self._save()
+        return p
+
+    # ---- getting in ----
+    def _admit(self, name: str, kind: str, how: str, span: str | None = None) -> tuple[dict, str]:
+        token = secrets.token_urlsafe(32)
+        life = SPANS.get(span or "keep")
+        p = {"id": uuid.uuid4().hex[:12], "name": name, "kind": kind, "joined": time.time(), "expires": (time.time() + life) if life else None,
+             "remote": False, "last_seen": time.time(), "how": how, "hash": _hash(token)}
+        self.data.append(p); self._save()
+        self.hub.log.add("phone", p["id"], None, "joined", source="user", detail={"name": name, "how": how, "span": span or "keep"})
+        self._changed()
+        return p, token
+
+    def with_code(self, name: str, kind: str = "phone") -> tuple[dict, str]:
+        """The code was typed on the phone itself: it is the owner's, and it stays."""
+        return self._admit(self._clean(name) or "A phone", kind, "code")
+
+    def from_setup(self, kind: str = "wall") -> tuple[dict, str]:
+        """The screen that set the code during setup is paired without asking; it is the wall."""
+        return self._admit("Wall screen" if kind == "wall" else "The phone that set up the house", kind, "setup")
+
+    def ask(self, name: str, kind: str = "phone") -> dict:
+        """A phone on the Wi‑Fi asks to join. Nothing is issued until a paired screen allows it."""
+        self._sweep()
+        a = {"id": uuid.uuid4().hex[:12], "name": self._clean(name) or "A phone", "kind": kind, "asked": time.time(), "token": None, "denied": False, "expires": None}
+        self.asks[a["id"]] = a
+        self.hub.log.add("phone", a["id"], None, "asked", source="user", detail={"name": a["name"]})
+        self._changed()
+        return self._ask_public(a)
+
+    def allow(self, ask_id: str, span: str = "keep") -> dict:
+        a = self.asks.get(ask_id)
+        if not a or a.get("token") or a.get("denied"): raise KeyError("That phone is no longer asking.")
+        if span not in SPANS: raise ValueError("For today, for the weekend, or keep.")
+        p, token = self._admit(a["name"], a.get("kind") or "phone", "wall", span)
+        a["token"], a["phone"], a["allowed"] = token, p["id"], time.time()
+        # _admit already said the phones changed, but it said it a line too early: the ask still had no
+        # token then, so every screen was told the phone was in AND that it was still at the door. Say it
+        # again now that the ask is answered, so the knock clears off the walls that did not answer it.
+        self._changed()
+        return self._public(p)
+
+    def deny(self, ask_id: str):
+        a = self.asks.pop(ask_id, None)
+        if a: self.hub.log.add("phone", a["id"], None, "not now", source="user", detail={"name": a["name"]}); self._changed()
+
+    def claim(self, ask_id: str) -> tuple[str, dict | None, str | None]:
+        """The asking phone polls. ('waiting' | 'allowed' | 'gone', phone, token). The token is handed over once."""
+        self._sweep()
+        a = self.asks.get(ask_id)
+        if not a or a.get("denied"): return "gone", None, None
+        if not a.get("token"): return "waiting", None, None
+        self.asks.pop(ask_id, None)
+        return "allowed", self.get(a["phone"]), a["token"]
+
+    # ---- leaving ----
+    # ---- moving to the house's own name (design/away/, C) ----
+    # A phone is remembered under the name it joined on, because a browser keeps its cookie per name. Moving it
+    # to <house>.elyir.app is a hand-off made at home: the phone, already the house's, asks for a code here,
+    # opens the house's own name with it, and is given a token there for the SAME phone -- same record, same
+    # name, same stay, same `remote`. Its old token keeps working until the household removes the old icon,
+    # so a move that is abandoned halfway costs nothing. The code is good once, for ten minutes, and is only
+    # ever minted for a phone that is already in, from inside the house.
+    MOVE_TTL = 10 * 60
+    # The code is typed: on an iPhone the Home Screen app keeps its own storage, so a house is carried into the app
+    # by a person reading eight characters off one screen and typing them on the other (design/houses/, AppSafari).
+    # No 0/O, no 1/I/L. 31^8 is about 850 billion, and the claim is open from away, so wrong ones are counted --
+    # for the whole house, not per address: behind the house's own proxy and the relay every phone is one address.
+    MOVE_ALPHABET = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"
+    MOVE_WRONG, MOVE_WRONG_WINDOW = 10, 10 * 60
+
+    def start_move(self, phone_id: str) -> str:
+        if not self.get(phone_id): raise KeyError(phone_id)
+        now = time.time()
+        self.moves = {c: m for c, m in self.moves.items() if m[1] > now}
+        code = "".join(secrets.choice(self.MOVE_ALPHABET) for _ in range(8))
+        self.moves[code] = (phone_id, now + self.MOVE_TTL)
+        return code
+
+    @staticmethod
+    def move_code(typed: str) -> str:
+        """What a person typed, as the code: case, spaces and dashes are how it was read aloud, not part of it."""
+        return "".join(c for c in (typed or "").upper() if c.isalnum())
+
+    def move_wait(self) -> float:
+        """Seconds before another claim is listened to, once ten wrong codes have come in ten minutes."""
+        now = time.time()
+        self.move_misses = [t for t in getattr(self, "move_misses", []) if t > now - self.MOVE_WRONG_WINDOW]
+        return (self.move_misses[0] + self.MOVE_WRONG_WINDOW - now) if len(self.move_misses) >= self.MOVE_WRONG else 0.0
+
+    def claim_move(self, code: str, into_app: bool = False) -> tuple[dict, str] | None:
+        """The phone, and a new token for it, for a code minted at home in the last ten minutes. Once only."""
+        m = self.moves.pop(self.move_code(code), None)
+        if not m: self.move_misses = getattr(self, "move_misses", []) + [time.time()]
+        if not m or m[1] < time.time(): return None
+        p = self.get(m[0])
+        if not p: return None
+        token = secrets.token_urlsafe(32)
+        moved = p.setdefault("moved_to", {"at": None, "hashes": []})
+        moved["hashes"] = (moved.get("hashes") or [])[-2:] + [_hash(token)]   # a phone moved three times keeps the last three
+        moved["at"] = time.time()
+        if into_app: moved["app"] = True
+        self._save()
+        self.hub.log.add("phone", p["id"], None, "moved", source="user", detail={"name": p["name"]})
+        self._changed()
+        return p, token
+
+    def remove(self, phone_id: str) -> bool:
+        p = self.get(phone_id)
+        if not p: return False
+        self.data.remove(p); self._save()
+        self.hub.log.add("phone", p["id"], None, "removed", source="user", detail={"name": p["name"]})
+        self._changed()
+        return True
+
+    def set_remote(self, phone_id: str, remote: bool) -> dict:
+        p = self.get(phone_id)
+        if not p: raise KeyError("No such phone.")
+        p["remote"] = bool(remote); self._save()
+        self.hub.log.add("phone", p["id"], None, "can reach the house from outside" if remote else "home only", source="user", detail={"name": p["name"]})
+        self._changed()
+        return self._public(p)
+
+    # ---- helpers ----
+    @staticmethod
+    def _clean(name: str) -> str:
+        return " ".join((name or "").split())[:40]
+
+    @staticmethod
+    def _ask_public(a: dict) -> dict:
+        return {"id": a["id"], "name": a["name"], "kind": a.get("kind"), "asked": a["asked"]}
+
+    def _changed(self):
+        """Tell the panels the phones changed -- and only that.
+
+        This is one message to every open panel at once, so it cannot carry the roster: what a phone may
+        see depends on which phone it is, and that is a question only `list` can answer, per request, with
+        the cookie in hand. So the panels are nudged and each asks for its own answer.
+        """
+        try: self.hub._broadcast(json.dumps({"type": "phones"}))
+        except Exception: pass
+
+
+# ---- which requests a phone may make before it belongs ----
+# /bridge/firmware/ is a puck, not a phone: it has broker credentials and no cookie. What it fetches
+# carries no secret -- the shipped image is blank until the cable writes to it -- and the only name
+# that answers is the hash the hub is offering today (hub/bridge_updates.py).
+OPEN_PREFIXES = ("/phones/claim/", "/assets/", "/sounds/", "/icons/", "/bridge/firmware/")
+OPEN_PATHS = {"/", "/alive", "/phones/me", "/phones/ask", "/phones/code", "/phones/move/claim", "/qr.svg", "/phone", "/index.html", "/manifest.webmanifest", "/sw.js", "/favicon.ico", "/favicon.svg", "/robots.txt"}
+OPEN_SUFFIXES = (".js", ".css", ".svg", ".png", ".ico", ".woff2", ".webmanifest", ".json", ".html", ".txt", ".map")
+NOT_THE_APP = {"/openapi.json"}
+
+
+# ---- how a request reached the house ----
+VIA, AWAY = "x-hub-via", "relay"
+
+
+def from_away(headers) -> bool:
+    """Did this request come in through the relay, rather than off the Wi-Fi?
+
+    The front door stamps `X-Hub-Via: relay` on the one site the tunnel feeds and deletes any copy a
+    client brought on every other site, so a phone on the Wi-Fi cannot claim to be away and a phone
+    away cannot claim to be home. The relay itself never adds anything: it does not terminate TLS and
+    could not stamp a header if it wanted to. With nothing in front of the brain at all -- a developer
+    on :8300 -- nothing stamps it and every request is at home, which is the right answer there.
+
+    Nothing is refused on the strength of this yet; step 2 in docs/away.md is the gate that reads it.
+    """
+    return (headers.get(VIA) or "").strip().lower() == AWAY
+
+
+# ---- and what may pass from outside it ----
+JOIN_AT_HOME = ("/phones/ask", "/phones/code", "/phones/claim/")
+HOME_ONLY = "This phone works on your home Wi\u2011Fi. Someone with the passcode can set it to Anywhere, in People."
+NOT_YOURS = "This house isn\u2019t open to this phone."
+
+
+def open_from_away(method: str, path: str) -> bool:
+    """What passes from outside the house without a phone the house has let out.
+
+    The app's own files, so it can load and say why it is not showing the house, and the one route that
+    tells it which door it came in at. Never the way in: a stranger on the internet is not offered the
+    question, and a phone is let out of the house from inside it or not at all.
+    """
+    if path.startswith(JOIN_AT_HOME): return False
+    return open_to_strangers(method, path)
+
+
+def away_refused(method: str, path: str, let_out: bool) -> bool:
+    """Is this request from outside the house turned away?
+
+    The way in is never open out there, not even to a phone the house has already let out: a phone joins
+    the house from inside it, where somebody can see who is asking. Everything else comes down to whether
+    this phone has been let out, and the app's own files pass either way so it can load and say so.
+    """
+    if path.startswith(JOIN_AT_HOME): return True
+    return not let_out and not open_from_away(method, path)
+
+
+def away_refusal(phone: dict | None, let_out: bool = False) -> dict:
+    """The words a request from away is turned down with, and a key the app can act on.
+
+    One of the house's own phones is told how that changes, because somebody at the wall can do it for
+    them. Anybody else is told nothing they could act on: from outside the house the join screen does not
+    exist, so there is nothing to offer and no house to name.
+    """
+    if let_out: return {"detail": "at-home", "message": "A phone can only join while it is at home, on the Wi\u2011Fi."}
+    return {"detail": "remote", "message": HOME_ONLY} if phone else {"detail": "away", "message": NOT_YOURS}
+
+
+def open_to_strangers(method: str, path: str) -> bool:
+    """What the panel needs before it is paired: the app itself, the join screen's own routes, and the sounds a speaker fetches."""
+    if method.upper() in ("OPTIONS", "HEAD"): return True
+    if path in OPEN_PATHS or path.startswith(OPEN_PREFIXES): return True
+    # The panel's own files by their extension -- but only at the top, where the build puts the few that are
+    # not under /assets/ (manifest.json, the icons). Anywhere deeper it was a hole: an API path whose last
+    # part happened to end in .js or .json passed without a phone, and a device id is shaped domain.name,
+    # so one named `json` would have. FastAPI's schema is the house's too, not the app's (2 October 2026).
+    if path in NOT_THE_APP: return False
+    return path.count("/") == 1 and path.endswith(OPEN_SUFFIXES)

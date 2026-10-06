@@ -1,0 +1,104 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Instrument Sans", -apple-system, "SF Pro Text", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      --bg: #0c0d10; --surface: rgba(26,28,34,.68); --surface-hi: rgba(255,255,255,.08);
+      --edge: rgba(255,255,255,.1); --edge-hi: rgba(255,255,255,.18);
+      --ink: #f1eee8; --ink-2: #b9b5ad; --muted: #7f7d77;
+      --lamp-rgb: 233,184,114; --lamp: rgb(var(--lamp-rgb)); --lamp-ink: #2a1c07;
+      --live-rgb: 116,198,157; --live: rgb(var(--live-rgb));
+      --danger-rgb: 224,138,138; --danger: rgb(var(--danger-rgb));
+      --r-lg: 22px; --r-md: 16px;
+    }
+    .dsp { font-weight: 400; letter-spacing: -.025em; text-wrap: balance; }
+    .cap { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .sheet { width: 560px; border-radius: 26px; background: rgba(22,24,30,.92);
+             border: 1px solid var(--edge-hi); box-shadow: 0 40px 100px -30px rgba(0,0,0,.9); overflow: hidden; }
+    .sheet h2 { margin: 0; font-size: 34px; line-height: 1.05; font-weight: 400; letter-spacing: -.025em; }
+    .lede { margin: 0 0 18px; color: var(--ink-2); font-size: 15px; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 14px 26px;
+           border-radius: 999px; background: var(--ink); color: var(--bg); font-weight: 500; font-size: 17px; }
+    .btn.ghost { background: var(--surface-hi); color: var(--ink); border: 1px solid var(--edge); }
+    .t1 { font-size: 15.5px; font-weight: 500; }
+    .t2 { font-size: 13px; color: var(--muted); }
+    .row { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 12px;
+           padding: 12px 14px; border-radius: var(--r-md); background: var(--surface); border: 1px solid var(--edge); }
+    .strip { height: 22px; border-radius: 4px;
+             background: repeating-linear-gradient(90deg, rgb(255,96,0) 0 4px, transparent 4px 7px);
+             filter: drop-shadow(0 0 9px rgba(255,140,40,.7)); }
+    .field { height: 56px; border-radius: var(--r-md); background: var(--surface-hi);
+             border: 1px solid var(--edge); display: flex; align-items: center; padding: 0 18px;
+             font-size: 22px; letter-spacing: .14em; color: var(--ink); }
+    .stage { position: relative; padding: 40px 24px 34px; border-radius: 20px;
+             background: rgba(255,255,255,.03); border: 1px solid var(--edge); overflow: hidden; }
+    .glow { position: absolute; left: 0; right: 0; top: -40px; height: 160px;
+            background: radial-gradient(42% 54% at 50% 50%, rgba(255,140,40,.26), transparent 72%); }
+  </style>
+</helmet>
+
+<style>
+  .dot { width: 7px; height: 7px; border-radius: 999px; background: var(--lamp); box-shadow: 0 0 0 4px rgba(var(--lamp-rgb),.16); }
+  .wait { display: flex; align-items: center; justify-content: center; gap: 9px;
+          margin: 0 0 16px; font-size: 13.5px; color: var(--ink-2); }
+  .beat { display: grid; grid-template-columns: 116px 1fr; gap: 16px; align-items: center;
+          padding: 14px 16px; border-radius: var(--r-md); background: var(--surface); border: 1px solid var(--edge); }
+  .beat + .beat { margin-top: 10px; }
+  .beat .t { font-size: 15px; font-weight: 500; }
+  .beat .s { display: block; margin-top: 3px; font-size: 13px; color: var(--muted); line-height: 1.5; }
+  .lit  { height: 16px; border-radius: 3px; background: repeating-linear-gradient(90deg, rgb(255,96,0) 0 4px, transparent 4px 7px);
+          filter: drop-shadow(0 0 8px rgba(255,140,40,.65)); }
+  .flash { height: 16px; border-radius: 3px; background: repeating-linear-gradient(90deg, rgb(255,255,255) 0 4px, transparent 4px 7px);
+           filter: drop-shadow(0 0 11px rgba(255,190,130,.95)); }
+  .drain { height: 16px; border-radius: 3px; background: repeating-linear-gradient(90deg, rgba(255,96,0,.34) 0 4px, transparent 4px 7px); }
+  .note { border-radius: var(--r-lg); border: 1px solid var(--edge); background: rgba(255,255,255,.03); padding: 18px 20px; }
+</style>
+<div style="position: relative; width: 1440px; height: 900px; overflow: hidden; background: var(--bg); color: var(--ink); font-size: 17px; line-height: 1.4;">
+  <div style="position: absolute; inset: 0; background: linear-gradient(rgb(29,33,46) 0%, rgb(41,42,63) 44%, rgb(92,63,57) 84%, rgb(62,44,42) 100%);"></div>
+  <div style="position: absolute; left: -222px; top: -135px; width: 1855px; height: 1156px; background: radial-gradient(58% 54% at 30% 64%, rgba(72,63,135,.4), transparent 68%), radial-gradient(62% 52% at 54% 110%, rgba(55,51,100,.44), transparent 72%);"></div>
+  <div style="position: absolute; inset: 0; background: rgba(6,7,9,.58);"></div>
+
+  <div class="cap" style="position: absolute; left: 60px; top: 44px;">Chosen &mdash; the one thing our door asks</div>
+  <div class="sheet" style="position: absolute; left: 90px; top: 106px;">
+    <div style="display: flex; align-items: flex-start; gap: 14px; padding: 24px 22px 6px 28px;">
+      <h2 class="dsp" style="flex: 1;">Press the button on it.</h2>
+      <div style="width: 38px; height: 38px; border-radius: 999px; background: var(--surface-hi); border: 1px solid var(--edge); display: grid; place-items: center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink-2)" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></div>
+    </div>
+    <div style="padding: 4px 28px 26px;">
+      <p class="lede">The button is on the controller, at the end it plugs in at. A short press, and it is yours &mdash; there is nothing to read, count or type.</p>
+      <div class="stage" style="margin-bottom: 18px;"><div class="glow"></div>
+        <div style="position: relative;" class="strip"></div>
+        <div class="t2" style="position: relative; text-align: center; margin-top: 14px;">It is lit, steady, so you can see which one you have</div></div>
+      <p class="wait"><span class="dot"></span>Waiting for the press&hellip;</p>
+      <div style="display: flex; gap: 10px;"><span class="btn ghost" style="flex: 1;">It has no button I can reach</span></div>
+    </div>
+  </div>
+
+  <div style="position: absolute; left: 720px; top: 106px; width: 660px;">
+    <h3 class="dsp" style="margin: 0 0 12px; font-size: 26px; font-weight: 400;">What the strip does, and when.</h3>
+    <p style="margin: 0 0 16px; color: var(--ink-2); font-size: 15px; line-height: 1.6;">The wall is drawn from the board on the door canvas. This is the half that is firmware, and it has never been drawn: the gate is on the <em>strip</em>, not on the hub. A session can be opened by anything in radio range and get exactly nowhere &mdash; the credentials are refused until somebody in the room has touched the object.</p>
+    <div class="beat"><div class="lit"></div><div><span class="t">Knocking</span><span class="s">Lit end to end from the moment it has power, and steady. Not a rhythm: a steady light is a thing you can point at, and it says nothing a stranger could use.</span></div></div>
+    <div class="beat"><div class="flash"></div><div><span class="t">Pressed</span><span class="s">One bright blink, on the strip itself, so the press is answered by the thing that was pressed. The gate is open for two minutes, once.</span></div></div>
+    <div class="beat"><div class="lit"></div><div><span class="t">Letting in</span><span class="s">The Wi&#8209;Fi and where we are arrive together, in the session that was already open. It holds the steady glow until the household&rsquo;s own light has something to say.</span></div></div>
+    <div class="beat"><div class="drain"></div><div><span class="t">Nobody came</span><span class="s">Two days, then the same glow drained rather than dark &mdash; unchanged. Going dark is what a broken strip does.</span></div></div>
+  </div>
+
+  <div class="note" style="position: absolute; left: 60px; right: 60px; top: 742px;">
+    <span class="cap">The same button, two lengths</span>
+    <p style="margin: 9px 0 0; font-size: 14.5px; line-height: 1.6; color: var(--ink-2);"><strong style="font-weight: 500; color: var(--ink);">A short press is counted on the way up, before the hold arms at one second.</strong> Holding for five is still &ldquo;forget the house&rdquo;, and it still turns the strip red at one second to say so &mdash; so the two cannot be confused by anybody doing either of them on purpose. And the press is only ever counted once the button has been seen let go, which is the rule that was already there: GPIO&nbsp;0 is held down to flash and sits low on some boards, and without it a strip would forget the house five seconds into every boot.</p>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

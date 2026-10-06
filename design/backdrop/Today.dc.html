@@ -1,0 +1,22 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>Today</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500&family=Plus+Jakarta+Sans:wght@200;300;400;500&display=swap">
+<link rel="stylesheet" href="scene.css">
+</head>
+<body>
+<div class="board"></div>
+<script src="scene.js"></script>
+<script>
+/* Today: the sky is the only background there is, and it listens to the clock and the
+   weather and to nothing in the house. Flip the ceiling light to red and nothing behind
+   the cards knows. */
+window.Backdrop = {
+  mount(el) { this.c = document.createElement('canvas'); this.c.width = 1440; this.c.height = 900; el.appendChild(this.c); this.x = this.c.getContext('2d') },
+  update({ hour }) { this.hour = hour },
+  frame(t) { Scene.sky(this.x, this.hour, t) },
+}
+Scene.init({ groups: ['hour', 'lamp', 'strip', 'tv'], tag: 'Today — the sky, and nothing else' })
+</script>
+</body>
+</html>

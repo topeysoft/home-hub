@@ -1,0 +1,13 @@
+<resources>
+    <string name="app_name">Elyir</string>
+    <string name="looking">Looking for the house</string>
+    <string name="address_hint">hub.local</string>
+    <string name="use">Use this</string>
+    <string name="reload">Reload</string>
+    <string name="leave">Leave kiosk</string>
+    <string name="this_screen">This screen</string>
+    <string name="this_screen_sub">The tablet on the wall, not the hub. The house keeps running either way.</string>
+    <string name="restart_app">Restart the wall app</string>
+    <string name="restart_tablet">Restart the tablet</string>
+    <string name="plug">If the hub stays unreachable for a few minutes, unplug it for ten seconds and plug it back in.</string>
+</resources>

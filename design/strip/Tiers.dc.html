@@ -1,0 +1,138 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Instrument Sans", -apple-system, "SF Pro Text", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      --bg: #0c0d10; --surface: rgba(26,28,34,.68); --surface-hi: rgba(255,255,255,.08);
+      --edge: rgba(255,255,255,.1); --edge-hi: rgba(255,255,255,.18);
+      --ink: #f1eee8; --ink-2: #b9b5ad; --muted: #7f7d77;
+      --lamp-rgb: 233,184,114; --lamp: rgb(var(--lamp-rgb)); --lamp-ink: #2a1c07;
+      --live-rgb: 116,198,157; --live: rgb(var(--live-rgb));
+      --danger-rgb: 224,138,138; --danger: rgb(var(--danger-rgb));
+      --r-lg: 22px; --r-md: 16px;
+    }
+    .dsp { font-weight: 400; letter-spacing: -.025em; text-wrap: balance; }
+    .cap { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .sheet { width: 560px; border-radius: 26px; background: rgba(22,24,30,.92);
+             border: 1px solid var(--edge-hi); box-shadow: 0 40px 100px -30px rgba(0,0,0,.9); overflow: hidden; }
+    .sheet h2 { margin: 0; font-size: 34px; line-height: 1.05; font-weight: 400; letter-spacing: -.025em; }
+    .lede { margin: 0 0 18px; color: var(--ink-2); font-size: 15px; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 14px 26px;
+           border-radius: 999px; background: var(--ink); color: var(--bg); font-weight: 500; font-size: 17px; }
+    .btn.ghost { background: var(--surface-hi); color: var(--ink); border: 1px solid var(--edge); }
+    .t1 { font-size: 15.5px; font-weight: 500; }
+    .t2 { font-size: 13px; color: var(--muted); }
+    .row { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 12px;
+           padding: 12px 14px; border-radius: var(--r-md); background: var(--surface); border: 1px solid var(--edge); }
+    .strip { height: 22px; border-radius: 4px;
+             background: repeating-linear-gradient(90deg, rgb(255,96,0) 0 4px, transparent 4px 7px);
+             filter: drop-shadow(0 0 9px rgba(255,140,40,.7)); }
+    .field { height: 56px; border-radius: var(--r-md); background: var(--surface-hi);
+             border: 1px solid var(--edge); display: flex; align-items: center; padding: 0 18px;
+             font-size: 22px; letter-spacing: .14em; color: var(--ink); }
+    .stage { position: relative; padding: 40px 24px 34px; border-radius: 20px;
+             background: rgba(255,255,255,.03); border: 1px solid var(--edge); overflow: hidden; }
+    .glow { position: absolute; left: 0; right: 0; top: -40px; height: 160px;
+            background: radial-gradient(42% 54% at 50% 50%, rgba(255,140,40,.26), transparent 72%); }
+  </style>
+</helmet>
+<style>
+  .box { border-radius: var(--r-lg); border: 1px solid var(--edge); background: rgba(255,255,255,.03); padding: 18px 20px; }
+  .box.good { border-color: rgba(var(--live-rgb),.3); background: linear-gradient(rgba(var(--live-rgb),.07), rgba(var(--live-rgb),.07)), rgba(255,255,255,.02); }
+  .box.bad { border-color: rgba(var(--danger-rgb),.3); background: rgba(var(--danger-rgb),.05); }
+  .node { width: 188px; border-radius: var(--r-md); background: var(--surface); border: 1px solid var(--edge); padding: 14px 16px; }
+  .arrow { display: grid; place-items: center; color: rgba(255,255,255,.3); font-size: 12px; letter-spacing: .1em; text-transform: uppercase; }
+  .wire { height: 2px; background: linear-gradient(90deg, rgba(var(--lamp-rgb),.7), rgba(var(--lamp-rgb),.15)); border-radius: 2px; }
+  .box .row { padding: 10px 14px; }
+  .tick { width: 24px; height: 24px; border-radius: 50%; background: rgba(var(--live-rgb),.9); display: grid; place-items: center; }
+  .tick.warm { background: rgba(var(--lamp-rgb),.92); }
+  .tick.off { background: rgba(255,255,255,.09); }
+</style>
+
+<div style="position: relative; width: 1440px; height: 900px; overflow: hidden; background: var(--bg); color: var(--ink); font-size: 17px; line-height: 1.4;">
+  <div style="position: absolute; inset: 0; background: linear-gradient(rgb(29,33,46) 0%, rgb(41,42,63) 44%, rgb(72,55,58) 88%, rgb(52,40,42) 100%);"></div>
+  <div style="position: absolute; inset: 0; background: rgba(6,7,9,.72);"></div>
+
+  <div style="position: absolute; left: 60px; top: 42px; right: 60px;">
+    <span class="cap">Three states of one strip, and the middle one is new</span>
+    <h1 class="dsp" style="margin: 9px 0 0; font-size: 38px; font-weight: 400;">It works anywhere. Here it can be asked more &mdash; and not only on the first day.</h1>
+    <p style="margin: 11px 0 0; color: var(--ink-2); font-size: 15.5px; max-width: 1150px;">
+      Not two products and not a crippled version. What separates these columns is one fact and nothing else:
+      whether anybody has ever completed our handshake with this strip. That used to be decided at commissioning
+      and could never be revisited, which is what made it a <em>tier</em>. Since the fork it is a state, and
+      states change.
+    </p>
+  </div>
+
+  <!-- ============================ set up here ============================ -->
+  <div class="box" style="position: absolute; left: 60px; top: 206px; width: 425px; padding: 22px; border-color: rgba(var(--live-rgb),.34); background: linear-gradient(rgba(var(--live-rgb),.07), rgba(var(--live-rgb),.07)), rgba(255,255,255,.02);">
+    <span class="cap" style="color: rgba(var(--live-rgb),.85);">Set up here</span>
+    <h3 class="dsp" style="margin: 9px 0 13px; font-size: 22px; font-weight: 400;">Everything as drawn.</h3>
+    <div style="display: flex; flex-direction: column; gap: 9px;">
+      <div class="row"><span class="tick"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#0b2216" stroke-width="3" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg></span><span><span class="t1">On, dim, any color</span><span class="t2" style="display:block;">the ambient light, same as anywhere</span></span></div>
+      <div class="row"><span class="tick"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#0b2216" stroke-width="3" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg></span><span><span class="t1">Which order its colors come out in</span><span class="t2" style="display:block;">real bytes, on our own channel</span></span></div>
+      <div class="row"><span class="tick"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#0b2216" stroke-width="3" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg></span><span><span class="t1">How far it goes</span><span class="t2" style="display:block;">the fill, latched in firmware at the tap</span></span></div>
+      <div class="row"><span class="tick"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#0b2216" stroke-width="3" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg></span><span><span class="t1">Both rows on its own pane</span><span class="t2" style="display:block;">either question can be asked again, later</span></span></div>
+    </div>
+    <p class="t2" style="margin: 13px 0 0; line-height: 1.55;">Handed over during our own handshake, at the one
+      moment somebody is standing in the room.</p>
+  </div>
+
+  <!-- ============================ set up elsewhere, asked since ============================ -->
+  <div class="box" style="position: absolute; left: 507px; top: 206px; width: 425px; padding: 22px; border-color: rgba(var(--lamp-rgb),.34); background: linear-gradient(rgba(var(--lamp-rgb),.07), rgba(var(--lamp-rgb),.07)), rgba(255,255,255,.02);">
+    <span class="cap" style="color: rgba(var(--lamp-rgb),.85);">Set up elsewhere, and asked since</span>
+    <h3 class="dsp" style="margin: 9px 0 13px; font-size: 22px; font-weight: 400;">The same, arriving late.</h3>
+    <div style="display: flex; flex-direction: column; gap: 9px;">
+      <div class="row"><span class="tick warm"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#2a1c07" stroke-width="3" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg></span><span><span class="t1">On, dim, any color</span><span class="t2" style="display:block;">never went away, and never does</span></span></div>
+      <div class="row"><span class="tick warm"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#2a1c07" stroke-width="3" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg></span><span><span class="t1">Which order its colors come out in</span><span class="t2" style="display:block;">the same question, over mDNS instead</span></span></div>
+      <div class="row"><span class="tick warm"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#2a1c07" stroke-width="3" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg></span><span><span class="t1">How far it goes</span><span class="t2" style="display:block;">the same fill, the same latch</span></span></div>
+      <div class="row"><span class="tick warm"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#2a1c07" stroke-width="3" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg></span><span><span class="t1">Both rows on its own pane</span><span class="t2" style="display:block;">identical from here on</span></span></div>
+    </div>
+    <p class="t2" style="margin: 13px 0 0; line-height: 1.55;">Already on the Wi&#8209;Fi, so the handshake came
+      over mDNS. <strong style="font-weight: 500; color: var(--ink-2);">Their app was never touched</strong> &mdash;
+      which retires the open question this board was left with.</p>
+  </div>
+
+  <!-- ============================ set up elsewhere, left there ============================ -->
+  <div class="box" style="position: absolute; left: 954px; top: 206px; width: 425px; padding: 22px;">
+    <span class="cap">Set up elsewhere, and left there</span>
+    <h3 class="dsp" style="margin: 9px 0 13px; font-size: 22px; font-weight: 400;">A good light we have not asked.</h3>
+    <div style="display: flex; flex-direction: column; gap: 9px;">
+      <div class="row"><span class="tick"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#0b2216" stroke-width="3" stroke-linecap="round"><path d="M20 6L9 17l-5-5"/></svg></span><span><span class="t1">On, dim, any color</span><span class="t2" style="display:block;">identical. Nothing is missing here</span></span></div>
+      <div class="row" style="opacity:.55;"><span class="tick off"></span><span><span class="t1">Which order its colors come out in</span><span class="t2" style="display:block;">asked in colors instead &mdash; the Reach C trick</span></span></div>
+      <div class="row" style="opacity:.4;"><span class="tick off"></span><span><span class="t1">How far it goes</span><span class="t2" style="display:block;">not asked. It lights a generous number and stops</span></span></div>
+      <div class="row" style="opacity:.4;"><span class="tick off"></span><span><span class="t1">Both rows on its own pane</span><span class="t2" style="display:block;">one row instead, saying how to change that</span></span></div>
+    </div>
+    <p class="t2" style="margin: 13px 0 0; line-height: 1.55;">Either nothing of ours is in this house, or the
+      offer was declined once. <strong style="font-weight: 500; color: var(--ink-2);">Neither is permanent</strong>,
+      and a light that cannot do a thing says so in the room.</p>
+  </div>
+
+  <!-- ============================ the field that did not work ============================ -->
+  <div class="box" style="position: absolute; left: 60px; right: 60px; top: 704px; border-color: rgba(var(--lamp-rgb),.32); background: linear-gradient(rgba(var(--lamp-rgb),.07), rgba(var(--lamp-rgb),.07)), rgba(255,255,255,.02);">
+    <span class="cap">How the house tells them apart &mdash; and the field this board used to name, which does not work</span>
+    <p style="margin: 10px 0 0; font-size: 15px; line-height: 1.6;">
+      This board once said every Matter device announces a vendor and a product id, so the house could recognize
+      one of ours whoever set it up. <strong style="font-weight: 500;">The first real commissioning reported
+      <em>TEST_VENDOR</em> and <em>TEST_PRODUCT</em></strong> &mdash; esp&#8209;matter&rsquo;s defaults on a test vendor
+      id, identical on every device built this way. Until a real Vendor ID exists it is our own mDNS service that
+      answers this, and that is the same service which carries the handshake &mdash; so the offer in column two
+      appears only for a strip that could take it. The test never changed:
+      <strong style="font-weight: 500;">has this strip ever completed our handshake?</strong>
+    </p>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

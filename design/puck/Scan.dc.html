@@ -1,0 +1,346 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Instrument Sans", -apple-system, "SF Pro Text", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      /* the panel's own tokens, unchanged -- app/src/panel.css */
+      --bg: #0c0d10; --surface: rgba(26,28,34,.68); --surface-hi: rgba(255,255,255,.08);
+      --edge: rgba(255,255,255,.1); --edge-hi: rgba(255,255,255,.18);
+      --ink: #f1eee8; --ink-2: #b9b5ad; --muted: #7f7d77;
+      --lamp: #e9b872; --lamp-ink: #2a1c07; --live: #74c69d; --danger: #e08a8a;
+    }
+    .dsp { font-weight: 400; letter-spacing: -.025em; text-wrap: balance; }
+    .cap { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    /* the sheet, as the panel builds it */
+    .sheet { width: 560px; border-radius: 26px; background: rgba(22,24,30,.92);
+             border: 1px solid var(--edge-hi); box-shadow: 0 40px 100px -30px rgba(0,0,0,.9); overflow: hidden; }
+    .sheet h2 { margin: 0; font-size: 36px; line-height: 1.05; font-weight: 400; letter-spacing: -.025em; }
+    .lede { margin: 0 0 20px; color: var(--ink-2); font-size: 15px; }
+    .btn { display: inline-flex; align-items: center; gap: 8px; padding: 12px 20px; border-radius: 999px;
+           background: var(--ink); color: var(--bg); font-weight: 500; font-size: 17px; }
+    .btn.big { padding: 15px 28px; }
+    .btn.ghost { background: var(--surface-hi); color: var(--ink); border: 1px solid var(--edge); }
+    .btn.sm { padding: 8px 14px; font-size: 14px; }
+    /* a found thing, as the Add screen already draws one */
+    .found { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px;
+             padding: 12px 14px; border-radius: 16px; border: 1px solid rgba(233,184,114,.3);
+             background: linear-gradient(rgba(233,184,114,.1), rgba(233,184,114,.1)), var(--surface); }
+    .found .ic { width: 36px; height: 36px; border-radius: 12px; display: grid; place-items: center;
+                 background: var(--lamp); color: var(--lamp-ink); }
+    .row { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px;
+           padding: 12px 14px; border-radius: 16px; background: var(--surface); border: 1px solid var(--edge); }
+    .t1 { font-size: 15.5px; font-weight: 500; }
+    .t2 { font-size: 13px; color: var(--muted); }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--lamp); }
+    .field { height: 50px; padding: 0 14px; border-radius: 14px; background: var(--surface-hi);
+             border: 1px solid var(--edge); display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 17px; }
+    .bar { height: 6px; border-radius: 999px; background: rgba(255,255,255,.1); overflow: hidden; }
+    .bar i { display: block; height: 100%; border-radius: 999px; background: var(--lamp); }
+  </style>
+</helmet>
+
+<div style="position: relative; width: 1440px; height: 900px; overflow: hidden; background: #0c0d10; color: var(--ink); font-size: 17px; line-height: 1.4;">
+  <div style="position: absolute; inset: 0; background: radial-gradient(64% 54% at 22% 18%, rgba(72,63,135,.22), transparent 70%), radial-gradient(56% 48% at 86% 88%, rgba(92,63,57,.2), transparent 72%);"></div>
+
+  <div style="position: absolute; top: 52px; left: 56px; right: 56px;">
+    <h1 class="dsp" style="margin: 0; font-size: 42px;">The wall shows. The phone scans.</h1>
+    <p style="margin: 10px 0 0; font-size: 17px; color: var(--ink-2); max-width: 96ch;">A new switch out of its box will not talk to anything until someone proves they are holding it &mdash; that is what the printed code is for. A camera is the only way to read one, so this half of the job lives on the phone, and the wall&rsquo;s whole role is to hand it over. Three screens, no typing in any of them.</p>
+  </div>
+
+  <!-- ============ 1 ============ -->
+  <div class="cap" style="position: absolute; top: 208px; left: 96px;">1 &middot; hold it up to the switch</div>
+  <div style="position: absolute; top: 244px; left: 96px; width: 366px; height: 596px; border-radius: 40px; background: #0a0b0e; border: 1px solid var(--edge-hi); box-shadow: 0 40px 100px -30px rgba(0,0,0,.9); overflow: hidden;">
+    <!-- what the camera sees: a plate on a wall, its code in the middle -->
+    <div style="position: absolute; inset: 0; background: linear-gradient(160deg, #2c2a27, #17161a 60%, #0f0f13);"></div>
+    <svg width="366" height="596" viewBox="0 0 366 596" style="position: absolute; inset: 0;">
+      <rect x="86" y="120" width="196" height="286" rx="18" fill="#ded8cc"/>
+      <rect x="86" y="120" width="196" height="286" rx="18" fill="none" stroke="rgba(0,0,0,.22)" stroke-width="2"/>
+      <rect x="106" y="142" width="156" height="148" rx="12" fill="#fbf8f2" stroke="rgba(0,0,0,.14)" stroke-width="1.5"/>
+      <path d="M106 216h156" stroke="rgba(0,0,0,.09)" stroke-width="1.5"/>
+      <!-- the sticker. It is small, because it is small: that is the whole reason a camera is needed. -->
+      <g transform="translate(142 304) scale(.56)"><rect x="0" y="0" width="150" height="150" rx="8" fill="#ffffff"/>
+<rect x="72.0" y="0.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="78.0" y="0.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="90.0" y="0.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="72.0" y="6.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="78.0" y="6.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="84.0" y="6.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="96.0" y="6.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="48.0" y="12.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="54.0" y="12.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="60.0" y="12.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="66.0" y="12.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="78.0" y="12.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="90.0" y="12.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="96.0" y="12.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="54.0" y="18.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="60.0" y="18.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="72.0" y="18.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="78.0" y="18.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="90.0" y="18.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="96.0" y="18.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="48.0" y="24.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="60.0" y="24.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="84.0" y="24.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="90.0" y="24.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="96.0" y="24.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="48.0" y="30.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="78.0" y="30.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="84.0" y="30.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="96.0" y="30.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="60.0" y="36.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="66.0" y="36.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="78.0" y="36.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="90.0" y="36.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="78.0" y="42.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="84.0" y="42.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="6.0" y="48.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="12.0" y="48.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="18.0" y="48.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="30.0" y="48.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="36.0" y="48.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="48.0" y="48.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="54.0" y="48.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="60.0" y="48.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="72.0" y="48.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="78.0" y="48.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="90.0" y="48.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="114.0" y="48.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="120.0" y="48.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="6.0" y="54.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="18.0" y="54.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="24.0" y="54.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="54.0" y="54.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="66.0" y="54.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="72.0" y="54.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="78.0" y="54.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="90.0" y="54.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="96.0" y="54.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="108.0" y="54.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="114.0" y="54.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="120.0" y="54.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="126.0" y="54.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="6.0" y="60.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="12.0" y="60.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="18.0" y="60.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="24.0" y="60.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="30.0" y="60.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="42.0" y="60.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="48.0" y="60.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="54.0" y="60.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="60.0" y="60.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="72.0" y="60.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="84.0" y="60.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="108.0" y="60.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="132.0" y="60.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="138.0" y="60.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="6.0" y="66.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="36.0" y="66.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="48.0" y="66.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="54.0" y="66.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="60.0" y="66.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="78.0" y="66.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="102.0" y="66.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="114.0" y="66.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="126.0" y="66.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="0.0" y="72.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="12.0" y="72.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="24.0" y="72.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="30.0" y="72.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="48.0" y="72.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="54.0" y="72.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="60.0" y="72.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="66.0" y="72.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="78.0" y="72.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="90.0" y="72.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="108.0" y="72.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="132.0" y="72.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="0.0" y="78.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="6.0" y="78.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="42.0" y="78.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="90.0" y="78.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="96.0" y="78.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="102.0" y="78.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="120.0" y="78.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="132.0" y="78.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="0.0" y="84.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="24.0" y="84.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="36.0" y="84.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="42.0" y="84.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="54.0" y="84.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="60.0" y="84.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="72.0" y="84.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="90.0" y="84.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="102.0" y="84.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="108.0" y="84.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="120.0" y="84.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="126.0" y="84.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="0.0" y="90.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="12.0" y="90.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="18.0" y="90.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="30.0" y="90.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="42.0" y="90.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="48.0" y="90.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="66.0" y="90.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="72.0" y="90.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="78.0" y="90.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="120.0" y="90.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="0.0" y="96.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="6.0" y="96.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="12.0" y="96.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="30.0" y="96.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="36.0" y="96.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="72.0" y="96.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="84.0" y="96.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="90.0" y="96.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="102.0" y="96.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="114.0" y="96.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="120.0" y="96.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="132.0" y="96.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="138.0" y="96.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="144.0" y="96.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="78.0" y="102.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="108.0" y="102.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="120.0" y="102.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="132.0" y="102.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="54.0" y="108.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="60.0" y="108.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="90.0" y="108.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="96.0" y="108.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="108.0" y="108.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="132.0" y="108.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="48.0" y="114.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="54.0" y="114.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="60.0" y="114.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="72.0" y="114.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="78.0" y="114.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="84.0" y="114.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="90.0" y="114.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="96.0" y="114.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="102.0" y="114.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="108.0" y="114.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="114.0" y="114.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="126.0" y="114.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="132.0" y="114.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="48.0" y="120.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="72.0" y="120.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="84.0" y="120.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="96.0" y="120.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="102.0" y="120.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="108.0" y="120.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="144.0" y="120.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="54.0" y="126.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="72.0" y="126.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="84.0" y="126.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="90.0" y="126.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="102.0" y="126.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="108.0" y="126.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="114.0" y="126.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="54.0" y="132.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="60.0" y="132.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="66.0" y="132.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="78.0" y="132.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="120.0" y="132.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="144.0" y="132.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="60.0" y="138.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="66.0" y="138.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="96.0" y="138.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="102.0" y="138.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="108.0" y="138.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="120.0" y="138.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="132.0" y="138.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="48.0" y="144.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="60.0" y="144.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="72.0" y="144.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="90.0" y="144.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="114.0" y="144.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="120.0" y="144.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="126.0" y="144.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="132.0" y="144.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="138.0" y="144.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="144.0" y="144.0" width="6.0" height="6.0" fill="#12131a"/>
+<rect x="0.0" y="0.0" width="42.0" height="42.0" rx="2" fill="#12131a"/>
+<rect x="6.0" y="6.0" width="30.0" height="30.0" fill="#ffffff"/>
+<rect x="12.0" y="12.0" width="18.0" height="18.0" rx="1" fill="#12131a"/>
+<rect x="108.0" y="0.0" width="42.0" height="42.0" rx="2" fill="#12131a"/>
+<rect x="114.0" y="6.0" width="30.0" height="30.0" fill="#ffffff"/>
+<rect x="120.0" y="12.0" width="18.0" height="18.0" rx="1" fill="#12131a"/>
+<rect x="0.0" y="108.0" width="42.0" height="42.0" rx="2" fill="#12131a"/>
+<rect x="6.0" y="114.0" width="30.0" height="30.0" fill="#ffffff"/>
+<rect x="12.0" y="120.0" width="18.0" height="18.0" rx="1" fill="#12131a"/></g>
+    </svg>
+    <!-- the viewfinder: four corners, nothing else -->
+    <svg width="366" height="596" viewBox="0 0 366 596" fill="none" stroke="rgba(255,255,255,.92)" stroke-width="4" stroke-linecap="round" style="position: absolute; inset: 0;">
+      <path d="M126 312v-18a10 10 0 0 1 10-10h18"/>
+      <path d="M230 284h18a10 10 0 0 1 10 10v18"/>
+      <path d="M126 382v18a10 10 0 0 0 10 10h18"/>
+      <path d="M258 382v18a10 10 0 0 1-10 10h-18"/>
+    </svg>
+    <div style="position: absolute; left: 0; right: 0; bottom: 0; padding: 26px 24px 30px; background: linear-gradient(transparent, rgba(6,7,9,.9) 40%);">
+      <div class="t1" style="font-size: 17px;">Point it at the square of dots</div>
+      <div class="t2" style="margin-top: 5px;">On the back of the switch, or on the card from the box.</div>
+    </div>
+    <div style="position: absolute; left: 0; right: 0; top: 0; padding: 22px 24px; display: flex; align-items: center; gap: 12px;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.8)" stroke-width="2" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg>
+      <span style="font-size: 15px; color: rgba(255,255,255,.8);">Add a wall switch</span>
+    </div>
+  </div>
+
+  <!-- ============ 2 ============ -->
+  <div class="cap" style="position: absolute; top: 208px; left: 537px;">2 &middot; it takes it from there</div>
+  <div style="position: absolute; top: 244px; left: 537px; width: 366px; height: 596px; border-radius: 40px; background: #14161b; border: 1px solid var(--edge-hi); box-shadow: 0 40px 100px -30px rgba(0,0,0,.9); overflow: hidden; padding: 30px 26px;">
+    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 40px;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ink-2)" stroke-width="2" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg>
+      <span style="font-size: 15px; color: var(--ink-2);">Add a wall switch</span>
+    </div>
+    <div style="display: grid; place-items: center; margin-bottom: 34px;">
+      <div style="position: relative; width: 150px; height: 150px; display: grid; place-items: center;">
+        <div style="position: absolute; inset: -46px; background: radial-gradient(closest-side, rgba(233,184,114,.3), transparent 70%);"></div>
+        <svg width="82" height="82" viewBox="0 0 24 24" fill="none" stroke="var(--lamp)" stroke-width="1.4" stroke-linecap="round" style="position: relative;"><path d="M12 3v3M19 12h3M2 12h3M17 7l2-2M5 19l2-2M17 17l2 2M5 5l2 2"/><circle cx="12" cy="12" r="3.4"/></svg>
+      </div>
+    </div>
+    <h2 class="dsp" style="margin: 0 0 10px; font-size: 30px; text-align: center;">Got it.</h2>
+    <p style="margin: 0 0 26px; color: var(--ink-2); font-size: 15px; text-align: center;">Letting it into the house. It learns the house&rsquo;s keys, then says hello to the bridge.</p>
+    <div class="bar" style="margin-bottom: 26px;"><i style="width: 52%;"></i></div>
+    <div class="row" style="border: 0; background: transparent; padding: 0; grid-template-columns: auto 1fr;">
+      <span class="dot"></span><span class="t2">Around half a minute. You can put your phone down.</span>
+    </div>
+  </div>
+
+  <!-- ============ 3 ============ -->
+  <div class="cap" style="position: absolute; top: 208px; left: 978px;">3 &middot; the only question it asks</div>
+  <div style="position: absolute; top: 244px; left: 978px; width: 366px; height: 596px; border-radius: 40px; background: #14161b; border: 1px solid var(--edge-hi); box-shadow: 0 40px 100px -30px rgba(0,0,0,.9); overflow: hidden; padding: 30px 26px;">
+    <div style="display: grid; place-items: center; margin: 14px 0 26px;">
+      <span style="width: 60px; height: 60px; border-radius: 20px; background: var(--live); color: #0b2216; display: grid; place-items: center;">
+        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>
+      </span>
+    </div>
+    <h2 class="dsp" style="margin: 0 0 10px; font-size: 30px; text-align: center;">It&rsquo;s in.</h2>
+    <p style="margin: 0 0 24px; color: var(--ink-2); font-size: 15px; text-align: center;">A light that dims, and a motion sensor. Where is it?</p>
+    <div style="display: flex; flex-wrap: wrap; gap: 9px; justify-content: center; margin-bottom: 30px;">
+      <span style="display: inline-flex; align-items: center; height: 42px; padding: 0 18px; border-radius: 999px; background: var(--lamp); color: var(--lamp-ink); font-size: 15px; font-weight: 500;">Landing</span>
+      <span style="display: inline-flex; align-items: center; height: 42px; padding: 0 18px; border-radius: 999px; background: var(--surface-hi); border: 1px solid var(--edge); font-size: 15px;">Hallway</span>
+      <span style="display: inline-flex; align-items: center; height: 42px; padding: 0 18px; border-radius: 999px; background: var(--surface-hi); border: 1px solid var(--edge); font-size: 15px;">Kitchen</span>
+      <span style="display: inline-flex; align-items: center; height: 42px; padding: 0 18px; border-radius: 999px; background: var(--surface-hi); border: 1px solid var(--edge); font-size: 15px;">Bedroom</span>
+      <span style="display: inline-flex; align-items: center; height: 42px; padding: 0 18px; border-radius: 999px; background: var(--surface-hi); border: 1px solid var(--edge); font-size: 15px; color: var(--ink-2);">Another room&hellip;</span>
+    </div>
+    <div style="display: grid; place-items: center; gap: 14px;">
+      <span class="btn big">Done</span>
+      <span class="t2" style="text-align: center; padding: 0 10px;">It is on the wall panel too, in that room, from now.</span>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

@@ -1,0 +1,401 @@
+<!--
+  SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+  SPDX-License-Identifier: AGPL-3.0-or-later
+-->
+<script setup lang="ts">
+import { computed, onMounted, ref } from 'vue'
+import { store, notify, installUpdate, restartHub } from './store'
+import { askRestart, askUpdate, checkForUpdate, downloadBackup, getNetwork, getUpdateNotes, listBridges, markNotesRead, setAutoUpdate, setLanguage, type BridgeRow, type NetState, type RestartAsk, type Rung, type UpdateAsk, type UpdateNotes } from './api'
+import Restore from './Restore.vue'
+import AdvancedLink from './AdvancedLink.vue'
+import Drivers from './Drivers.vue'
+import NetworkSheet from './NetworkSheet.vue'
+import { getAddress, turnAddress, type AddressState } from './api'
+import { outsideRow } from './address'
+import BridgeCard from './BridgeCard.vue'
+import Icon from './Icon.vue'
+import { locale, languageName, LANGUAGES } from './lang'
+
+/* This hub: which build it is, whether a newer one exists, a backup to take away and a way to put one back.
+   The phones that belong to the house are on the People page: they are about who, not about this computer. */
+const update = computed(() => store.status?.update ?? null)
+const busy = ref(false)
+async function backup() {
+  if (busy.value) return
+  busy.value = true
+  try { await downloadBackup(); notify('Your backup is on its way. Keep it somewhere safe; it holds the house’s passwords and sign-ins.') }
+  catch (e: any) { notify(e.message, 'error') }
+  busy.value = false
+}
+/* Installing, and the question in front of it.
+ *
+ * The same shape as the restart below, and deliberately so: an update is a restart with a download
+ * in front of it, and half the sheet is the same brain's answer to the same question. What it adds
+ * is the half a restart has no use for -- why this update exists, in the release's own words, and
+ * the fact that the download is not a blackout. Home keeps its one-tap nudge; this is the page
+ * somebody came to in order to find out more, so this is where the more lives.
+ */
+const uask = ref<UpdateAsk | null>(null)
+const installBusy = ref(false)
+async function openInstall() {
+  try { uask.value = await askUpdate() } catch (e: any) { notify(e.message, 'error') }
+}
+async function goInstall() {
+  if (installBusy.value) return
+  installBusy.value = true
+  /* Nothing is closed until the hub has taken it: a refusal -- a restore that started a second ago,
+     a release pulled since this page loaded -- leaves the question up with the reason under it. */
+  if (await installUpdate()) uask.value = null
+  else await openInstall()
+  installBusy.value = false
+}
+/* Where the host has got to. The brain is up for nearly all of an update, so this is a real answer
+   for most of the wait rather than three dots. */
+const phase = computed(() => update.value?.progress ?? null)
+const busyUpdating = computed(() => !!store.updating || !!update.value?.requested || update.value?.state?.state === 'running')
+/* A version that was installed, would not start, and was put back by the host (docs/updates.md,
+   piece 1). Home stops nudging for it; here it is still one tap, because this page is where a person
+   is the one choosing, and trying it a second time is often what fixes it. */
+const rolledBack = computed(() => update.value?.state?.state === 'reverted' ? (update.value?.state?.bad || update.value?.rejected || 'That update') : '')
+/* A release the hub would not vouch for: no signed record of what it is, or one signed by a key this
+   hub does not know (docs/updates.md, piece 2). Nothing was installed and nothing is broken, and no
+   button appears -- the same tap would refuse the same release, and this one is not the household's
+   to fix. */
+const refused = computed(() => update.value?.state?.state === 'refused' ? (update.value?.state?.bad || 'That update') : '')
+/* The people who make the hub have pulled this release since signing it (docs/updates.md, piece 5).
+   No button, and not because this hub failed at anything: it is the one case where somebody tapping
+   Install would be overruled on purpose, and saying so is better than a tap that goes nowhere. */
+const held = computed(() => !!update.value?.held)
+/* Installing in the night without being asked. On by default where the hub can check what it is
+   installing, because the alternative is what actually happens otherwise: nobody walks to the wall,
+   and the house sits a year behind on the release that had the bug. A hub that cannot check waits
+   to be asked, and says so here rather than leaving a switch that means something different. */
+const autoBusy = ref(false)
+async function flipAuto() {
+  if (autoBusy.value) return
+  autoBusy.value = true
+  try { await setAutoUpdate(!update.value?.auto) }
+  catch (e: any) { notify(e.message, 'error') }
+  autoBusy.value = false
+}
+/* The bridges running older software than the house ships.
+ *
+ * Said here and nowhere louder, deliberately. A bridge a version behind is doing its whole job, so
+ * this is not a fault and must not be drawn as one -- but a household told nothing has no way to
+ * find out, and the COUNT is the thing that matters the day a fix has to reach every one of them
+ * (docs/puck-updates.md). Named by the room each one serves, because that is the only word a
+ * household has for a puck; where the hub cannot honestly say which room, it does not guess.
+ */
+const behind = computed(() => store.bridge?.behind ?? [])
+
+/* THE BRIDGES THEMSELVES, and not only the ones something is wrong with.
+ *
+ * The row above this one has always been a count of the bridges running older software -- which is
+ * to say a puck appeared on this page only when it was a problem. A household had nowhere to look at
+ * one that is fine, and so nowhere to turn its nightlight on (docs/puck-light.md). The list is read
+ * when the page opens rather than polled: a bridge is a standing fact, not a moving one. */
+const bridges = ref<BridgeRow[]>([])
+const open = ref<string | null>(null)
+const opened = computed(() => bridges.value.find(b => b.chip === open.value) ?? null)
+async function loadBridges() {
+  try { bridges.value = (await listBridges()).bridges } catch { /* the page is worth drawing without it */ }
+}
+function changed(rows: BridgeRow[]) { bridges.value = rows }
+const line = (b: BridgeRow) =>
+  !b.online ? 'Quiet' : b.signal === 'weak' ? 'Faint' : b.night ? 'Working, light on' : 'Working'
+const behindLine = computed(() => {
+  const named = behind.value.map(b => b.room).filter(Boolean) as string[]
+  const are = behind.value.length === 1 ? 'is' : 'are'
+  if (named.length === behind.value.length) {
+    const list = named.length === 1 ? named[0]
+      : named.slice(0, -1).join(', ') + ' and ' + named[named.length - 1]
+    return `The ${list} bridge${behind.value.length === 1 ? '' : 's'} ${are} on older software.`
+  }
+  const n = behind.value.length === 1 ? 'One' : behind.value.length === 2 ? 'Two' : String(behind.value.length)
+  return `${n} of your bridges ${are} on older software.`
+})
+
+/* What changed. Opening this page is what marks the morning-after card read: nothing vanishes under
+   a tap on Home, and somebody who came here to look has, by definition, looked. */
+const notes = ref<UpdateNotes | null>(null)
+const earlier = ref(false)
+const earlierReleases = computed(() => (notes.value?.history ?? []).filter(r => r.version !== notes.value?.notes?.version && r.what.length))
+onMounted(async () => {
+  loadNet()     // not awaited: the Network row is a fact the hub already holds, and nothing below needs it
+  loadAddress()
+  loadBridges()
+  try { notes.value = await getUpdateNotes() } catch { /* an older hub, or no notes in this build */ }
+  if (store.status?.update?.whats_new) { try { await markNotesRead() } catch { /* it will come back tomorrow */ } }
+  /* Opening this page is also the check for an update: no button to explain, "checked just now" under
+     the version is the answer, and Install appears by itself if there is one. Last, because it can
+     take the brain a few seconds to hear back, and the notes should not wait on it. */
+  try { const u = await checkForUpdate(); if (store.status) store.status.update = u } catch { /* offline, or an older hub: the row already says so */ }
+})
+/* Turning it off and on again.
+ *
+ * One button and no rung picker. A person at the wall cannot tell "restart the brain" from "restart
+ * the machine" -- that is the whole reason they are at the wall -- so the hub picks the smallest
+ * rung that could help and the next one up appears only once this one has visibly stopped helping.
+ *
+ * The first tap asks the hub what it would cost and turns the button into the question, the way
+ * Needs a look does: every word of it is the brain's, because what stops, what keeps working and how
+ * long it takes are facts about THIS house that a panel would only be guessing at. docs/restart.md.
+ */
+const ask = ref<RestartAsk | null>(null)
+const rung = ref<Rung>('hub')
+const restartBusy = ref(false)
+async function openRestart(which: Rung = 'hub') {
+  rung.value = which
+  try { ask.value = await askRestart(which) } catch (e: any) { notify(e.message, 'error') }
+}
+async function goRestart(understood = false) {
+  if (restartBusy.value) return
+  restartBusy.value = true
+  /* Nothing is closed until the hub has taken it: a refusal (an update started a second ago, or this
+     phone may not) leaves the question on the screen with the reason under it. */
+  if (await restartHub(rung.value, understood)) ask.value = null
+  else await openRestart(rung.value)
+  restartBusy.value = false
+}
+/* The network the house runs on.
+ *
+ * One row, because that is what the rest of this page is, and because a household does not have two
+ * questions here. The hub's own connection and the Wi-Fi its bridges are given are different facts
+ * on most hubs -- the hub is on a cable and the bridges cannot be -- and the row says both in one
+ * sentence rather than making somebody choose which of two settings they meant. docs/network.md.
+ *
+ * The sub-line is where the honesty lives. A hub on Wi-Fi READ that name off its own connection; a
+ * hub on a cable was TOLD it and cannot check it. Those are not the same kind of sentence and this
+ * row must not write them as though they were -- everything that went wrong here went wrong because
+ * something the hub had been told once was treated as a fact for ever.
+ */
+const net = ref<NetState | null>(null)
+const netOpen = ref(false)
+const netLine = computed(() => {
+  const n = net.value
+  if (!n) return ''
+  if (n.moving) return `Moving to ${n.moving.ssid}…`
+  if (n.how === 'cable') return 'On a cable.'
+  if (n.how === 'wifi') return `On ${n.ssid}.${n.signal === 'strong' ? ' Strong.' : n.signal === 'faint' ? ' Faint.' : ''}`
+  if (n.how === 'none') return 'Not connected to a network.'
+  return 'Looked after by the machine this runs on.'
+})
+const netSub = computed(() => {
+  const n = net.value
+  if (!n) return ''
+  if (n.reverted) return `${n.reverted} didn’t answer, so the one that was working was put back.`
+  const b = n.bridges
+  if (!b.count && !b.ssid) return 'No bridges yet. The first one set up will be given this.'
+  /* `bridges.ssid` is the network the hub WOULD GIVE a bridge -- which is not the same claim as
+     where the bridges are, and the hub cannot honestly make the second one about a puck it has not
+     heard from. So the past tense: they were given this. */
+  const them = b.count === 1 ? 'Your bridge was' : b.count ? `Your ${b.count} bridges were` : 'Bridges are'
+  if (n.how === 'wifi' && b.known) return `${b.count ? `Your ${b.count === 1 ? 'bridge is' : `${b.count} bridges are`} on it too. ` : ''}Change it here and they come with it.`
+  if (!b.known) return `The hub has moved to ${n.ssid} and hasn’t got the password for it. Setting up a bridge will ask you once.`
+  // Why it cannot check is not always the cable: a hub whose machine has no network script cannot
+  // check anything, and telling that household about a cable they may not have is a small nonsense.
+  if (!b.checked) return `${them} given ${b.ssid}. ${n.how === 'cable' ? 'The hub can’t check that one from a cable' : 'Nothing here can check that one'}, so it takes your word for it.`
+  return `${them} given ${b.ssid}.`
+})
+/* The house's own address, once it has one (design/address/, All three after). A house without one
+   shows nothing here: it is asked once in setup, and where else it is offered is not this page. */
+const address = ref<AddressState | null>(null)
+const outside = computed(() => outsideRow(address.value))
+const turning = ref(false)
+async function loadAddress() { try { address.value = await getAddress() } catch { /* an older hub, or no service: the row stays away */ } }
+async function turnOutside() {
+  if (!address.value || turning.value) return
+  turning.value = true
+  try { address.value = await turnAddress(address.value.want === 'off') } catch (e: any) { notify(e.message, 'error') }
+  turning.value = false
+}
+
+async function loadNet() { try { net.value = await getNetwork() } catch { /* an older hub: the row stays away */ } }
+
+/*
+ * The house's language. Not what the panel's own words are in -- those are English -- but what
+ * everything the house did not write is asked for in: what your devices' makers call themselves on
+ * the Add screen, the place search, the dates, and the voice. The row says exactly that, because a
+ * row called "Language" on a screen still speaking English is a promise nobody meant to make.
+ *
+ * Set from the browser at first run and almost never touched again, so it is a row that shows and
+ * offers Change, like Network -- not a picker sitting open on a settings page.
+ */
+const langOpen = ref(false), langBusy = ref(false)
+const lang = computed(() => store.status?.language || 'en')
+async function pickLanguage(code: string) {
+  if (langBusy.value || code === lang.value) { langOpen.value = false; return }
+  langBusy.value = true
+  try {
+    const r = await setLanguage(code)
+    if (store.status) store.status = { ...store.status, language: r.language }
+    langOpen.value = false
+    notify('The house is in ' + languageName(r.language) + ' now.')
+  } catch (e: any) { notify(e.message, 'error') }
+  langBusy.value = false
+}
+function closeNet() { netOpen.value = false; loadNet() }
+
+const when = (ts?: number | null) => ts ? new Date(ts * 1000).toLocaleString(locale(), { weekday: 'short', hour: 'numeric', minute: '2-digit' }) : ''
+</script>
+
+<template>
+  <div class="page">
+    <p class="page-lede">The small computer running the house. It looks after itself; this is where you check on it.</p>
+
+    <ul class="hub-rows">
+      <li :class="{ asking: !!uask }">
+        <span class="hub-k">Software</span>
+        <template v-if="uask">
+          <span class="hub-v">
+            <b>{{ uask.title }}</b>
+            <!-- Why this one, in the release's own words. The wait is the one moment somebody is
+                 both captive and curious, and these were fetched and drawn nowhere until now. One
+                 line, like the What's new row: split into a list they stop reading as the reason and
+                 start reading as another column of costs. -->
+            <span class="hub-sub line" v-if="uask.what.length">{{ uask.what.join(' ') }}</span>
+            <span class="hub-sub line">{{ uask.keeps }} It takes {{ uask.how_long }}, and the screen is away for {{ uask.dark_how_long }} of that.</span>
+            <span class="hub-sub line" v-for="(l, i) in uask.stops" :key="'s' + i">{{ l }}</span>
+            <span class="hub-sub line warn" v-for="(l, i) in uask.flight" :key="'f' + i">{{ l }}</span>
+            <span class="hub-sub line warn" v-if="uask.warn">{{ uask.warn }}</span>
+            <span class="hub-sub line warn" v-if="uask.blocked">{{ uask.blocked }}</span>
+          </span>
+          <span class="note-ask">
+            <button class="button small" v-if="!uask.blocked" :class="{ busy: installBusy }" @click="goInstall">{{ uask.yes }}</button>
+            <button class="button small ghost" @click="uask = null">Not now</button>
+          </span>
+        </template>
+        <template v-else>
+        <span class="hub-v">{{ !store.status?.version || store.status.version === 'dev' ? 'Development build' : store.status.version }}<span class="hub-sub" v-if="held"> · {{ update?.latest?.version }} was paused by the people who make the hub</span><span class="hub-sub" v-else-if="refused"> · {{ refused }} couldn’t be checked, so it wasn’t installed</span><span class="hub-sub" v-else-if="rolledBack"> · {{ rolledBack }} didn’t start, so this one was put back</span><span class="hub-sub" v-else-if="update?.checked"> · checked {{ when(update.checked) }}</span>
+          <!-- What the hub is doing right now, said in its own words rather than three dots. It is a
+               line here and not a screen over the panel because the house still works: for all of
+               this but the last stretch the brain is up and every light still answers. -->
+          <span class="hub-sub line" v-if="busyUpdating">{{ phase?.says || 'Starting.' }} {{ (phase?.notices ?? []).join(' ') }}</span></span>
+        <button class="button small" v-if="update?.available && !refused && !held && !busyUpdating" @click="openInstall">{{ rolledBack ? 'Try again' : 'Install the update' }}</button>
+        <span class="hub-sub" v-else-if="busyUpdating">{{ phase?.step ? `Step ${phase.step} of ${phase.steps}` : 'Updating…' }}</span>
+        <span class="hub-sub" v-else-if="update?.available === false">Up to date</span>
+        <span class="hub-sub" v-else-if="update?.error">Couldn't check: no internet?</span>
+        <span v-else></span>
+        </template>
+      </li>
+      <li v-if="notes?.notes?.what?.length || earlierReleases.length">
+        <span class="hub-k">What's new</span>
+        <span class="hub-v">{{ notes?.notes?.what?.length ? notes.notes.what.join(' ') : 'Nothing was written down for this build.' }}
+          <template v-if="earlier">
+            <span class="was" v-for="r in earlierReleases" :key="r.version"><b>{{ r.version }}</b> {{ r.what.join(' ') }}</span>
+          </template>
+        </span>
+        <button class="button small" v-if="earlierReleases.length" @click="earlier = !earlier">{{ earlier ? 'Hide' : 'Earlier' }}</button>
+        <span v-else></span>
+      </li>
+      <li v-if="net">
+        <span class="hub-k">Network</span>
+        <span class="hub-v">{{ netLine }}<span class="hub-sub line">{{ netSub }}</span></span>
+        <button class="button small" v-if="!net.moving" @click="netOpen = true">Change</button>
+        <span class="hub-sub" v-else>Moving…</span>
+      </li>
+      <li v-if="outside">
+        <span class="hub-k">Web address</span>
+        <span class="hub-v">{{ outside.value }}<span class="hub-sub line">{{ outside.sub }}</span></span>
+        <button class="button small ghost" :class="{ busy: turning }" @click="turnOutside">{{ outside.action }}</button>
+      </li>
+      <li :class="{ asking: langOpen }">
+        <span class="hub-k">Language</span>
+        <span class="hub-v">{{ languageName(lang) }}
+          <span class="hub-sub line">Dates, place names and device makers&rsquo; names follow it. The panel&rsquo;s own words are English for now.</span>
+          <span class="hub-langs" v-if="langOpen">
+            <button v-for="l in LANGUAGES" :key="l.code" class="chip-btn" :class="{ on: l.code === lang }"
+                    :disabled="langBusy" @click="pickLanguage(l.code)">
+              <Icon v-if="l.code === lang" name="check" :size="14" />{{ l.name }}
+            </button>
+          </span>
+        </span>
+        <button class="button small" :class="{ ghost: langOpen }" @click="langOpen = !langOpen">{{ langOpen ? 'Cancel' : 'Change' }}</button>
+      </li>
+      <li>
+        <span class="hub-k">Updates</span>
+        <span class="hub-v">{{ update?.auto ? 'Installed overnight, on their own.' : 'Installed when you tap, and not before.' }}<span class="hub-sub line">{{ update?.verified ? 'Only ones this hub can check, and it puts back any that won’t start.' : 'This hub can’t check an update yet, so it waits to be asked.' }}</span></span>
+        <button class="toggle" role="switch" :aria-checked="!!update?.auto" aria-label="Install updates overnight" :class="{ on: update?.auto, busy: autoBusy }" @click="flipAuto"><span class="knob"></span></button>
+      </li>
+      <li v-if="bridges.length || behind.length">
+        <span class="hub-k">Bridges</span>
+        <span class="hub-v">
+          <span v-if="behind.length">{{ behindLine }}<span class="hub-sub line">They keep working, and nothing they do is affected. Catching one up needs a cable for now — the hub can’t do it over the air yet.</span></span>
+          <span v-else>They bring in the switches that have no Wi‑Fi of their own.</span>
+          <span class="hub-bridges" v-if="bridges.length">
+            <button v-for="b in bridges" :key="b.chip" class="hub-bridge" @click="open = b.chip">
+              <span class="hub-bridge-name">{{ b.where }}</span>
+              <span class="hub-bridge-state" :class="{ quiet: !b.online }">{{ line(b) }}</span>
+            </button>
+          </span>
+        </span>
+        <span></span>
+      </li>
+      <li>
+        <span class="hub-k">Backup</span>
+        <span class="hub-v">Everything the house knows, in one file.<span class="hub-sub line">Settings, rooms, routines, connections and the radios' keys. It holds the house's keys, so keep the file private.</span></span>
+        <button class="button small" :class="{ busy }" @click="backup">{{ busy ? 'Packing…' : 'Back up' }}</button>
+      </li>
+      <li>
+        <span class="hub-k">Restore</span>
+        <span class="hub-v">Put a backup back, here or on a new hub.<span class="hub-sub line">Everything running now is replaced by what is in the file.</span></span>
+        <Restore small />
+      </li>
+      <li :class="{ asking: !!ask }">
+        <span class="hub-k">Restart</span>
+        <template v-if="!ask">
+          <span class="hub-v">If something's stuck, restart the hub.<span class="hub-sub line">Lights and switches keep working. It takes under a minute and this screen comes back on its own.</span></span>
+          <button class="button small" v-if="!store.restarting" @click="openRestart('hub')">Restart</button>
+          <span class="hub-sub" v-else>Restarting…</span>
+        </template>
+        <template v-else>
+          <span class="hub-v">
+            <b>{{ ask.title }}</b>
+            <!-- What is still true while it is away, first: it is the thing people are actually asking. -->
+            <span class="hub-sub line">{{ ask.keeps }} The screen goes dark for {{ ask.how_long }}.</span>
+            <span class="hub-sub line" v-for="(line, i) in ask.stops" :key="i">{{ line }}</span>
+            <!-- Half-done things, named before they are lost. Nothing vanishes under a tap unsaid. -->
+            <span class="hub-sub line warn" v-for="(line, i) in ask.flight" :key="'f' + i">{{ line }}</span>
+            <span class="hub-sub line warn" v-if="ask.weary">{{ ask.weary }}</span>
+            <span class="hub-sub line warn" v-if="ask.warn">{{ ask.warn }}</span>
+            <span class="hub-sub line warn" v-if="ask.blocked">{{ ask.blocked }}</span>
+            <span class="hub-sub line warn" v-else-if="!ask.may">Restarting needs the passcode. Someone who joined with it can do it.</span>
+          </span>
+          <span class="note-ask">
+            <button class="button small" v-if="ask.may && !ask.blocked" :class="{ busy: restartBusy }" @click="goRestart(!!ask.warn)">{{ ask.yes }}</button>
+            <!-- The next rung up, and only once the hub says this one has stopped being the answer.
+                 A ladder drawn as a menu is the diagnosis handed back to the household. -->
+            <button class="button small ghost" v-if="ask.harder" @click="openRestart(ask.harder)">{{ ask.harder === 'machine' ? 'Power off and on' : 'Full restart' }}</button>
+            <button class="button small ghost" @click="ask = null">Not now</button>
+          </span>
+        </template>
+      </li>
+    </ul>
+
+    <!-- The hub's own wiring, which is where wiring belongs. It used to sit on the Add page under
+         the four doors, where it answered a question nobody adding a lamp had asked, and where it
+         went on listing itself underneath a half-finished one. design/adding/Under.dc.html. -->
+    <div class="add-block">
+      <h3 class="label">Connections</h3>
+      <Drivers />
+    </div>
+
+    <AdvancedLink />
+    <NetworkSheet v-if="netOpen" @close="closeNet" />
+    <BridgeCard v-if="opened" :bridge="opened" @close="open = null; loadBridges()" @changed="changed" />
+  </div>
+</template>
+
+<style scoped>
+/* The restart row while its question is up: the question needs the width, so the row gives up its
+   three columns and stacks. `warn` is the attention color the rest of the panel already uses. */
+.hub-rows li.asking { align-items: flex-start; }
+.hub-sub.warn { color: var(--lamp); opacity: 0.95; }
+/* One earlier release per line, quieter than the one this hub is on. Kept here rather than in
+   panel.css: it is three declarations and only this page has them. */
+.was { display: block; margin-top: 0.45em; font-size: 0.92em; opacity: 0.55; }
+.was b { font-weight: 600; margin-right: 0.35em; }
+/* The language list while it is open. Scoped here rather than in panel.css, which is one flat
+   global sheet: a `.langs` in there would be one name away from restyling somebody else. */
+.hub-langs { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+</style>

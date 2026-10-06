@@ -1,0 +1,156 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Instrument Sans", -apple-system, "SF Pro Text", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      /* the panel's own tokens, unchanged -- app/src/panel.css */
+      --bg: #0c0d10; --surface: rgba(26,28,34,.68); --surface-hi: rgba(255,255,255,.08);
+      --edge: rgba(255,255,255,.1); --edge-hi: rgba(255,255,255,.18);
+      --ink: #f1eee8; --ink-2: #b9b5ad; --muted: #7f7d77;
+      --lamp: #e9b872; --lamp-ink: #2a1c07; --live: #74c69d; --danger: #e08a8a;
+    }
+    .dsp { font-weight: 400; letter-spacing: -.025em; text-wrap: balance; }
+    .cap { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .phone { position: absolute; top: 244px; width: 366px; height: 596px; border-radius: 40px;
+             background: #14161b; border: 1px solid var(--edge-hi);
+             box-shadow: 0 40px 100px -30px rgba(0,0,0,.9); overflow: hidden; padding: 30px 26px; }
+    .row { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px;
+           padding: 12px 14px; border-radius: 16px; background: var(--surface); border: 1px solid var(--edge); }
+    .row.lit { border-color: rgba(233,184,114,.35);
+               background: linear-gradient(rgba(233,184,114,.1), rgba(233,184,114,.1)), var(--surface); }
+    .row.dash { background: none; border-style: dashed; }
+    .ic { width: 36px; height: 36px; border-radius: 12px; display: grid; place-items: center;
+          background: var(--surface-hi); color: var(--ink-2); }
+    .ic.on { background: var(--lamp); color: var(--lamp-ink); }
+    .t1 { font-size: 15.5px; font-weight: 500; }
+    .t2 { font-size: 13px; color: var(--muted); }
+    .btn { display: inline-flex; align-items: center; gap: 8px; padding: 12px 20px; border-radius: 999px;
+           background: var(--ink); color: var(--bg); font-weight: 500; font-size: 17px; }
+    .btn.big { padding: 15px 28px; }
+    .btn.ghost { background: var(--surface-hi); color: var(--ink); border: 1px solid var(--edge); }
+  </style>
+</helmet>
+
+<div style="position: relative; width: 1440px; height: 900px; overflow: hidden; background: #0c0d10; color: var(--ink); font-size: 17px; line-height: 1.4;">
+  <div style="position: absolute; inset: 0; background: radial-gradient(64% 54% at 22% 18%, rgba(72,63,135,.22), transparent 70%), radial-gradient(56% 48% at 86% 88%, rgba(92,63,57,.2), transparent 72%);"></div>
+
+  <div style="position: absolute; top: 52px; left: 56px; right: 56px;">
+    <h1 class="dsp" style="margin: 0; font-size: 42px;">Afterwards, from the light itself.</h1>
+    <p style="margin: 10px 0 0; font-size: 17px; color: var(--ink-2); max-width: 96ch;">Setup catches the moment somebody is holding two switches. Everything after that &mdash; a third one added years later, a wrong pair undone, a switch replaced when it dies &mdash; happens on the light&rsquo;s own screen, because the light is the thing a person is looking for. There is no list of switches anywhere in the house, and there should not be one.</p>
+  </div>
+
+  <!-- ============ 1 ============ -->
+  <div class="cap" style="position: absolute; top: 208px; left: 96px;">1 &middot; the light knows what works it</div>
+  <div class="phone" style="left: 96px;">
+    <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 22px;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ink-2)" stroke-width="2" stroke-linecap="round"><path d="M15 5l-7 7 7 7"/></svg>
+      <span class="t2">Stairs</span>
+    </div>
+    <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 26px;">
+      <span style="width: 52px; height: 52px; border-radius: 16px; background: var(--lamp); color: var(--lamp-ink); display: grid; place-items: center;">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9V15h7v-1.1A6 6 0 0 0 12 3z"/></svg>
+      </span>
+      <span><span class="dsp" style="display: block; font-size: 23px;">Stairs &mdash; light</span><span class="t2">On &middot; 60% &middot; motion</span></span>
+    </div>
+    <div class="cap" style="margin-bottom: 12px;">switches that work it</div>
+    <div style="display: grid; gap: 8px; margin-bottom: 16px;">
+      <div class="row">
+        <span class="ic on"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 5v9M8.5 8.5L12 5l3.5 3.5"/><path d="M5 19h14"/></svg></span>
+        <span><span class="t1">Bottom of the stairs</span><span class="t2" style="display: block;">The lamp is wired to this one</span></span>
+        <span class="t2">&#8942;</span>
+      </div>
+      <div class="row">
+        <span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 19v-9M8.5 15.5L12 19l3.5-3.5"/><path d="M5 5h14"/></svg></span>
+        <span><span class="t1">Landing</span><span class="t2" style="display: block;">Works it from up there</span></span>
+        <span class="t2">&#8942;</span>
+      </div>
+      <div class="row dash">
+        <span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 6v12M6 12h12"/></svg></span>
+        <span><span class="t1">Add another switch</span><span class="t2" style="display: block;">A third one, anywhere in the house.</span></span>
+      </div>
+    </div>
+    <p class="t2" style="position: absolute; left: 28px; right: 28px; bottom: 28px; margin: 0;">Only the lamp&rsquo;s own switch can be told to dim. The others pass a press along to it, which is why the light behaves the same from every end.</p>
+  </div>
+
+  <!-- ============ 2 ============ -->
+  <div class="cap" style="position: absolute; top: 208px; left: 537px;">2 &middot; a third, and a fourth, change nothing</div>
+  <div class="phone" style="left: 537px;">
+    <div style="display: grid; place-items: center; margin: 6px 0 20px;">
+      <span style="width: 56px; height: 56px; border-radius: 18px; background: var(--live); color: #0b2216; display: grid; place-items: center;">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>
+      </span>
+    </div>
+    <h2 class="dsp" style="margin: 0 0 10px; font-size: 27px; text-align: center;">Three switches, one light.</h2>
+    <p style="margin: 0 0 22px; color: var(--ink-2); font-size: 15px; text-align: center;">The new one works the stairs from the back door now. Press any of the three and the same lamp answers.</p>
+    <div style="display: grid; place-items: center; margin-bottom: 22px;">
+      <svg width="250" height="104" viewBox="0 0 250 104" fill="none">
+        <rect x="101" y="4" width="48" height="40" rx="8" fill="#ded8cc" stroke="rgba(0,0,0,.22)" stroke-width="2"/>
+        <rect x="109" y="11" width="32" height="18" rx="5" fill="#fbf8f2" stroke="rgba(0,0,0,.12)" stroke-width="1.3"/>
+        <circle cx="125" cy="37" r="4.6" fill="var(--lamp)"/>
+        <rect x="6" y="62" width="44" height="38" rx="8" fill="#ded8cc" stroke="rgba(0,0,0,.22)" stroke-width="2"/>
+        <rect x="13" y="69" width="30" height="17" rx="5" fill="#fbf8f2" stroke="rgba(0,0,0,.12)" stroke-width="1.3"/>
+        <rect x="103" y="62" width="44" height="38" rx="8" fill="#ded8cc" stroke="rgba(0,0,0,.22)" stroke-width="2"/>
+        <rect x="110" y="69" width="30" height="17" rx="5" fill="#fbf8f2" stroke="rgba(0,0,0,.12)" stroke-width="1.3"/>
+        <rect x="200" y="62" width="44" height="38" rx="8" fill="#ded8cc" stroke="rgba(0,0,0,.22)" stroke-width="2"/>
+        <rect x="207" y="69" width="30" height="17" rx="5" fill="#fbf8f2" stroke="rgba(0,0,0,.12)" stroke-width="1.3"/>
+        <g stroke="var(--live)" stroke-width="2.2" stroke-linecap="round">
+          <path d="M40 60C58 48 92 42 112 44"/><path d="M125 58v-8"/><path d="M210 60c-18-12-52-18-72-16"/>
+          <path d="M106 40l7 4-6 5" fill="none"/><path d="M120 52l5-6 5 6" fill="none"/><path d="M143 40l-7 4 6 5" fill="none"/>
+        </g>
+      </svg>
+    </div>
+    <div class="row lit">
+      <span class="ic on"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9V15h7v-1.1A6 6 0 0 0 12 3z"/></svg></span>
+      <span><span class="t1">Stairs &mdash; light</span><span class="t2" style="display: block;">3 switches &middot; dims &middot; motion</span></span>
+      <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--live);"></span>
+    </div>
+    <div style="position: absolute; left: 26px; right: 26px; bottom: 28px; display: grid; place-items: center; gap: 12px;">
+      <span class="btn big">Done</span>
+      <span class="t2" style="text-align: center;">Any of the three can be taken off again from here.</span>
+    </div>
+  </div>
+
+  <!-- ============ 3 ============ -->
+  <div class="cap" style="position: absolute; top: 208px; left: 978px;">3 &middot; taking one off says what happens to it</div>
+  <div class="phone" style="left: 978px; background: #0e1014;">
+    <div style="opacity: .28; pointer-events: none;">
+      <div class="cap" style="margin-bottom: 12px;">switches that work it</div>
+      <div style="display: grid; gap: 8px;">
+        <div class="row"><span class="ic on"></span><span><span class="t1">Bottom of the stairs</span><span class="t2" style="display: block;">The lamp is wired to this one</span></span><span class="t2">&#8942;</span></div>
+        <div class="row"><span class="ic"></span><span><span class="t1">Landing</span><span class="t2" style="display: block;">Works it from up there</span></span><span class="t2">&#8942;</span></div>
+      </div>
+    </div>
+    <div style="position: absolute; left: 0; right: 0; bottom: 0; padding: 26px 26px 28px; border-radius: 28px 28px 40px 40px; background: #1b1e25; border-top: 1px solid var(--edge-hi); box-shadow: 0 -30px 60px -20px rgba(0,0,0,.8);">
+      <h2 class="dsp" style="margin: 0 0 10px; font-size: 24px;">Take the landing switch off this light?</h2>
+      <p style="margin: 0 0 20px; color: var(--ink-2); font-size: 14.5px;">It has no lamp of its own, so on its own it does nothing. Give it something to do while it is here.</p>
+      <div style="display: grid; gap: 9px;">
+        <div class="row">
+          <span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9V15h7v-1.1A6 6 0 0 0 12 3z"/></svg></span>
+          <span><span class="t1">Put it on another light</span><span class="t2" style="display: block;">Pick one, and it works that instead.</span></span>
+        </div>
+        <div class="row">
+          <span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M12 4v7M7.5 7.5l9 9" /><circle cx="12" cy="15" r="5.5"/></svg></span>
+          <span><span class="t1">Make it a button</span><span class="t2" style="display: block;">A tap runs something; a slide dims it.</span></span>
+        </div>
+        <div class="row">
+          <span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M7 7l10 10M17 7L7 17"/></svg></span>
+          <span><span class="t1">Just take it off</span><span class="t2" style="display: block;">A blank plate until you come back to it.</span></span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

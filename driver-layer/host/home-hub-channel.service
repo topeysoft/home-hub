@@ -1,0 +1,14 @@
+# Asks what the maker is saying about releases right now: which ones are being held back, and how far
+# a new one has been let out. Checked against this hub's release keys and written into the data
+# volume for the brain to read. install.sh copies this (with its own directory in place of
+# /opt/home-hub) and enables the timer beside it.
+[Unit]
+Description=Home Hub: what the maker is saying about releases
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+Environment=HOME_HUB_DIR=/opt/home-hub
+ExecStart=/opt/home-hub/driver-layer/host/channel.sh
+StandardOutput=journal

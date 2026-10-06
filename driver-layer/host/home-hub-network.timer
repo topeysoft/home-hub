@@ -1,0 +1,13 @@
+# Keeps brain-data/network.json current, so the panel's Network row is a fact and not a memory.
+# Once a minute: a link coming or going is the sort of thing somebody is standing there watching.
+[Unit]
+Description=Home Hub: keep the hub's own network picture current
+
+[Timer]
+OnBootSec=45s
+OnUnitActiveSec=60s
+AccuracySec=10s
+Unit=home-hub-network.service
+
+[Install]
+WantedBy=timers.target

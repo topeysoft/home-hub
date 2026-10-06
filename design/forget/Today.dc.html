@@ -1,0 +1,157 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Instrument Sans", -apple-system, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      /* app/src/panel.css :root, unchanged */
+      --ink: #f1eee8; --ink-2: #b9b5ad; --muted: #7f7d77;
+      --lamp: #e9b872; --lamp-ink: #2a1c07;
+      --live: #74c69d; --danger: #e08a8a;
+      --edge: rgba(255,255,255,.10); --edge-hi: rgba(255,255,255,.18);
+      --surface-hi: rgba(255,255,255,.08);
+      --mark: #e0685f;
+    }
+    .dsp { font-family: inherit; font-weight: 400; letter-spacing: -.025em; }
+    .lbl { font-size: 12.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    /* the pane's own edit, at the sizes panel.css gives it */
+    .edit-room { height: 40px; min-width: 200px; display: inline-flex; align-items: center; justify-content: space-between; gap: 14px; padding: 0 12px; border-radius: 12px; background: var(--surface-hi); border: 1px solid var(--edge); color: var(--ink); font-size: 15px; }
+    .edit-name { padding: 6px 14px; border-radius: 14px; border: 1px solid var(--lamp); background: var(--surface-hi); color: var(--ink); font-size: 34px; font-weight: 500; letter-spacing: -.01em; }
+    .btn { display: inline-flex; align-items: center; height: 36px; padding: 0 16px; border-radius: 999px; background: var(--lamp); color: var(--lamp-ink); font-size: 15px; font-weight: 500; }
+    .btn.ghost { background: transparent; border: 1px solid var(--edge); color: var(--ink-2); font-weight: 400; }
+    .kind-say { font-size: 14px; color: var(--muted); text-decoration: underline dotted; text-decoration-color: var(--edge-hi); text-underline-offset: 4px; }
+    .kind-say.still { text-decoration: none; }
+    .crop { border-radius: 18px; border: 1px solid var(--edge); background: linear-gradient(rgba(26,28,34,.8), rgba(16,17,21,.94)); padding: 26px 28px 28px; position: relative; overflow: hidden; }
+    /* a route: how far in it is, and what it is called when you get there */
+    .route { display: grid; grid-template-columns: 24px 1fr; column-gap: 13px; padding: 12px 0 11px; border-bottom: 1px solid rgba(255,255,255,.06); }
+    .route-n { font-size: 13px; color: var(--muted); }
+    .route-t { font-size: 15.5px; }
+    .route-p { margin-top: 4px; font-size: 13.5px; color: var(--ink-2); }
+    .route-p b { color: var(--lamp); font-weight: 400; }
+    .route-w { margin-top: 4px; font-size: 12.5px; color: var(--muted); line-height: 1.45; }
+    /* a thing with no way out */
+    .none { min-height: 224px; display: flex; flex-direction: column; padding: 16px 18px 17px; border-radius: 16px; border: 1px solid rgba(224,104,95,.28); background: rgba(224,104,95,.05); }
+    .none-t { font-size: 16px; }
+    .none-s { margin-top: 3px; font-size: 12.5px; color: var(--mark); }
+    .none-w { margin-top: 9px; flex: 1 1 auto; font-size: 13px; color: var(--ink-2); line-height: 1.5; }
+    .none-f { margin-top: 12px; padding-top: 11px; border-top: 1px solid rgba(224,104,95,.2); font-size: 12.5px; color: var(--muted); line-height: 1.45; }
+    .none-f b { color: var(--ink-2); font-weight: 400; }
+    .none-w code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; color: var(--muted); }
+  </style>
+</helmet>
+
+<!-- TODAY -- every way out of the house that ships, traced from the panel and the brain on 22 September. -->
+<div style="position: relative; width: 1440px; height: 900px; overflow: hidden; background: #0c0d10; color: var(--ink); font-size: 17px; line-height: 1.4;">
+
+  <div style="position: absolute; inset: 0; background: linear-gradient(rgb(20,23,38) 0%, rgb(35,36,58) 42%, rgb(78,55,52) 86%, rgb(54,40,40) 100%);"></div>
+  <div style="position: absolute; inset: 0; background: radial-gradient(90% 70% at 62% 78%, rgba(233,184,114,.10), transparent 66%);"></div>
+  <div style="position: absolute; inset: 0; opacity: .5; background-image: url(&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.035'/%3E%3C/svg%3E&quot;);"></div>
+
+  <div style="position: absolute; left: 48px; top: 38px; width: 1160px;">
+    <div class="lbl">Traced, not remembered</div>
+    <h1 class="dsp" style="margin: 9px 0 0; font-size: 42px; line-height: 1.06;">Getting rid of a thing, today</h1>
+    <p style="margin: 10px 0 0; font-size: 16px; color: var(--ink-2); max-width: 1120px; line-height: 1.5;">Four ways out ship &mdash; a fault report, an unlabeled pencil, a puck, an account door. No two are in the same place, and the word is <span style="color: var(--ink);">Forget</span> on three of them and <span style="color: var(--ink);">Remove</span> on the fourth. Three kinds of thing have no way out at all.</p>
+  </div>
+
+  <!-- what the pane's edit verb actually opens, at its own size -->
+  <div class="lbl" style="position: absolute; left: 48px; top: 186px;">What &ldquo;Rename or move it&rdquo; opens &middot; at its own size</div>
+  <div class="crop" style="position: absolute; left: 48px; top: 208px; width: 652px; height: 292px;">
+    <div style="position: absolute; right: -30px; bottom: -46px; opacity: .45;"><svg width="200" height="200" viewBox="0 0 24 24" fill="none" stroke="rgba(233,184,114,.3)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.4.3.5.7.5 1.1h6c0-.4.1-.8.5-1.1A6 6 0 0 0 12 3z"/></svg></div>
+    <div style="position: relative; display: flex; flex-direction: column; gap: 10px; max-width: 470px;">
+      <div class="edit-room" style="align-self: flex-start;"><span>Living room</span><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#b9b5ad" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9.5l6 6 6-6"/></svg></div>
+      <div class="edit-name">Ceiling light</div>
+      <div style="display: flex; gap: 8px; margin-top: 2px;"><span class="btn">Done</span><span class="btn ghost">Cancel</span></div>
+    </div>
+    <div style="position: relative; margin-top: 20px; display: flex; flex-direction: column; gap: 11px;">
+      <span class="kind-say" style="align-self: flex-start;">Show this as</span>
+      <span class="kind-say still" style="align-self: flex-start;">Shared with other apps</span>
+      <span class="kind-say still" style="align-self: flex-start;">Lead with</span>
+    </div>
+  </div>
+
+  <div style="position: absolute; left: 48px; top: 518px; width: 652px; font-size: 14.5px; color: var(--ink-2); line-height: 1.6;">
+    This is where somebody who wants a thing gone will look, because it is the thing. The verb is called <span style="color: var(--ink);">Rename or move it</span>, and that is exactly and only what it does. Forget is not here, and nothing here says where Forget is.
+  </div>
+
+  <!-- the four ways out that ship -->
+  <div class="lbl" style="position: absolute; left: 740px; top: 186px;">The four ways out, and how far in they are</div>
+  <div style="position: absolute; left: 740px; top: 208px; width: 652px;">
+
+    <div class="route">
+      <div class="route-n">1</div>
+      <div>
+        <div class="route-t">A device &mdash; the pencil</div>
+        <div class="route-p">Rooms <b>&rsaquo;</b> a room <b>&rsaquo;</b> the pencil <b>&rsaquo;</b> the row <b>&rsaquo;</b> Forget <b>&rsaquo;</b> Forget?</div>
+        <div class="route-w">Six taps, and the third is an unlabeled pencil whose words &mdash; &ldquo;Edit this room&rdquo; &mdash; are a title attribute a finger cannot hover. SortView.vue:276.</div>
+      </div>
+    </div>
+
+    <div class="route">
+      <div class="route-n">2</div>
+      <div>
+        <div class="route-t">A device that stopped answering &mdash; the fault report</div>
+        <div class="route-p">Needs a look <b>&rsaquo;</b> It&rsquo;s gone, remove it <b>&rsaquo;</b> Yes, remove it</div>
+        <div class="route-w">The plainest words anywhere in the house, offered only once the house has decided something is wrong. A thing you sold while it still worked never gets here. health.py:91.</div>
+      </div>
+    </div>
+
+    <div class="route">
+      <div class="route-n">3</div>
+      <div>
+        <div class="route-t">A bridge puck &mdash; This house</div>
+        <div class="route-p">This house <b>&rsaquo;</b> Bridges <b>&rsaquo;</b> the puck <b>&rsaquo;</b> Forget <b>&rsaquo;</b> Forget it</div>
+        <div class="route-w">The one that is properly built: it says what stops working, and it clears the retained topics so the puck cannot be back in the list on Tuesday. BridgeCard.vue:152.</div>
+      </div>
+    </div>
+
+    <div class="route" style="border-bottom: 0;">
+      <div class="route-n">4</div>
+      <div>
+        <div class="route-t">An account &mdash; and everything it brought</div>
+        <div class="route-p">This house <b>&rsaquo;</b> Accounts <b>&rsaquo;</b> the account <b>&rsaquo;</b> Remove</div>
+        <div class="route-w">The bigger hammer, and the only way out for a device whose integration will not let it leave on its own.</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- and the three with no way out -->
+  <div class="lbl" style="position: absolute; left: 48px; top: 612px;">And three with no way out at all</div>
+  <div style="position: absolute; left: 48px; top: 638px; width: 1344px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 21px;">
+
+    <div class="none">
+      <div class="none-t">A light strip</div>
+      <div class="none-s">No route, and nothing to build one on</div>
+      <div class="none-w">There is no forget anywhere in <code>/strip</code>: <code>Radio.forget()</code> at strip.py:374 is <code>return None</code>, with no callers. Forgetting its device through the pencil drops it from the house and leaves it adopted in the hub &mdash; half out, and nothing says so.</div>
+      <div class="none-f"><b>What it needs:</b> a forget that tells the strip to forget the house too, so it can be set up again &mdash; here or in somebody else&rsquo;s.</div>
+    </div>
+
+    <div class="none">
+      <div class="none-t">A Brilliant wall switch</div>
+      <div class="none-s">Answers Forget, and is back by morning</div>
+      <div class="none-w">The puck republishes discovery every MQTT session (<code>announced</code>, main.cpp:171), so the row returns the next time it reconnects. The mesh node keeps our netkey either way: the only real way back is a factory reset at the wall.</div>
+      <div class="none-f"><b>What it needs:</b> a forget the puck keeps across a reboot, and honors by staying quiet &mdash; with letting the switch in again as the way back.</div>
+    </div>
+
+    <div class="none">
+      <div class="none-t">A device its account owns</div>
+      <div class="none-s">Refused, correctly, into a dead end</div>
+      <div class="none-w">&ldquo;It goes when the account that brought it does&rdquo; is true, and the right sentence to say. The panel then leaves you standing on the row with no way through to the account door it has just named.</div>
+      <div class="none-f"><b>What it needs:</b> the door, where the sentence is said. Which screen that lands on is the one part of this that waits for the choice.</div>
+    </div>
+
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

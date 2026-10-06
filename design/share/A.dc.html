@@ -1,0 +1,115 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Instrument Sans", -apple-system, "SF Pro Text", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      /* the panel's own tokens, unchanged -- app/src/panel.css */
+      --bg: #0c0d10; --surface: rgba(26,28,34,.68); --surface-hi: rgba(255,255,255,.08);
+      --edge: rgba(255,255,255,.1); --edge-hi: rgba(255,255,255,.18);
+      --ink: #f1eee8; --ink-2: #b9b5ad; --muted: #7f7d77;
+      --lamp: #e9b872; --lamp-ink: #2a1c07; --live: #74c69d; --danger: #e08a8a;
+    }
+    .dsp { font-weight: 400; letter-spacing: -.025em; text-wrap: balance; }
+    .cap { font-size: 11.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .panel { position: absolute; inset: 8px; border-radius: 26px; background: rgba(14,15,19,.92);
+             border: 1px solid var(--edge); display: grid; grid-template-columns: 320px 1fr; overflow: hidden; }
+    .doors { padding: 22px 18px; border-right: 1px solid var(--edge); }
+    .door { display: grid; grid-template-columns: 38px 1fr; gap: 12px; align-items: center;
+            padding: 9px 10px; border-radius: 15px; }
+    .door.on { background: var(--surface); border: 1px solid var(--edge); }
+    .di { width: 38px; height: 38px; border-radius: 13px; background: var(--surface-hi); color: var(--ink-2); display: grid; place-items: center; }
+    .door.on .di { background: var(--lamp); color: var(--lamp-ink); }
+    .dn { font-size: 15.5px; display: block; }
+    .dh { font-size: 12.5px; color: var(--muted); display: block; }
+    .main { padding: 34px 40px; }
+    .lede { font-size: 15.5px; color: var(--ink-2); margin: 0 0 22px; max-width: 74ch; line-height: 1.5; }
+    .rows { list-style: none; margin: 0; padding: 0; }
+    .rows > li { display: grid; grid-template-columns: 148px 1fr auto; gap: 18px; align-items: center;
+                 padding: 15px 0; border-bottom: 1px solid var(--edge); }
+    .k { font-size: 11.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .v { font-size: 15.5px; }
+    .sub { display: block; font-size: 13px; color: var(--muted); margin-top: 4px; line-height: 1.45; }
+    .tog { width: 48px; height: 28px; border-radius: 999px; background: var(--surface-hi); border: 1px solid var(--edge); position: relative; }
+    .tog.on { background: var(--lamp); border-color: transparent; }
+    .knob { position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #efece6; }
+    .tog.on .knob { left: auto; right: 3px; background: var(--lamp-ink); }
+    .btn { padding: 9px 17px; border-radius: 999px; background: var(--surface-hi); border: 1px solid var(--edge); font-size: 14px; }
+    .chip { display: inline-flex; padding: 8px 15px; border-radius: 999px; border: 1px solid var(--edge);
+            background: var(--surface); color: var(--ink-2); font-size: 14px; margin-right: 8px; }
+    .chip.on { background: var(--ink); color: var(--bg); border-color: transparent; font-weight: 500; }
+    .qr { width: 96px; height: 96px; border-radius: 12px; background: #fff; display: grid; place-items: center; }
+    .off { position: absolute; left: 368px; right: 40px; bottom: 26px; padding: 14px 18px; border-radius: 16px;
+           background: rgba(233,184,114,.07); border: 1px solid rgba(233,184,114,.25); }
+  </style>
+</helmet>
+
+<div style="position: relative; width: 1440px; height: 900px; overflow: hidden; background: #0c0d10; color: var(--ink); font-size: 17px; line-height: 1.4;">
+  <div style="position: absolute; inset: 0; background: radial-gradient(64% 54% at 22% 18%, rgba(72,63,135,.22), transparent 70%), radial-gradient(56% 48% at 86% 88%, rgba(92,63,57,.2), transparent 72%);"></div>
+
+  <div class="panel">
+    <!-- the doors, with Share among them -->
+    <div class="doors">
+      <div style="display: flex; align-items: center; justify-content: space-between; margin: 4px 6px 20px;">
+        <span class="dsp" style="font-size: 20px;">This house</span>
+      </div>
+      <div class="door"><span class="di"></span><span><span class="dn">Where home is</span><span class="dh">Holts Summit, MO</span></span></div>
+      <div class="door"><span class="di"></span><span><span class="dn">How it looks</span><span class="dh">Calm</span></span></div>
+      <div class="door"><span class="di"></span><span><span class="dn">Routines</span><span class="dh">4 routines, 1 off</span></span></div>
+      <div class="door"><span class="di"></span><span><span class="dn">People and phones</span><span class="dh">3 people, 2 home</span></span></div>
+      <div class="door"><span class="di"></span><span><span class="dn">Accounts</span><span class="dh">4 accounts, all signed in</span></span></div>
+      <div class="door"><span class="di"></span><span><span class="dn">Add a device</span><span class="dh">Lights, plugs, cameras, locks</span></span></div>
+      <div class="door on"><span class="di"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="6" r="2.5"/><circle cx="18" cy="18" r="2.5"/><path d="M8.3 10.8l7.4-3.7M8.3 13.2l7.4 3.7"/></svg></span><span><span class="dn">Share this house</span><span class="dh">Apple Home, Google Home, Alexa</span></span></div>
+      <div class="door"><span class="di"></span><span><span class="dn">The hub</span><span class="dh">v0.3.0</span></span></div>
+      <div class="door"><span class="di"></span><span><span class="dn">Lock the settings</span><span class="dh">Open to anyone on the Wi‑Fi</span></span></div>
+    </div>
+
+    <div class="main">
+      <h1 class="dsp" style="margin: 0 0 14px; font-size: 38px;">Share this house</h1>
+      <p class="lede">Your lights and plugs can appear in other apps as <b style="font-weight: 600; color: var(--ink);">Matter devices</b> — the standard Apple Home, Google Home and Alexa all speak. Turn this on and they show up there like any other accessory, ready for Siri, the Assistant or Alexa. Nothing goes out until you say so, and the house keeps working with all of them removed.</p>
+
+      <ul class="rows">
+        <li>
+          <span class="k">Share</span>
+          <span class="v">14 things shared as Matter devices.<span class="sub">Held by Apple Home.</span></span>
+          <span class="tog on"><span class="knob"></span></span>
+        </li>
+        <li>
+          <span class="k">Apps</span>
+          <span class="v">Apple Home<span class="sub">A house can be held by several at once. Removing it is done in that app.</span></span>
+          <span class="btn">Add an app</span>
+        </li>
+        <li>
+          <span class="k">What is shared</span>
+          <span class="v"><span class="chip on">Lights</span><span class="chip on">Plugs and switches</span><span class="chip">Appliance features</span><span class="sub">Every lamp and ceiling light, dimmable where it can dim. Anything that is only on or off.</span></span>
+          <span></span>
+        </li>
+        <li>
+          <span class="k">Locks and garage doors</span>
+          <span class="v">Not shared.<span class="sub">If you share these, anything that can ask Siri, the Assistant or Alexa can unlock this door — including a voice outside it. Closing and locking cannot be shared on their own.</span></span>
+          <span class="tog"><span class="knob"></span></span>
+        </li>
+      </ul>
+
+      <div class="off">
+        <span class="cap">and before anybody has said yes</span>
+        <div style="margin-top: 8px; font-size: 15.5px;">Not shared yet.<span class="sub" style="margin-top: 3px;">14 lights and plugs are ready to go out as Matter devices.</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="cap" style="position: absolute; left: 56px; bottom: 22px;">A &middot; a page of rows, and the words do the selling</div>
+</div>
+</x-dc>
+</body>
+</html>

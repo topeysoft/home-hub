@@ -1,0 +1,580 @@
+{
+  "artboards": [
+    {
+      "file": "Today.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "Today \u2014 what an arrival already looks like"
+    },
+    {
+      "file": "Spine.dc.html",
+      "x": 1560,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "The spine \u2014 five beats, one of them new"
+    },
+    {
+      "file": "Fill.dc.html",
+      "x": 0,
+      "y": 1080,
+      "w": 1440,
+      "h": 900,
+      "title": "A \u2014 it fills, and you stop it"
+    },
+    {
+      "file": "Trim.dc.html",
+      "x": 1560,
+      "y": 1080,
+      "w": 1440,
+      "h": 900,
+      "title": "B \u2014 all of it is lit, and you trim it back"
+    },
+    {
+      "file": "Never.dc.html",
+      "x": 3120,
+      "y": 1080,
+      "w": 1440,
+      "h": 900,
+      "title": "C \u2014 it never asks"
+    },
+    {
+      "file": "Order.dc.html",
+      "x": 0,
+      "y": 2160,
+      "w": 1440,
+      "h": 900,
+      "title": "The order the colors come in"
+    },
+    {
+      "file": "Later.dc.html",
+      "x": 1560,
+      "y": 2160,
+      "w": 1440,
+      "h": 900,
+      "title": "Afterwards \u2014 both answers, on its own pane"
+    },
+    {
+      "file": "CodeBox.dc.html",
+      "x": 0,
+      "y": 3240,
+      "w": 1440,
+      "h": 900,
+      "title": "A \u2014 the code is on the box"
+    },
+    {
+      "file": "CodeMade.dc.html",
+      "x": 1560,
+      "y": 3240,
+      "w": 1440,
+      "h": 900,
+      "title": "B \u2014 the hub already knows it"
+    },
+    {
+      "file": "CodeTap.dc.html",
+      "x": 3120,
+      "y": 3240,
+      "w": 1440,
+      "h": 900,
+      "title": "C \u2014 the phone reads it off the thing"
+    },
+    {
+      "file": "ReachTold.dc.html",
+      "x": 0,
+      "y": 4320,
+      "w": 1440,
+      "h": 900,
+      "title": "A \u2014 the hub tells it"
+    },
+    {
+      "file": "ReachAsks.dc.html",
+      "x": 1560,
+      "y": 4320,
+      "w": 1440,
+      "h": 900,
+      "title": "B \u2014 the strip asks"
+    },
+    {
+      "file": "ReachNone.dc.html",
+      "x": 3120,
+      "y": 4320,
+      "w": 1440,
+      "h": 900,
+      "title": "C \u2014 no broker at all"
+    },
+    {
+      "file": "Tiers.dc.html",
+      "x": 0,
+      "y": 5400,
+      "w": 1440,
+      "h": 900,
+      "title": "Three states \u2014 and the middle one arrives later"
+    },
+    {
+      "file": "Foreign.dc.html",
+      "x": 1560,
+      "y": 5400,
+      "w": 1440,
+      "h": 900,
+      "title": "The pane for one we cannot ask"
+    },
+    {
+      "file": "Both.dc.html",
+      "x": 0,
+      "y": 6480,
+      "w": 1440,
+      "h": 900,
+      "title": "The spine, forked \u2014 whoever arrives first wins"
+    },
+    {
+      "file": "Ours.dc.html",
+      "x": 1560,
+      "y": 6480,
+      "w": 1440,
+      "h": 900,
+      "title": "Our hub got there first"
+    },
+    {
+      "file": "Theirs.dc.html",
+      "x": 3120,
+      "y": 6480,
+      "w": 1440,
+      "h": 900,
+      "title": "Somebody else's app got there first"
+    },
+    {
+      "file": "CodeHub.dc.html",
+      "x": 4680,
+      "y": 6480,
+      "w": 1440,
+      "h": 900,
+      "title": "D \u2014 the hub is the box the code comes in"
+    },
+    {
+      "file": "PopBox.dc.html",
+      "x": 0,
+      "y": 7560,
+      "w": 1440,
+      "h": 900,
+      "title": "A \u2014 the code is on the box, for this door too"
+    },
+    {
+      "file": "PopLight.dc.html",
+      "x": 1560,
+      "y": 7560,
+      "w": 1440,
+      "h": 900,
+      "title": "B \u2014 the strip shows the secret (demoted 21 September)"
+    },
+    {
+      "file": "PopWindow.dc.html",
+      "x": 3120,
+      "y": 7560,
+      "w": 1440,
+      "h": 900,
+      "title": "C \u2014 no secret, only a window"
+    },
+    {
+      "file": "KnockOn.dc.html",
+      "x": 0,
+      "y": 8640,
+      "w": 1440,
+      "h": 900,
+      "title": "A \u2014 it never stops knocking"
+    },
+    {
+      "file": "KnockTwoDays.dc.html",
+      "x": 1560,
+      "y": 8640,
+      "w": 1440,
+      "h": 900,
+      "title": "B \u2014 two days, then dark"
+    },
+    {
+      "file": "KnockAsked.dc.html",
+      "x": 3120,
+      "y": 8640,
+      "w": 1440,
+      "h": 900,
+      "title": "C \u2014 it knocks when it is asked to"
+    },
+    {
+      "file": "Press.dc.html",
+      "x": 0,
+      "y": 9720,
+      "w": 1440,
+      "h": 900,
+      "title": "Chosen \u2014 press the button on it"
+    },
+    {
+      "file": "ReachRhythm.dc.html",
+      "x": 1560,
+      "y": 9720,
+      "w": 1440,
+      "h": 900,
+      "title": "And only if it cannot be reached \u2014 the rhythm"
+    },
+    {
+      "file": "Again.dc.html",
+      "x": 0,
+      "y": 10800,
+      "w": 1440,
+      "h": 900,
+      "title": "Today \u2014 the row restarts the whole measurement"
+    },
+    {
+      "file": "Nudge.dc.html",
+      "x": 1560,
+      "y": 10800,
+      "w": 1440,
+      "h": 900,
+      "title": "A \u2014 the whole strip is lit, and you walk the end"
+    },
+    {
+      "file": "Handle.dc.html",
+      "x": 3120,
+      "y": 10800,
+      "w": 1440,
+      "h": 900,
+      "title": "B \u2014 Trim, as drawn: drag the end"
+    },
+    {
+      "file": "Tail.dc.html",
+      "x": 4680,
+      "y": 10800,
+      "w": 1440,
+      "h": 900,
+      "title": "C \u2014 only the end is lit, and it walks"
+    },
+    {
+      "file": "Foot.dc.html",
+      "x": 0,
+      "y": 12240,
+      "w": 1920,
+      "h": 1080,
+      "title": "The pane as it should be \u2014 the three kept, the strip's two at the foot right"
+    },
+    {
+      "file": "OneDoor.dc.html",
+      "x": 0,
+      "y": 13560,
+      "w": 1920,
+      "h": 1080,
+      "title": "A \u2014 one door, where the two rows were"
+    },
+    {
+      "file": "WithFacts.dc.html",
+      "x": 2040,
+      "y": 13560,
+      "w": 1920,
+      "h": 1080,
+      "title": "B \u2014 the door goes with the facts, and the rig is a light's"
+    },
+    {
+      "file": "OwnPage.dc.html",
+      "x": 4080,
+      "y": 13560,
+      "w": 1920,
+      "h": 1080,
+      "title": "C \u2014 not on this pane at all: it is a thing the house has"
+    },
+    {
+      "file": "Behind.dc.html",
+      "x": 6120,
+      "y": 13560,
+      "w": 1920,
+      "h": 1080,
+      "title": "What is behind the door \u2014 A and B open this"
+    },
+    {
+      "file": "Blocked.dc.html",
+      "x": 0,
+      "y": 14880,
+      "w": 1440,
+      "h": 900,
+      "title": "Today \u2014 five blocks before the strip's row"
+    },
+    {
+      "file": "OneGrid.dc.html",
+      "x": 1560,
+      "y": 14880,
+      "w": 1440,
+      "h": 900,
+      "title": "A \u2014 one grid under one label"
+    },
+    {
+      "file": "Smaller.dc.html",
+      "x": 3120,
+      "y": 14880,
+      "w": 1440,
+      "h": 900,
+      "title": "B \u2014 smaller swatches, more to a row"
+    },
+    {
+      "file": "Tighter.dc.html",
+      "x": 4680,
+      "y": 14880,
+      "w": 1440,
+      "h": 900,
+      "title": "A and B together"
+    },
+    {
+      "file": "Fewer.dc.html",
+      "x": 6240,
+      "y": 14880,
+      "w": 1440,
+      "h": 900,
+      "title": "C \u2014 only the eight, the rest behind the door"
+    }
+  ],
+  "annotations": [
+    {
+      "id": "why",
+      "x": -620,
+      "y": 0,
+      "w": 500,
+      "text": "WHY THIS EXISTS\n\nA light strip is the first thing this house has been asked to adopt that is not a bridge and not already in a wall. It is bought in a box, taped behind a television or under a shelf, and plugged into a socket that is nowhere near the hub.\n\nThe decision taken before these boards: it is NEVER carried to the hub on a cable. It leaves the factory flashed, so it can knock the moment it has power. design/puck/Knock.dc.html argued exactly this shape for the bridge and lost on one line -- \"it only works on a bridge that already has firmware on it\". A product we ship is flashed. That objection is gone, and the puck's hardware notes' open question is answered for this device class.\n\nSo most of this collection is not a proposal. It is a demonstration that a strip already fits the sheet the house has. There is exactly one moment with no precedent, and boards A, B and C are the three whole answers to it."
+    },
+    {
+      "id": "today",
+      "x": -620,
+      "y": 380,
+      "w": 500,
+      "text": "TODAY -- AND IT IS ALREADY MOST OF THE WAY THERE\n\nDrawn from app/src/BridgeSheet.vue as it ships: the knocking beat on the left, the placing beat on the right. Every value here is the panel's own.\n\nWhat a strip inherits for free: the sheet, the veil, the arrival-not-navigation rule, the reassurance row, and the words. \"Yes, that's mine\" and \"Nothing has been let in yet\" are not being invented for this device -- they were settled in design/adding/Words.dc.html and they are right for a strip without a syllable changed.\n\nWhat does NOT survive is the right-hand board. Amber, green and breathing red answer \"is here good?\", and that question only exists because a bridge has to be carried somewhere a radio can hear. A strip is stuck down where it is stuck down."
+    },
+    {
+      "id": "spine",
+      "x": 3120,
+      "y": 0,
+      "w": 500,
+      "text": "THE SPINE, AND WHY IT IS SHORT\n\nFive beats. Four of them are somebody else's work, already shipped and already tested on a household.\n\nBeat two gets BETTER rather than merely reused. The puck proves it is the one by blinking a single indicator LED at somebody standing over it. A strip proves it by lighting two meters of itself. There is no list to pick out of, no chip id on a screen, and no failure mode where two arrive at once and the wall has to describe them.\n\nTHE LIGHT'S PRECEDENCE DOES NOT CARRY OVER, and this is worth writing down before anybody copies the table out of docs/puck-light.md. For a puck a fault outranks everything, because a puck that glows while its bridge is down is furniture that lies. A strip is the opposite case: the household is watching a film, and a strip that turns amber mid-scene because the broker blinked is the product breaking, not reporting. Here the light stays what the person set it to, and the panel carries the fault.\n\nOPEN: which end is the first light. It does not matter for a wash and matters completely for a sweep, and no board here asks it. Probably it is not a question at all -- a sweep that runs the wrong way is fixed by one \"other way round\" on the tile, which is a thing you can judge by looking rather than a thing you have to answer in advance."
+    },
+    {
+      "id": "length",
+      "x": -620,
+      "y": 1080,
+      "w": 500,
+      "text": "THE ONE QUESTION WITH NO PRECEDENT\n\nThe controller cannot know how long the strip is. Nobody can tell it but the household, and the household bought a light, not a component -- they do not know the number and should never have to.\n\nWhat makes this genuinely hard is that the strip cannot show you what it does not have. Write three hundred lights to a strip of a hundred and eighty and the extra two hundred and twenty fall off the end of the wire, invisibly. So every design that works by \"look at where the light is\" only has information in one direction, and that asymmetry is what separates these three.\n\nA first draft of A had a single light TRAVELING down the strip, to be tapped when it reached the end. It is drawn here as a fill instead, because a traveling head goes invisible the moment it passes the real end and there is nothing left to tap. A fill stops changing at exactly that moment, which is the thing a person can actually catch."
+    },
+    {
+      "id": "option-a",
+      "x": -620,
+      "y": 1460,
+      "w": 500,
+      "text": "CHOSEN, 20 SEPTEMBER 2026 -- A AT SETUP, B AFTERWARDS\n\nA -- IT FILLS, AND YOU STOP IT\n\nThe lights come on one at a time from the plug end. The person watches the actual strip, not the screen, and taps once when the far end lights.\n\nFOR: one tap, no number, no measuring, nothing to understand. It is the same idea as pressing a switch to say which room it is in -- you identify a thing by doing something to it and watching what happens. And it is self-correcting by construction: the moment the fill stops changing IS the answer, so a person who taps a beat late is a few lights out and a person who taps early sees dark at the end and does it again.\n\nAGAINST: it is timed, and timing is the one thing a wall panel is bad at asking for. Somebody who looked away misses it and has to sit through another pass. It also assumes the strip is in view of the panel, which behind a television it usually is, and under a kitchen shelf it may not be.\n\nOPEN: how fast. Slow enough to catch is slow enough to be boring at five meters; the board has a Slower button, which is an admission that one speed may not do.\n\nTAKEN TOGETHER WITH B rather than instead of it. The fill is the setup moment, because it is one tap and asks for no number; the trim handle lives on the strip's own pane for anybody who cut it down, joined another on, or answered wrong. They are not a fork -- they are the same fact, asked once while somebody is standing there and editable for ever after."
+    },
+    {
+      "id": "option-b",
+      "x": 3120,
+      "y": 1080,
+      "w": 500,
+      "text": "CHOSEN AS THE SECOND HALF -- IT LIVES ON THE PANE, NOT IN SETUP\n\nB -- ALL OF IT IS LIT, AND YOU TRIM IT BACK\n\nEverything is on. Drag the handle back until the dark part is about to appear.\n\nFOR: nothing is timed. The person can take as long as they like, look away, come back, and the strip is still saying the same thing. It is also the only one of the three that can be re-done casually afterwards, which matters when somebody cuts a strip down or joins two together -- and people do both.\n\nAGAINST: it is a search, not an answer, and it is a search in the dark in one direction. Dragging the handle PAST the real end shows nothing at all, so the person has to overshoot, come back, and find the edge by feel. The board hides this behind a plain-words readout, and that readout is the tell: it is there because the picture alone does not close the question.\n\nAND IT PUTS A NUMBER ON THE WALL. \"About 3.1 m\" is friendlier than a count of lights, but it is still a measurement in a product whose whole argument is that you never take one.\n\nEverything the AGAINST says is true of B as a setup beat and mostly harmless as an afterwards control: a person going looking for it has already decided something is wrong, so a search is what they came for, and the readout they were not to be shown at setup is the thing they want now."
+    },
+    {
+      "id": "option-c",
+      "x": 4680,
+      "y": 1080,
+      "w": 500,
+      "text": "NOT CHOSEN -- KEPT, WITH ITS CASE INTACT\n\nC -- IT NEVER ASKS\n\nWrite a generous number of lights every frame and let the surplus fall off the end of the wire. On, off, brighter, dimmer, any color: all correct on any strip, with nothing asked and nothing to get wrong.\n\nFOR: it is the shortest setup of the three by an entire beat, and it is the only one that cannot be done wrong. For the product as described -- accent lighting, a shelf, the back of a television, warm and on -- it is very possibly the whole of the right answer.\n\nAGAINST: anything that needs to know where the middle is comes out wrong, and the board draws that rather than describing it. A wash meant to run the width of the shelf finishes early and the remainder sits on one color.\n\nTHE REAL ARGUMENT IS ABOUT THE SECOND PRODUCT. If following the television picture is where this is going, the length is not optional -- the zones are defined in terms of it -- and C does not remove the question, it defers it to the worst possible moment: months later, to a household that already believes the thing is set up. Choosing C is a bet that the ambient light and the picture follower are genuinely two products and not one.\n\nWhat decided it: the bet at the foot of the board is a bet about whether the picture follower is a separate product, and that is not settled. A is one tap, so C's advantage over it was one tap's worth -- too little to buy a deferred question with."
+    },
+    {
+      "id": "order",
+      "x": -620,
+      "y": 2160,
+      "w": 500,
+      "text": "THE ORDER THE COLORS COME IN\n\nRaised 20 September, and it is a real hole in everything above: strips do not agree on which channel goes down the wire first. WS2812B is green-red-blue, plenty of others are red-green-blue, and there are six orderings in circulation.\n\nIT CANNOT BE DETECTED. The data line is write-only -- there is no readback on any of these parts -- so the controller can never ask a strip what it wants. It has to be told, and the two obvious ways of telling it are both wrong: asking the household in those words is exactly the component vocabulary product-direction-out-of-the-box forbids, and guessing silently ships a product whose red is not red.\n\nSo it is shown. The strip is lit red and the household says what they see, which is the same move as pressing a switch to say which room it is in. The common strip is already right and answers in one tap; a second question only ever reaches the households whose first answer was no, and two primaries settle all six orderings between them, because whichever color comes back names the channel that went out first.\n\nTHE FOURTH CHOICE IS THE INTERESTING ONE. A three-byte frame sent to a strip that carries a separate white channel misaligns by a byte a pixel and comes out as a repeating candy-stripe rather than one color. So \"stripes\" answers a completely different question -- how many channels -- without a word of vocabulary, and it is the one answer on the board that nobody has to be taught to give.\n\nWRITING THE CODE FOUND A SUBTLETY THE BOARD GLOSSES. \"One tap\" is a prior, not a proof. The first question makes the SECOND byte loud, so the channel somebody names is the one that byte drives -- and that always leaves two orderings standing, never one. Answering \"yes, red\" leaves grb and brg, and we take grb because it is what almost every 5 V strip on sale actually is. So the row on the light's own pane is not a nicety: it is the other half of this shortcut, and the shortcut is not honest without it. resolve() in brain/hub/strip.py says the same thing where somebody changing it would see it, and a test pins that the first answer always leaves a pair."
+    },
+    {
+      "id": "later",
+      "x": 3120,
+      "y": 2160,
+      "w": 500,
+      "text": "AFTERWARDS -- BOTH ANSWERS, ON ITS OWN PANE\n\nThe consequence of choosing A and B together, and of the color question existing at all: two things were settled once, while somebody stood in front of the strip, and both of them go stale.\n\nA strip gets cut down to fit a shelf. Another gets soldered on to reach round a corner. One fails and is replaced by whatever was in stock, which is very often not the same make and therefore not the same channel order. None of that is unusual and none of it should mean setting the thing up again.\n\nSo the pane carries both, and carries them quietly: everything above the two rows is the ordinary light pane, drawn by LightPane.vue with no knowledge that this is a strip. The strip-shaped part is two rows at the foot of the cluster, and each one is the setup question it came from, reopened.\n\nNOTE WHAT IS NOT HERE. No effects list, no segments, no zones. A strip with a hundred named animations is a maker's toy; this is an accent light that a household should be able to forget about. If the picture follower ever ships, it arrives as its own thing and argues for its own screens.\n\nSUPERSEDED IN PART, 22 SEPTEMBER, BY Foot.dc.html. The two rows and the words are this board's and stand; the arrangement is not, because this board was drawn without the three levels every light pane carries. The note beside Foot says what that cost."
+    },
+    {
+      "id": "decided",
+      "x": -620,
+      "y": 1840,
+      "w": 500,
+      "text": "WHAT WAS DECIDED, AND WHAT IT COST\n\n20 September 2026: A at setup, B afterwards on the pane. C stays on the canvas with its case intact, because the argument it makes -- that the ambient light and the picture follower are two products and the second one's questions should not be charged to the first -- is still live and will come back.\n\nThe two boards below were drawn after that decision, not before it. Later is what choosing two answers rather than one actually costs: a surface that has to hold both of them for ever. Order is a question nobody had asked yet, and it is the more dangerous of the two, because a strip whose red is green is broken in a way the household can see and the panel cannot."
+    },
+    {
+      "id": "code",
+      "x": -620,
+      "y": 3240,
+      "w": 500,
+      "text": "WHERE THE SETUP CODE COMES FROM\n\nThe question the firmware move left behind, and the one thing between a commissionable strip and a household owning one. Matter's advertisement carries a discriminator and NEVER the passcode -- that is the standard being careful, not an oversight -- so something outside the radio has to bring it, and the hub cannot invent it.\n\nIT IS A QUESTION ABOUT design/puck/Knock.dc.html AS MUCH AS ABOUT A STRIP. That board's proudest line is that the identity check is the object and never a number: no chip id, no serial, nothing to read out to anybody. A passcode is a number. So whichever of these wins, Knock either survives, is bought back at a price, or is amended -- and it should be amended deliberately rather than quietly eroded by a protocol.\n\nB IS THE ONE THAT LOOKS BEST AND IS PROBABLY WRONG, which is why it is drawn rather than described. It keeps the one-tap promise exactly, and it does it by making every unit we sell commissionable by anybody who has worked out the derivation -- from a serial that is in the advertisement, using a secret that is in every hub we ship. It also fails certification, which forbids a passcode with a fixed relationship to anything public. A thing can be the nicest screen here and still not be shippable.\n\nA IS WHAT EVERY OTHER MAKER DOES and is finished, honest and dull. C is the interesting middle: the proof becomes physical rather than written, Knock's argument mostly survives, and the cost is that a wall panel cannot do it at all -- which in a house whose every other setup happens on the wall is a real thing to give up.\n\nTHE ANSWER MAY BE OUTSIDE THESE THREE. It usually has been."
+    },
+    {
+      "id": "reach",
+      "x": -620,
+      "y": 4320,
+      "w": 500,
+      "text": "HOW A STRIP FINDS OUR HUB, IF IT EVER DOES\n\nThe other thing the firmware move left behind. Matter gets a strip onto the Wi-Fi and into somebody's app, and then it knows nothing whatever about us: the two questions that are ours -- which order its colors come out in, and how far it goes -- are addressed over a broker it has never heard of. Today the field is an empty string and setup stops at commissioned.\n\nA AND B ARE THE SAME ANSWER AT DIFFERENT PRICES. A uses the encrypted session Matter already built and waits on a Vendor ID to exist at all. B needs nothing and protects itself with a time window, which is a weaker promise than a session -- and the fix for that turns it back into A. Worth drawing both anyway, because which one is cheaper depends entirely on when certification happens, and that is not our decision alone.\n\nC IS THE ONE THAT WAS NOT OBVIOUS, and it came out of porting the firmware rather than out of a design conversation. The color question never needed a private channel: it needed three particular bytes on the wire, and the hub can get them there by asking for an ordinary color, because it knows what the firmware will do to it. Everything about item 2a stops existing.\n\nAND THEN C COLLECTS ITS BILL. The fill has to send a number BACK, latched at the moment somebody taps, and Matter has nowhere to put it. So choosing C is choosing Never -- the length direction drawn, argued and not chosen, kept because 'it will come back'. It has, from a direction nobody was watching.\n\nWhich makes the real question the one Never already named: are the ambient light and the picture follower two products or one? If two, C is clean and free. If one, the length is not optional and C is borrowing against a debt that comes due."
+    },
+    {
+      "id": "tiers",
+      "x": -620,
+      "y": 5400,
+      "w": 500,
+      "text": "IT WORKS ANYWHERE, AND BETTER HERE \u2014 REDRAWN AFTER THE FORK\n\nFrom \"this should be simpler when a user provisions the device in our hub directly -- C and Never should only apply to others, not our hub\", which was right and corrected a real mistake. The two cases had been collapsed into one, and the answer for the worst of them applied to both.\n\nWHAT IT USED TO ARGUE, kept here because the board no longer says it. Our hub is present at the one moment when more is possible: the Matter commissioning, where there is already an encrypted session and somebody standing in the room holding the thing. A strip that joined somebody else's fabric was never in a room with us, may have been shared over months later, and so there was no moment left to hand it anything.\n\nWHAT THE FORK CHANGED. The moment is our own handshake now rather than Matter's commissioning, which is the whole of Ours. And the premise that no later moment exists turned out to be false: a strip somebody else set up is already on the Wi-Fi, so the handshake it is missing can come over mDNS whenever the household wants it. Two tiers became three states, and a state can be left.\n\nIT IS STILL THE HONEST VERSION OF SOMETHING THE CANVAS ALREADY TRIED TO BUY. Direction B of the setup code wanted \"our hub is better at this than anybody else's app\" and got there by knowing a secret that would leak out of every unit we ship. This gets the same thing by DOING more rather than by KNOWING more, which is a sentence that can be said out loud. CodeHub extends it and does not spend it: the hub is told the code and still derives nothing.\n\nWHAT THE THIRD COLUMN IS FOR. A light that cannot do a thing says so in the room rather than being skipped in silence -- that rule came out of the occasion boards and applies here too. So the pane does not simply lose two rows; it says which kind of strip this is and offers the one action that would change it.\n\nRESOLVED, AND IT WAS THIS BOARD'S OPEN QUESTION. Whether \"set it up here instead\" is a good idea or a trap, because it would mean decommissioning the strip out of the app that has it, and a household that does that to a strip their partner added is going to be surprised. It does not mean that any more: the mDNS handshake never touches their fabric, nothing is re-commissioned, and the strip stays where it is. Theirs draws it, and it can be a button after all.\n\nAND ONE CLAIM THIS BOARD HAD WRONG. It said a vendor and product id let the house recognize one of ours whoever set it up. The first real commissioning reported TEST_VENDOR and TEST_PRODUCT, which is what every device on a test vendor id says. Corrected in the band at the foot."
+    },
+    {
+      "id": "fork",
+      "x": -620,
+      "y": 6480,
+      "w": 500,
+      "text": "WHOEVER ARRIVES FIRST \u2014 THE ROW THAT WAS DRAWN AFTER ALL THE OTHERS\n\nRaised on 20 September, after everything above was settled: instead of bending over backwards to make Matter work with our hub, what if the strip works with our hub with or without it, and which protocol gets used is decided along the way, by whoever turns up to set it up. This row is that question drawn. It is later in time than every board above and it reopens two of them on purpose.\n\nTHE ARGUMENT IS NOT CONVENIENCE, AND THAT MATTERS. Everything on the bench runs on the test vendor id. Apple Home and Google Home have both now commissioned one, so the gate is not the commissioner -- it is that a strip on a test id cannot be sold: it names itself TEST_VENDOR, it is in no compliance ledger, it may not wear the logo, and it carries no certificate of its own. Until membership, a certificate in every unit at manufacture and testing per product at a lab are bought, there is no strip to sell. A second door is how a strip reaches a household before any of that and gains the Matter lane by an update afterwards. The partitions were laid down for exactly that.\n\nWHAT IT COSTS, SAID PLAINLY. WiFiProv comes back, weeks after being deleted as won by Matter, and that reversal belongs in docs/strip.md as a decision rather than as drift. And the second security surface is ours: the first firmware put a household's Wi-Fi password on an unauthenticated link, and bringing our own door back brings that responsibility back with it.\n\nTHE COEXISTENCE RISK WAS CHECKED ON THE DESK AND THE ROW SURVIVED IT. connectedhomeip merges application GATT services into its own NimBLE host through BLEManagerImpl::ConfigureExtraServices, so there is no second stack and no second nimble_port_init -- which was the thing that could have killed all four of these boards. What did not survive is a sentence. Both said \"one advertisement carrying two services\"; a legacy advertising payload is 31 bytes, and Matter's own service data plus a 128-bit vendor UUID overruns it. Ours goes in the scan response, which CHIP already exposes, and the board now says so. Item 12 in docs/strip.md has the detail -- including that every heap figure anybody has been quoting is from the Arduino build and means nothing on this one.\n\nWHAT IT REPAIRS IS MORE THAN IT BREAKS. Item 2a, how a strip learns our broker, stops being an empty string \u2014 it rides the session. Item 1a gets an answer at last, and it is CodeHub on this row. And 2-mac comes off the critical path, because our own door needs no matter-server, no host networking and no Matter integration added to Home Assistant by hand.\n\nAND IT LEAVES ONE BOARD STALE. Tiers.dc.html still argues that our advantage comes from being present at the Matter commissioning. Under this row the moment is our own handshake instead, and its right-hand column is unchanged. It wants redrawing and has not been."
+    },
+    {
+      "id": "code-hub",
+      "x": 6240,
+      "y": 6480,
+      "w": 500,
+      "text": "AND THEN ITEM 1A ANSWERS ITSELF\n\nThe three code boards were drawn when Matter was the only door, and none of them was good. A gives up the thing design/puck/Knock.dc.html was proudest of \u2014 that the identity check is the object and never a number. B makes every unit we ever sell commissionable by anybody holding the algorithm. C cannot stand alone. The recommendation was A, on the grounds that it was the least bad.\n\nD IS ONLY POSSIBLE BECAUSE OF OURS. Once there is a link the strip itself authenticated, a passcode no longer has to travel from outside the radio: the strip can simply say it, and the wall is where a code was going to have to appear anyway. Nothing is printed, nothing is derived, nothing is kept at the factory.\n\nIT DOES NOT REPLACE A, and the board says so where an enthusiastic board would not. A strip bought by a household with no hub of ours still needs a number from outside the radio, and that is still the label. D is what A becomes once our hub is in the house. Recommendation: ship A on the box, D on the wall, and B stays rejected for the reason it was always rejected.\n\nSETTLED 20 SEPTEMBER, AND IT CHANGED THE BOARD. The question was whether a certified device may hand its factory passcode to a vendor channel. It cannot, and not because a rule forbids it: it does not have one. A production device stores only the SPAKE2+ verifier. ESP32FactoryDataProvider::GetSetupPasscode returns CHIP_ERROR_NOT_IMPLEMENTED; connectedhomeip's own header says using the verifier rather than the passcode \"safeguards the passcode from ever leaking\"; and Espressif's production guide says the verifier is installed \"and not the actual passcode\". So this board's central sentence -- the strip has always held its own passcode -- was false, and has been redrawn.\n\nWHAT REPLACED IT IS SMALLER AND BETTER. The strip mints a passcode when it is asked, derives the verifier on the chip, and opens an enhanced commissioning window with it. Espressif recommends exactly this for a device whose onboarding payload can be displayed, and ships the code: examples/light_switch's dynamic_commissionable_data_provider is a DRBG draw, the disallowed-passcode check and Spake2pVerifier::Generate. CommissioningWindowManager::OpenEnhancedCommissioningWindow needs no fabric and no Matter administrator, so the hub does not have to be one. The sheet on this board did not change at all.\n\nTHREE CONSTRAINTS ARRIVED WITH IT. An enhanced window never advertises over Bluetooth -- \"once a device is operational it shall be commissioned into subsequent fabrics using the operational network only\" -- so the other app has to be on the house Wi-Fi. While the window is open the fresh verifier replaces the factory one, so the code on the label does not work. And fifteen minutes is the specification's ceiling on a window rather than a number we picked; the countdown already drawn on the sheet was inside it."
+    },
+    {
+      "id": "pop",
+      "x": -620,
+      "y": 7560,
+      "w": 500,
+      "text": "WHO IS THE HUB, AS FAR AS THE STRIP CAN TELL -- 1A AGAIN, ON OUR OWN DOOR\n\nRaised 21 September by the code itself: network_prov_mgr_start_provisioning needs a security level, and every real one needs the hub to know a secret before the session. SEC0 is the Wi-Fi password on an unauthenticated link, which is the sin Matter came in to remove. SEC1 wants a proof-of-possession string. SEC2 wants a per-device salt and SRP6a verifier, which is a password by another name.\n\nTHE PROMISE IN TENSION IS OURS'S. \"There is nothing to type\" and \"the identity check is two meters of light.\" The light tells the HOUSEHOLD which strip it is. It tells the STRIP nothing about who the hub is. Those are different proofs, and the boards above conflated them.\n\nA BORROWS A NUMBER THAT ALREADY EXISTS. The Matter setup code has to be on the label for the other lane anyway, and SRP6a can be seeded from the same digits, so A costs no manufacturing and no new secret. It costs the promise, and it makes one label open both doors.\n\nB MAKES THE LIGHT THE LABEL. The strip mints a rhythm each time it is plugged in -- four groups of one to six flashes -- and the person taps what they count. Rhythm rather than color because \"Is it red?\" has not been asked yet and a color cannot be trusted; a count can. 1,296 possibilities is small until SRP6a is under it: no offline attack, one wrong guess ends the session, a new rhythm next power cycle. It asks somebody to count flashes from across a room, and \"I can't see it\" is a real button because it will be pressed.\n\nC KEEPS OURS EXACTLY AS DRAWN AND SAYS WHAT THAT COSTS. SEC1 with no secret: encrypted, so nothing can listen, but unauthenticated, so anything that speaks first in the three minutes after a plug-in is the hub. Theirs already ruled that being nearby is not proof. This is proximity standing in for a secret.\n\nRECOMMENDATION: B, with A as the fallback that costs nothing because the label exists anyway. Not C -- it re-admits the class of risk this project already paid to remove, and it would have to say so on the box. What B needs before it is real: a rhythm the firmware can show while Matter is also advertising, and a retry that does not lock a household out of its own strip.\n\nCHOSEN 21 SEPTEMBER: B. And the same day the ground shifted under A: our ecosystem comes first and Matter on the strip is kept dormant, with Apple and Google reached through the hub's bridge instead. So the label A leaned on need not exist, and B's case stands alone. C is allowed behind a build flag on a bench and nowhere else.\n\nDEMOTED THE SAME DAY IT SHIPPED, AND THIS IS THE RECORD OF WHY. B was chosen, built and proven -- a real SRP6a session completed against a rhythm on 21 September. Then somebody used it and said counting four groups of flashes is a chore, which it is; and then said the thing that actually settled it, which is that a proof made of light only works on something two metres long. A puck has one LED. A sensor has none. Our door is not a strip feature, so an answer that needs a strip is not an answer for it.\n\nThe question moved out of this collection and was drawn again in design/door/, where it belongs, as a ladder rather than a winner: PressIt, ShowMe, OnTheBox. A was chosen. B here is not deleted and not wrong -- it is now the rung below the press, for a strip already mounted where nobody can reach the controller. The row below (Press, ReachRhythm) is what that looks like. A and C on this row stay exactly as they were argued."
+    },
+    {
+      "id": "knock",
+      "x": -620,
+      "y": 8640,
+      "w": 500,
+      "text": "HOW LONG A STRIP NOBODY HAS TAKEN GOES ON KNOCKING\n\nFound on 21 September by leaving a strip waiting and coming back to nothing. Our scan response rides on CHIP's advertisement, and CHIP shuts a commissioning window after fifteen minutes, so both doors close together while network_prov_mgr still believes it is listening. A household that plugs a strip in and comes back twenty minutes later finds a strip that is not there.\n\nTHIS IS NOT THE CASE THE DOCUMENT ALREADY RULES ON. That one is a strip somebody has SET UP re-advertising after a router reboot, which must never happen: every strip in the house announcing itself several times a year, with nobody present and nobody told. This is a strip nobody has ever taken, still in the state it left the factory in. It has nothing to protect yet.\n\nTHE THREE ARE NOT EQUALLY EXPENSIVE. B is a Kconfig line -- ENABLE_BLE_EXT_ANNOUNCEMENT raises the cap from 900 seconds to 48 hours and Matter's own authors put it there for exactly this. A is ours to maintain: reopen the window whenever it lapses, forever. C needs a short press on the button that already exists for the factory-reset hold, which is free in hardware and expensive in reach, because the button is behind the television.\n\nWHAT DECIDES IT IS WHICH SENTENCE WE ARE WILLING TO OWE. A owes none. B owes one nobody will read until the day it matters. C owes one and also asks for a finger. Weigh that against a radio talking in somebody's house for years because a strip in a drawer was never set up.\n\nRECOMMENDATION: B, and make the ending visible rather than silent -- the light should stop in a way that reads as stopped, not as broken, and the pane should offer the way back. That turns B's one real weakness into a screen, which is the kind of problem this canvas is good at. A if we decide a strip in a drawer is not our problem; C only if the product board ever gets a button somewhere reachable.\n\nCHOSEN 21 SEPTEMBER: B -- AND ITS MAIN ARGUMENT WAS WRONG. ENABLE_BLE_EXT_ANNOUNCEMENT does not compile in this connectedhomeip: it is default n, nobody builds that path, and BLEManagerImpl.cpp:288 drops a nodiscard CHIP_ERROR under -Werror. Patching vendored CHIP would put the fix outside this repository. So B is built the way A is built, by reopening the window from our own code, with a 48-hour budget on it. The board has been corrected rather than quietly left standing: it cost B the cheapness that was most of its case, and B is still the right answer, because what was chosen was the behavior and not the line of configuration.\n\nAND ONE THING ON THESE BOARDS WAS INVENTED. C's Against said it asks somebody to reach a thing they have just taped behind a television. Nothing established that order, and it is the wrong way round: a strip is unboxed, plugged in, set up and THEN placed, in your hands, like everything else here. Where the button sits on a real unit has never been decided (item 9). Corrected on the board, because it was about to rule out the one proof of possession that works for every device we make and not only for a strip."
+    },
+    {
+      "id": "door",
+      "x": -620,
+      "y": 9720,
+      "w": 500,
+      "text": "OUR DOOR ASKS FOR A PRESS, AND ONLY FALLS BACK TO THE LIGHT\n\nChosen 21 September, from design/door/PressIt.dc.html. The argument for the rung is on that canvas and is not repeated here; these two boards are the spec for the strip -- what the wall says, and what the strip itself does while it says it.\n\nTHE GATE IS ON THE STRIP. This is the whole of it, and it is the line that keeps the press from being decoration. Anything in radio range can open a session and get exactly as far as the Wi-Fi question, where it is refused until somebody in the room has touched the object. The hub does not decide this and cannot; it asks, and waits, and says so on the wall.\n\nWHAT THE PRESS BUYS, HONESTLY. Not a keyspace -- there is no secret any more, which is the point: nothing on a label, nothing derived from a chip, nothing to count. What it buys is possession, in the two minutes the gate is open. The residual risk is somebody in radio range at that exact moment, racing the household's own hub; it is the same trade every push-button pairing has ever made, and it is written down in docs/strip.md rather than left implied.\n\nTHE SECOND BOARD IS THE RUNG BELOW. It is reached one way only: by tapping 'It has no button I can reach'. The door canvas names ShowMe here, and for a strip that would move the gate off the strip and onto the hub, which re-admits exactly what this project paid to remove. The rhythm keeps the gate where it is and keeps a real secret behind SRP6a, so the rhythm is the fallback and ShowMe stays drawn and unbuilt.\n\nAND ONE THING THIS ROW CLAIMS THAT NO BOARD ELSEWHERE DOES: a button, reachable, on the outside of every product. It is free now and impossible later."
+    },
+    {
+      "id": "tune",
+      "x": -620,
+      "y": 10800,
+      "w": 500,
+      "text": "FINE-TUNING THE LENGTH, AND IT WAS ALREADY DECIDED\n\nReported 22 September from a real house: the fill is easy to get a bit less or a bit more than the strip really is, and there is no way to nudge it afterwards.\n\nTHIS IS THE SECOND HALF OF A DECISION ALREADY TAKEN. On 20 September the length question was settled as \"A at setup, B afterwards\" -- the fill while somebody is standing there, and the trim on the strip's own pane for ever after. The note beside Trim says it in as many words: \"they are the same fact, asked once while somebody is standing there and EDITABLE FOR EVER AFTER\". The pane got the row. The row calls revisit('length'), which starts the fill from nothing. So the editing half was never built, and Again.dc.html is what that costs.\n\nWHICH WAY IT IS WRONG IS NOT SYMMETRICAL, and it decides what the control has to show. Tapping a beat late reads LONG: the surplus falls off the end of the wire invisibly, so nothing looks wrong and anything needing the middle is. Tapping early reads SHORT: the last stretch stays dark for ever, which is the one a household notices and the one that was reported.\n\nSO THE QUESTION THESE THREE ARGUE IS NOT \"buttons or a drag\". It is HOW YOU SEE THE END WHILE YOU MOVE IT, on a strip where everything past the real end is written to nothing and shows you nothing back.\n\nA NUDGE lights the whole strip and walks its far end, one light a tap, faster on a hold. No number. B HANDLE is Trim exactly as drawn, brought to the pane: one drag whatever the size of the mistake, with the metres readout its own board admitted was a tell. C TAIL darkens the strip and lights only the last few, so the edge is unmistakable at sixty lights to the metre -- and one tap too far makes the tail vanish, which is the only honest way to show the direction you otherwise cannot see.\n\nRECOMMENDATION: A, with C's vanishing tail borrowed for the last few taps rather than built as a mode of its own -- but that is a guess about a strip behind a television and the board to trust is the one you can check against yours. B stays drawn either way: it is right for the household who cut a metre off, and \"Measure it again\" is on all three cards for that.\n\nAND \"SOMETHING ELSE -- I'LL DESCRIBE IT\" IS A REAL OPTION."
+    },
+    {
+      "id": "foot",
+      "x": -620,
+      "y": 12240,
+      "w": 500,
+      "text": "THE PANE'S ARRANGEMENT, CORRECTED FROM A PHOTOGRAPH OF THE REAL ONE\n\nReported 22 September: the strip's pane looks nothing like Later. Both of them were right about something and neither is what ships.\n\nWHAT THE CODE HAD DRIFTED INTO. The two rows went across the WHOLE rig, under the brightness column as well, which gives a question asked once a year the same width as the thing the pane is for -- and pushes the pane past one screen on the way down. The brightness column stopped at 293 pixels with its own lane empty beneath it. And the strip itself was drawn nowhere: a pin, a bulb and two sentences, which is a settings list, not the thing behind the television.\n\nWHAT LATER HAD WRONG. It was drawn without THE THREE IT IS USED AT, so its cluster was two questions where the real one has three. That is why the rows fit so neatly under the swatches there and do not here; the board never met the problem the code was solving. The three stay -- they are why anybody opens this pane.\n\nSO: THE BRIGHTNESS COLUMN RUNS THE FULL HEIGHT, as it does on every other light. Beside it, one column holding the light's own two questions on the first line and the strip's two on the line under them, at the foot, on the right. The strip's rows are below the light's and narrower than the rig, which is the whole of what they are: a thing a household touches when they cut the strip down or bought a second one that is not the same make.\n\nAND EACH CARD DRAWS THE STRIP AGAIN, which is Later's best idea and the one most worth having back. One card lights as far as the light goes; the other shows what red, green and blue actually come out as. Nothing else on this screen says 'strip' except the words.\n\nONE THING DELIBERATELY NOT CARRIED OVER. Later put a drag handle on Ends here -- that is direction B of the length question, and the control built on 22 September is A, two buttons that walk the end while you watch the strip (Nudge). So the card draws the strip and opens that; the handle is still on the canvas as Handle.dc.html if B wins after all.\n\nSTILL OPEN: 1440 x 900. This board is 1920 x 1080, which is the wall these screenshots came from. At 1440 the rig is only 694 wide, the three cannot sit beside the colors at all, and the pane scrolls -- it does today too, and worse. That is its own board.\n\nIF A DOOR WINS (the row below this one), this board is superseded: the two rows become one, and what is drawn here is only the arrangement they would have had. The brightness column running the full height and the three staying put are not in question either way."
+    },
+    {
+      "id": "doors",
+      "x": -620,
+      "y": 13560,
+      "w": 500,
+      "text": "ONE DOOR FOR BOTH, BECAUSE NEITHER IS USED OFTEN\n\nAsked 22 September, looking at Foot: the length and the color order are not things a household touches. Two rows on the pane for two once-a-year questions is two rows too many, and the pane is for the light.\n\nTHE QUESTION IS NOT WHETHER, IT IS WHERE THE DOOR LIVES. All three of these put both questions behind one door and all three open the same thing, which is drawn once beside them. What they disagree about is how much of the light's own pane a strip is allowed to take.\n\nA KEEPS IT IN THE INSTRUMENT, under the three, where the rows are today. One row, and it still draws the strip -- lit as far as the light goes -- so the pane says what this thing is without saying the word. Cheapest to build: it is the row that is already there, with one destination instead of two.\n\nB MOVES IT OUT OF THE INSTRUMENT and puts it with Made by and The room is on. Those are the other two facts about this light that are read rather than changed, and a strip's length is that kind of fact. The rig becomes EXACTLY the rig of an ordinary light, which is what a strip was argued to be on 20 September -- the purest form of the claim. Against: the left column is a reading, not a place anybody has been taught to press, and a door there may never be found.\n\nC TAKES IT OFF THE PANE ENTIRELY and puts it on the strip's row in What this house has -- the door built on 22 September for everything the house owns, which already carries Get rid of it. The argument is real: using the light and owning the thing are different jobs, and the second one already has a home. Against, and it is the heavy one: a household who can see the far end of the strip is dark has to leave the light, find This house, and read a list to fix it. The fault is in the room, and C answers it three screens away.\n\nCHOSEN 22 SEPTEMBER: A. The note below stands as the case for it.\n\nRECOMMENDATION WAS A. It is one row rather than two, it keeps the fix next to the thing that is wrong, and it costs the pane the least. B is the better idea if the pane's left column is ever taught to hold controls -- it is not today. C is worth taking anyway as well: whichever of these wins, the strip's row in What this house has could carry the same two acts for nothing, because that page's words already come from the brain.\n\nAND \"SOMETHING ELSE -- I'LL DESCRIBE IT\" IS A REAL OPTION."
+    },
+    {
+      "id": "door-a",
+      "x": 0,
+      "y": 14700,
+      "w": 600,
+      "text": "A. One row, in the instrument, under the three. It draws the strip rather than wearing a pin icon, so the only thing on this pane that knows what a strip is says so with a picture. \u201cSet up as a strip \u00b7 about 3.0 m\u201d reads as a fact with a door on it, which is what it is. The cheapest of the three and the one that keeps the fix nearest the fault.\n\nBUILT 22 SEPTEMBER, and two things came out of building it. The rig is now a brightness column and one column holding everything else, which is what lets the row start where the colors start -- and it turned out the three columns never fitted at 1440 at all: the third ran 18px off the side of the rig and was quietly clipped. It folds now instead. And the metres on the walking card say where the end is NOW rather than where it was when the door opened: the strip is behind a television two rooms of wall away, and a control whose only answer is over there is one somebody presses twice."
+    },
+    {
+      "id": "door-b",
+      "x": 2040,
+      "y": 14700,
+      "w": 600,
+      "text": "B. The door sits with Made by and The room is on, and the instrument goes back to being exactly a light's. This is the 20 September claim taken literally: a strip is an ordinary light, and nothing that belongs only to a strip is allowed into the rig. The cost is discoverability \u2014 that column has never held a control before, and a door nobody presses is a door nobody finds."
+    },
+    {
+      "id": "door-c",
+      "x": 4080,
+      "y": 14700,
+      "w": 600,
+      "text": "C. Neither the pane nor the rig carries anything: the two acts join the strip's row in What this house has, beside Get rid of it, with their words coming from the brain like every other act on that page. Using the light and owning the thing are different jobs. The cost is distance \u2014 the far end of the strip is dark in the room, and the fix is three screens away."
+    },
+    {
+      "id": "door-behind",
+      "x": 6120,
+      "y": 14700,
+      "w": 600,
+      "text": "What opens, for A and B alike. The setup conversation reopened, which is what revisit() already does; the only new thing is that the length is a walk rather than the whole measurement again, with \u201cMeasure it again\u201d kept for the household who cut a metre off. Note what is still not in here: no effects, no segments, no zones."
+    },
+    {
+      "id": "block",
+      "x": -620,
+      "y": 14880,
+      "w": 500,
+      "text": "THE COLOR BLOCK IS TOO TALL, AND IT IS THE LIGHT'S PROBLEM RATHER THAN THE STRIP'S\n\nReported 22 September, from a real house, on the pane the door was just built into: a bulb that can do color AND white, in a room with colors kept in it, pushes everything below it off the screen.\n\nMEASURED, at 1440 x 900, where the rig has about 426px to give the block: today 512. A, one grid under one label, 441. B, the swatches at 46 and more to a row, 424 -- which fits by two pixels, which is to say it does not. A and B together, 330. C, only the eight with the kept ones and the whites behind More colors, 323.\n\nWHAT WAS DONE THE SAME DAY, and it is not the fix: .pane-rig was overflow: hidden, so the row underneath was CUT OFF with no way to reach it. It scrolls now. A pane that scrolls says there is more; a pane that clips says the panel is broken. But a wall panel that has to be scrolled to reach a row is the thing this canvas keeps arguing against, so the block still has to get shorter.\n\nWHAT EACH ONE SPENDS. A spends nothing at all -- it is the argument already in the code for why a white is a swatch beside the colors rather than a mode, taken one step further -- and it is not enough on its own. B spends the panel's oldest rule: the columns are 168 wide because the hand that reaches for them is not looking, and 46px is the first time this panel has made a target smaller to fit something in. C spends the rule that is written down out loud: nothing appears or disappears when a lamp goes into a color mode, and the way back to white is where it always was.\n\nCHOSEN AND BUILT 22 SEPTEMBER: A AND B TOGETHER. The worst case a house can reach -- a bulb with colors and whites, six colors kept in the room, eighteen swatches -- measures 378px built, against 512 before, and the pane fits a 1440 wall with the day still under it. The 46 is written down in panel.css where somebody tidying numbers would see it.\n\nRECOMMENDATION WAS A and B together. It is the only one with slack left for a sixth kept color, and the only thing it costs is a question a drawing cannot answer -- whether 46px is still a target on a wall. That is a thing to check on the wall itself, in a minute, with a finger.\n\nAND \"SOMETHING ELSE -- I'LL DESCRIBE IT\" IS A REAL OPTION."
+    }
+  ],
+  "reading": [
+    "why",
+    "Today.dc.html",
+    "spine",
+    "Spine.dc.html",
+    "length",
+    "option-a",
+    "Fill.dc.html",
+    "option-b",
+    "Trim.dc.html",
+    "option-c",
+    "Never.dc.html",
+    "decided",
+    "order",
+    "Order.dc.html",
+    "later",
+    "Later.dc.html",
+    "code",
+    "CodeBox.dc.html",
+    "CodeMade.dc.html",
+    "CodeTap.dc.html",
+    "reach",
+    "ReachTold.dc.html",
+    "ReachAsks.dc.html",
+    "ReachNone.dc.html",
+    "tiers",
+    "Tiers.dc.html",
+    "Foreign.dc.html",
+    "fork",
+    "Both.dc.html",
+    "Ours.dc.html",
+    "Theirs.dc.html",
+    "code-hub",
+    "CodeHub.dc.html",
+    "pop",
+    "PopBox.dc.html",
+    "PopLight.dc.html",
+    "PopWindow.dc.html",
+    "knock",
+    "KnockOn.dc.html",
+    "KnockTwoDays.dc.html",
+    "KnockAsked.dc.html",
+    "door",
+    "Press.dc.html",
+    "ReachRhythm.dc.html",
+    "tune",
+    "Again.dc.html",
+    "Nudge.dc.html",
+    "Handle.dc.html",
+    "Tail.dc.html",
+    "foot",
+    "Foot.dc.html",
+    "doors",
+    "OneDoor.dc.html",
+    "WithFacts.dc.html",
+    "OwnPage.dc.html",
+    "Behind.dc.html",
+    "block",
+    "Blocked.dc.html",
+    "OneGrid.dc.html",
+    "Smaller.dc.html",
+    "Tighter.dc.html",
+    "Fewer.dc.html"
+  ]
+}

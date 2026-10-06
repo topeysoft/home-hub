@@ -1,0 +1,89 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>Glare F</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500&family=Plus+Jakarta+Sans:wght@200;300;400;500&display=swap">
+<link rel="stylesheet" href="scene.css">
+</head>
+<body>
+<div class="board"></div>
+<script src="scene.js"></script>
+<script>
+/* F: D's dark room, with the light falling as slanted shafts instead of pools. Each
+   thing that is on is a wide band of its color running from the top of the wall down
+   and to the right, diffused so it has no edge to find. The shafts fade out toward
+   the floor, so the top of the wall is where the light is and the bottom stays dark
+   under the people and the orb.
+
+   One shaft leads. The strongest thing that is on takes the middle of the wall, a
+   little wider and brighter than the rest, and it alone carries the faint brighter
+   seam of glare; everything else stands to either side of it, quieter. The wall is
+   composed around one light rather than lit by several equal ones (26 September).
+   So a shaft no longer sits near its card: where it stands says how much it counts.
+
+   The same quiet color as D: a shaft is a hint of the lamp's hue, not the lamp. Each
+   slides a short way sideways on a path minutes long. With nothing on, the hour takes
+   the middle itself: cool moonlight at night, ember at dusk, pale daylight at noon.
+   Motion: Still holds them. */
+window.Backdrop = {
+  mount(el, over) {
+    const mk = (parent, blend) => { const c = document.createElement('canvas'); c.width = 720; c.height = 450; c.style.cssText = 'position:absolute;inset:0;width:1440px;height:900px;' + (blend ? 'mix-blend-mode:screen;filter:blur(22px);transform:scale(1.06)' : ''); parent.appendChild(c); return c.getContext('2d') }
+    this.base = mk(el); this.x = mk(over, true)
+    this.shafts = {}; this.last = performance.now()
+  },
+  update({ sources, s }) {
+    const D = Math.PI / 180, H = s.hour
+    const b = this.base, top = Scene.rgbOf([{ night: .1, dusk: .13, noon: .24 }[H], .02, { night: 265, dusk: 290, noon: 240 }[H] * D]),
+          bot = Scene.rgbOf([{ night: .07, dusk: .09, noon: .17 }[H], .015, { night: 260, dusk: 300, noon: 230 }[H] * D])
+    const g = b.createLinearGradient(0, 0, 0, 450); g.addColorStop(0, Scene.css(top)); g.addColorStop(1, Scene.css(bot))
+    b.fillStyle = g; b.fillRect(0, 0, 720, 450)
+    /* the places a shaft can stand, first to last: [where it starts along the top, how
+       wide, how strong]. The middle starts left of center because the shaft leans, and
+       crosses the center of the wall halfway down. Half-scale wall units. */
+    const SLOTS = [[242, 250, 1.15], [-30, 170, .55], [530, 170, .55], [690, 150, .45]]
+    const OWN = { night: [.55, .05, 250], dusk: [.56, .08, 45], noon: [.85, .05, 230] }[H]
+    const want = sources.map((o) => { const [, C, h] = Scene.oklch(o.rgb); return { id: o.id, core: Scene.rgbOf([.58, Math.min(C, .1), h]), a: o.strength } })
+      .sort((a, b) => b.a - a.a)
+    want.push({ id: 'hour', core: Scene.rgbOf([OWN[0], OWN[1], OWN[2] * D]), a: want.length ? .6 : .8 })
+    for (const p of Object.values(this.shafts)) p.ta = 0
+    want.forEach((w, i) => {
+      const [x0, wd, k] = SLOTS[i]
+      const p = this.shafts[w.id] ??= { a: 0, col: w.core.slice(), ph: i * 2.3 + w.id.length, x: x0, w: wd }
+      Object.assign(p, { tx: x0, tw: wd, to: w.core, ta: w.a * k, lead: i === 0 })
+    })
+  },
+  frame(t) {
+    const now = performance.now(), k = 1 - Math.exp(-(now - this.last) / 900); this.last = now
+    const x = this.x, css = Scene.css, TILT = -24 * Math.PI / 180   // leaning down and to the right
+    x.globalCompositeOperation = 'source-over'; x.clearRect(0, 0, 720, 450)
+    x.globalCompositeOperation = 'lighter'
+    for (const p of Object.values(this.shafts)) {
+      p.a += (p.ta - p.a) * k; for (let j = 0; j < 3; j++) p.col[j] += (p.to[j] - p.col[j]) * k
+      p.x += (p.tx - p.x) * k; p.w += (p.tw - p.w) * k   // a change of lead walks the shafts to their new places
+      if (p.a < .01) continue
+      const c = p.col, a = p.a
+      const cx = p.x + 28 * Math.sin(t / 210 + p.ph), w = p.w * (1 + .08 * Math.sin(t / 29 + p.ph))
+      x.save(); x.translate(cx, -40); x.rotate(TILT)
+      // the body of the shaft: soft on both sides, strongest a little left of center
+      let g = x.createLinearGradient(-w / 2, 0, w / 2, 0)
+      g.addColorStop(0, css(c, 0)); g.addColorStop(.2, css(c, .17 * a)); g.addColorStop(.42, css(c, .42 * a)); g.addColorStop(.65, css(c, .26 * a)); g.addColorStop(.85, css(c, .09 * a)); g.addColorStop(1, css(c, 0))
+      x.fillStyle = g; x.fillRect(-w / 2, 0, w, 700)
+      // the glare, on the lead shaft only: a soft brighter seam inside it
+      if (p.lead) {
+      const e = -w * .1, lw = Math.max(10, w * .14)
+      g = x.createLinearGradient(e - lw, 0, e + lw, 0)
+      g.addColorStop(0, css(c, 0)); g.addColorStop(.5, css(Scene.tame(c, .8, .06), .14 * a)); g.addColorStop(1, css(c, 0))
+      x.fillStyle = g; x.fillRect(e - lw, 0, 2 * lw, 700)
+      }
+      x.restore()
+    }
+    // light comes from above: every shaft fades out toward the floor
+    x.globalCompositeOperation = 'destination-in'
+    const f = x.createLinearGradient(0, 0, 0, 450)
+    f.addColorStop(0, 'rgba(0,0,0,1)'); f.addColorStop(.55, 'rgba(0,0,0,.55)'); f.addColorStop(1, 'rgba(0,0,0,.05)')
+    x.fillStyle = f; x.fillRect(0, 0, 720, 450)
+  },
+}
+Scene.init({ groups: ['hour', 'lamp', 'strip', 'tv', 'speed'], tag: 'F — slanted light, like glare' })
+</script>
+</body>
+</html>

@@ -1,0 +1,25 @@
+idf_component_register(SRC_DIRS "." PRIV_INCLUDE_DIRS ".")
+target_compile_options(${COMPONENT_LIB} PRIVATE "-DCHIP_HAVE_CONFIG_H")
+
+# Forwarded so `idf.py -DDATA_PIN=21 build` means what the README says it means. idf.py's -D sets a
+# CMake variable and nothing more -- without this it is accepted, ignored, and the board is flashed
+# with the old pin, which is the worst kind of wrong because it looks like it worked.
+foreach(opt DATA_PIN CLOCK_PIN BUTTON_PIN SELFTEST)
+    # NOT just DEFINED: `idf.py -DDATA_PIN= build` defines it as an empty string, which compiles to
+    # `#define DATA_PIN` and then fails deep inside esp_log.h with nothing that names the cause.
+    if(DEFINED ${opt} AND NOT "${${opt}}" STREQUAL "")
+        target_compile_definitions(${COMPONENT_LIB} PRIVATE ${opt}=${${opt}})
+    endif()
+endforeach()
+
+# The board (../CMakeLists.txt, board.h). The devkit is the absence of this, so its build is unchanged.
+if("${STRIP_BOARD}" STREQUAL "reva")
+    target_compile_definitions(${COMPONENT_LIB} PRIVATE STRIP_BOARD_REVA=1)
+endif()
+
+# A working-tree build's version, from tools/dev.sh strip: `idf.py -DSTRIP_FW=0.4.0-d384085 build`.
+# Quoted here because it is a string in C, which the loop above does not do. Unset it the same way:
+# `idf.py -USTRIP_FW build`, or the next plain build carries the last test build's name.
+if(DEFINED STRIP_FW AND NOT "${STRIP_FW}" STREQUAL "")
+    target_compile_definitions(${COMPONENT_LIB} PRIVATE STRIP_FW="${STRIP_FW}")
+endif()

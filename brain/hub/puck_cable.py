@@ -1,0 +1,389 @@
+#!/usr/bin/env python3
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
+"""Talk to a bridge puck over its USB cable: the hub's side of puck/src/config.h.
+
+    puck_cable.py <port> hello                       who is this, and is it blank
+    puck_cable.py <port> status                      wifi / mqtt / proxy / light, one line
+    puck_cable.py <port> write [--from secrets.h] [--wifi SSID PASS] [--wifi2 SSID PASS] [--name hub]
+                               [--mqtt HOST PORT USER PASS]
+                               [--keys NETKEY APPKEY IV] [--base mesh] [--label Brilliant] [--no-apply]
+    puck_cable.py <port> wipe                        back to blank
+    puck_cable.py <port> upgrade                     new firmware, keeping who it is
+
+`write` is what the hub does when a puck is on its cable (design/puck/Cable.dc.html): every value goes
+over hex-encoded, so nothing needs quoting, then `apply` restarts the puck on the new config and this
+waits for it to come back and say so. --from reads a desk header (include/secrets*.h) so a puck can be
+given exactly what it was compiled with -- which is how this was first proven. Anything given on the
+command line wins over the header.
+
+The port is opened with DTR and RTS held low: on macOS pyserial's defaults pulse DTR and reset an
+ESP32 on open, and a puck that reboots every time the hub says hello is not one you can talk to.
+"""
+import argparse
+import glob
+import hashlib
+import json
+import os
+import pathlib
+import re
+import subprocess
+import sys
+import tempfile
+import time
+
+import serial
+
+
+def hx(s: str) -> str:
+    return s.encode("utf-8").hex()
+
+
+def open_port(port: str, tries: int = 40) -> serial.Serial:
+    """Open without resetting the board; after `apply` the USB port re-enumerates, so keep trying."""
+    for i in range(tries):
+        try:
+            s = serial.Serial()
+            s.port, s.baudrate, s.timeout = port, 115200, 0.4
+            s.dtr = False
+            s.rts = False
+            s.open()
+            return s
+        except (serial.SerialException, OSError):
+            if i == tries - 1:
+                raise
+            time.sleep(0.5)
+    raise RuntimeError("unreachable")
+
+
+class Puck:
+    ANSWERS = ("bridge ", "status ", "ok ", "err ")
+
+    def __init__(self, port: str):
+        self.port = port
+        self.s = open_port(port)
+        self.s.reset_input_buffer()
+
+    def close(self) -> None:
+        """Let go of the port. esptool wants it exclusively, and a Puck left open is why the first
+        upgrade attempt died with "multiple access on port"."""
+        try:
+            self.s.close()
+        except Exception:
+            pass
+
+    def ask(self, line: str, wait: float = 3.0) -> str:
+        """Send one line, return the first line back that is an answer (the firmware's own log is noise)."""
+        self.s.write((line + "\n").encode())
+        self.s.flush()
+        end = time.time() + wait
+        buf = b""
+        while time.time() < end:
+            d = self.s.read(4096)
+            if not d:
+                continue
+            buf += d
+            while b"\n" in buf:
+                raw, buf = buf.split(b"\n", 1)
+                t = raw.decode("utf-8", "replace").strip()
+                if t.startswith(self.ANSWERS):
+                    return t
+        raise TimeoutError(f"no answer to {line.split()[0]!r} from {self.port}")
+
+    def hello(self, patience: float = 12.0) -> dict:
+        """Opening the port resets the puck (the S3's USB-serial peripheral does that on its own, DTR or
+        no DTR), so the first hello goes into the bootloader and is lost. Keep asking until it is up."""
+        end = time.time() + patience
+        last = ""
+        while time.time() < end:
+            try:
+                w = self.ask("hello", wait=1.5).split()
+            except TimeoutError:
+                continue
+            # a line that arrived torn (the puck's own log fighting it for the port) is asked again, not trusted
+            if len(w) == 4 and w[0] == "bridge" and w[3] in ("blank", "set"):
+                return {"chip": w[1], "fw": w[2], "state": w[3]}
+            last = " ".join(w)
+            time.sleep(0.3)
+        raise RuntimeError(f"no clean hello from {self.port}" + (f" (last: {last!r})" if last else ""))
+
+    # The link tears the odd line (see reply() in the firmware), so nothing here is trusted on one
+    # reading: a set is idempotent and is repeated until its own `ok` comes back whole; a status is
+    # only accepted with every key present. Those are the ones every puck has: rssi and sw are the
+    # wall-switch mesh's and a puck without it leaves them out. light is the line's last field, so a
+    # line torn short of it is still refused.
+    KEYS = ("wifi", "mqtt", "light")
+
+    def status(self, tries: int = 4) -> dict:
+        for _ in range(tries):
+            try:
+                w = self.ask("status", wait=2.0).split()
+            except TimeoutError:
+                continue
+            d = dict(kv.split("=", 1) for kv in w[1:] if "=" in kv)
+            if all(k in d for k in self.KEYS):
+                return d
+        raise RuntimeError(f"no clean status from {self.port}")
+
+    def set(self, what: str, *args: str, tries: int = 4, required: bool = True) -> bool:
+        """One value onto the puck. True if it took, False if this puck is too old to know the verb.
+
+        A PUCK IS OLDER THAN THE HUB TALKING TO IT, always and for ever. The hub updates itself
+        overnight; a puck is flashed once over a cable and then lives behind a sofa, and the hub
+        deliberately does not reflash one that still answers (docs/puck-updates.md). So every verb
+        added after a puck was made is one that puck will refuse, and a hub that treats a refusal as
+        a failure cannot set up any of the pucks already in the house -- which is exactly what
+        happened: `set name` arrived in firmware 0.4.0 and every 0.3.1 puck answered `err what`,
+        failing the whole adoption over a field it does not need.
+
+        The firmware says which kind of no it is, and the difference is the whole point:
+          err what   this puck has never heard of that verb. A version gap, not a fault.
+          err bad    it knows the verb and your argument is wrong. A fault, at any version.
+        So `required=False` tolerates the first and never the second."""
+        for _ in range(tries):
+            try:
+                r = self.ask(f"set {what} " + " ".join(args), wait=2.0)
+            except TimeoutError:
+                continue
+            if r == f"ok {what}":
+                return True
+            if r == "err what" and not required:
+                return False
+            if r.startswith("err "):
+                raise RuntimeError(f"puck refused {what}: {r}")
+        raise RuntimeError(f"no clean answer to set {what} from {self.port}")
+
+    def apply(self):
+        r = self.ask("apply")
+        if r != "ok apply":
+            raise RuntimeError(f"puck refused apply: {r}")
+        self.s.close()
+
+    def wipe(self):
+        r = self.ask("wipe")
+        if r != "ok wipe":
+            raise RuntimeError(f"puck refused wipe: {r}")
+        self.s.close()
+
+
+def from_header(path: str) -> dict:
+    """The values a desk header compiles in, so a puck can be handed exactly what it already had."""
+    text = open(path).read()
+    out = {}
+    for key in ("WIFI_SSID", "WIFI_PASS", "MQTT_HOST", "MQTT_USER", "MQTT_PASS", "MQTT_BASE", "DEVICE_LABEL"):
+        m = re.search(rf'^#define\s+{key}\s+"(.*)"', text, re.M)
+        if m:
+            out[key] = m.group(1)
+    m = re.search(r"^#define\s+MQTT_PORT\s+(\d+)", text, re.M)
+    if m:
+        out["MQTT_PORT"] = m.group(1)
+    m = re.search(r"^#define\s+IV_INDEX\s+(\d+)", text, re.M)
+    if m:
+        out["IV_INDEX"] = m.group(1)
+    for key in ("NET_KEY", "APP_KEY"):
+        m = re.search(rf"{key}\[16\]\s*=\s*\{{([^}}]*)\}}", text)
+        if m:
+            out[key] = "".join(f"{int(b, 16):02x}" for b in re.findall(r"0x([0-9a-fA-F]{2})", m.group(1)))
+    return out
+
+
+# ---- upgrade: new firmware over a cable, without losing the puck ----------------------------------
+#
+# releases/bridge/esp32s3-ship.bin is a merged image starting at 0x0, and merge_bin pads the gaps
+# between the pieces with 0xff. One of those gaps is nvs, at 0x9000..0xe000 -- where a puck's wifi,
+# broker credentials, netkey, IV index and sequence number live. esptool erases before it writes, so
+# flashing that merged image at 0x0 onto a puck that is already somebody's wipes all of it and the
+# puck has to be adopted again. That is fine for the bare boards the hub flashes; it is wrong here.
+#
+# So the image goes down in two pieces with the nvs gap left alone: 0x0..0x9000 (bootloader and the
+# partition table) and 0xe000..end (otadata and the app). Both edges are 4 KiB aligned, which they
+# must be, because that is the erase granularity.
+NVS_START, NVS_END = 0x9000, 0xe000
+ROOT = pathlib.Path(__file__).resolve().parent.parent.parent
+
+
+def _nvs_is_where_we_think() -> None:
+    """Refuse to flash if the partition table has moved nvs. Getting this wrong is not recoverable
+    by the person holding the cable -- it is discovered later, by a puck that has forgotten itself."""
+    csv = ROOT / "puck/partitions-ota.csv"
+    for line in csv.read_text().splitlines():
+        if line.strip().startswith("nvs,"):
+            f = [x.strip() for x in line.split(",")]
+            start, size = int(f[3], 16), int(f[4], 16)
+            if (start, start + size) != (NVS_START, NVS_END):
+                sys.exit(f"{csv.name} puts nvs at {start:#x}..{start + size:#x}, not "
+                         f"{NVS_START:#x}..{NVS_END:#x}; upgrading would wipe every puck's identity")
+            return
+    sys.exit(f"no nvs row in {csv.name}")
+
+
+def _esptool() -> str:
+    hits = glob.glob(os.path.expanduser("~/.platformio/packages/tool-esptoolpy/esptool.py"))
+    if not hits:
+        sys.exit("no esptool.py under ~/.platformio/packages/tool-esptoolpy")
+    return hits[0]
+
+
+def _kind(v: str) -> str:
+    """The kind after a '+', the firmware's BRIDGE_KIND; a version before 0.7.0 with none carried the
+    mesh. The hub's own reading of it is Bridges.kind() in hub/bridge.py."""
+    head, plus, k = str(v or "").partition("+")
+    if plus: return "+" + k
+    m = re.match(r"(\d+)\.(\d+)\.(\d+)", head)
+    return "+mesh" if m and tuple(map(int, m.groups())) < (0, 7, 0) else ""
+
+
+def upgrade(port: str, folder: str | None = None) -> None:
+    _nvs_is_where_we_think()
+    where = pathlib.Path(folder) if folder else ROOT / "releases/bridge"
+    img = where / "esp32s3-ship.bin"
+    meta = json.loads((where / "esp32s3-ship.json").read_text())
+    data = img.read_bytes()
+    got = hashlib.sha256(data).hexdigest()
+    if got != meta["sha256"]:
+        sys.exit(f"{img.name} does not match its .json ({got[:12]} vs {meta['sha256'][:12]}); "
+                 "rebuild with tools/build-bridge.sh")
+
+    # Ask more than once. A puck that was just reset by something else is briefly deaf, and treating
+    # that as "blank" would quietly skip the check that its config survived -- which is the one thing
+    # this command exists to get right.
+    was_set = False
+    for attempt in range(3):
+        try:
+            probe = Puck(port)
+            who = probe.hello()
+            probe.close()
+            print(f"puck {who['chip']} fw {who['fw']} ({who['state']}) -> fw {meta['fw']}")
+            was_set = who["state"] == "set"
+            # Another kind of image would take its module away -- a puck bridging switches upgraded to
+            # the public image keeps its keys and loses the code that used them. A blank board has
+            # nothing to lose, so it takes whatever it is given.
+            if was_set and _kind(who["fw"]) != _kind(meta["fw"]):
+                sys.exit(f"this puck runs the {_kind(who['fw']) or 'plain'} kind and {img} is the "
+                         f"{_kind(meta['fw']) or 'plain'} kind; pass --image <folder> with its own kind")
+            break
+        except (TimeoutError, RuntimeError, serial.SerialException, OSError):
+            if attempt < 2:
+                time.sleep(2)
+                continue
+            print(f"nothing answered on the cable after 3 tries; flashing anyway -> fw {meta['fw']}")
+
+    time.sleep(1.5)     # the board re-enumerates after that probe; esptool cannot open it mid-flight
+
+    with tempfile.TemporaryDirectory() as tmp:
+        head, tail = pathlib.Path(tmp) / "head.bin", pathlib.Path(tmp) / "tail.bin"
+        head.write_bytes(data[:NVS_START])
+        tail.write_bytes(data[NVS_END:])
+        print(f"  0x0000 .. {NVS_START:#06x}  bootloader + partition table  ({head.stat().st_size} bytes)")
+        print(f"  {NVS_START:#06x} .. {NVS_END:#06x}  nvs -- LEFT ALONE")
+        print(f"  {NVS_END:#06x} ..          otadata + app                 ({tail.stat().st_size} bytes)")
+        # Underscores, not hyphens: esptool v4 only accepts write_flash/default_reset, and v5 still
+        # takes them as aliases. brain/hub/bridge.py spells these with hyphens and so needs v5.
+        subprocess.run([sys.executable, _esptool(), "--chip", "esp32s3", "--port", port,
+                        "--baud", "460800", "--before", "default_reset", "--after", "hard_reset",
+                        "write_flash", "-z", "--flash_mode", "dio", "--flash_freq", "80m",
+                        "--flash_size", "16MB", "0x0", str(head), hex(NVS_END), str(tail)],
+                       check=True)
+
+    print("  flashed; waiting for it to come back", end="", flush=True)
+    time.sleep(2)
+    for _ in range(30):
+        try:
+            back = Puck(port)
+            who = back.hello()
+            back.close()
+            print()
+            print(f"back: puck {who['chip']} fw {who['fw']} ({who['state']})")
+            if was_set and who["state"] != "set":
+                sys.exit("it came back blank: its config did not survive. Do not ship this.")
+            if was_set:
+                print("      it still knows who it is, which is the whole point of the two pieces")
+            return
+        except (TimeoutError, RuntimeError, serial.SerialException, OSError):
+            print(".", end="", flush=True)
+            time.sleep(1)
+    print()
+    sys.exit("it did not come back on the cable")
+
+
+def main():
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("port")
+    ap.add_argument("what", choices=["hello", "status", "write", "wipe", "upgrade"])
+    ap.add_argument("--from", dest="header")
+    ap.add_argument("--wifi", nargs=2, metavar=("SSID", "PASS"))
+    ap.add_argument("--mqtt", nargs=4, metavar=("HOST", "PORT", "USER", "PASS"))
+    ap.add_argument("--keys", nargs=3, metavar=("NETKEY", "APPKEY", "IV"))
+    ap.add_argument("--name", help="the hub's hostname, resolved over mDNS before the address is tried")
+    ap.add_argument("--wifi2", nargs=2, metavar=("SSID", "PASS"), help="the other key on the ring: what to fall back to")
+    ap.add_argument("--base")
+    ap.add_argument("--label")
+    ap.add_argument("--no-apply", action="store_true", help="write, but leave the restart to the caller")
+    ap.add_argument("--image", help="upgrade: a folder holding esp32s3-ship.bin and .json, instead of releases/bridge/")
+    a = ap.parse_args()
+
+    if a.what == "upgrade":
+        upgrade(a.port, a.image)
+        return
+
+    p = Puck(a.port)
+    if a.what == "hello":
+        print(p.hello())
+        return
+    if a.what == "status":
+        p.hello()
+        print(p.status())
+        return
+    if a.what == "wipe":
+        print("wiping", p.hello())
+        p.wipe()
+        return
+
+    h = from_header(a.header) if a.header else {}
+    wifi = a.wifi or ((h["WIFI_SSID"], h["WIFI_PASS"]) if "WIFI_SSID" in h else None)
+    mqtt = a.mqtt or ((h["MQTT_HOST"], h.get("MQTT_PORT", "1883"), h.get("MQTT_USER", ""), h.get("MQTT_PASS", "")) if "MQTT_HOST" in h else None)
+    keys = a.keys or ((h["NET_KEY"], h["APP_KEY"], h.get("IV_INDEX", "0")) if "NET_KEY" in h else None)
+    base = a.base or h.get("MQTT_BASE")
+    label = a.label or h.get("DEVICE_LABEL")
+    if not wifi:
+        sys.exit("nothing to write: no --wifi and no header with one")
+
+    who = p.hello()
+    print(f"puck {who['chip']} fw {who['fw']} ({who['state']})")
+    p.set("wifi", hx(wifi[0]), hx(wifi[1]));            print(f"  wifi   {wifi[0]}")
+    # docs/network.md: a name outlives a DHCP lease, and a spare outlives a changed password.
+    if a.name:
+        took = p.set("name", hx(a.name), required=False)
+        print(f"  name   {a.name}" if took else f"  name   -- this puck is too old to know it ({who['fw']}); it will use the address")
+    if a.wifi2:
+        p.set("wifi2", hx(a.wifi2[0]), hx(a.wifi2[1]));  print(f"  wifi2  {a.wifi2[0]}")
+    if mqtt:
+        p.set("mqtt", hx(mqtt[0]), str(mqtt[1]), hx(mqtt[2]), hx(mqtt[3])); print(f"  mqtt   {mqtt[0]}:{mqtt[1]}" + (f" as {mqtt[2]}" if mqtt[2] else ""))
+    if keys:
+        p.set("keys", keys[0], keys[1], str(keys[2]));   print(f"  keys   net …{keys[0][-4:]} app …{keys[1][-4:]} iv {keys[2]}")
+    if base:
+        p.set("base", hx(base));                          print(f"  base   {base}")
+    if label:
+        p.set("label", hx(label));                        print(f"  label  {label}")
+    if a.no_apply:
+        print("written; not applied")
+        return
+    p.apply()
+    print("  applied; waiting for it to come back", end="", flush=True)
+    time.sleep(2)
+    for _ in range(30):
+        try:
+            q = Puck(a.port)
+            who = q.hello()
+            print()
+            print(f"back: puck {who['chip']} fw {who['fw']} ({who['state']})")
+            return
+        except (TimeoutError, RuntimeError, serial.SerialException, OSError):
+            print(".", end="", flush=True)
+            time.sleep(1)
+    print()
+    sys.exit("it did not come back on the cable")
+
+
+if __name__ == "__main__":
+    main()

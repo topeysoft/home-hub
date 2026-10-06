@@ -1,0 +1,173 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Instrument Sans", -apple-system, "SF Pro Text", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      /* the panel's own tokens, unchanged -- app/src/panel.css */
+      --bg: #0c0d10; --surface: rgba(26,28,34,.68); --surface-hi: rgba(255,255,255,.08);
+      --edge: rgba(255,255,255,.1); --edge-hi: rgba(255,255,255,.18);
+      --ink: #f1eee8; --ink-2: #b9b5ad; --muted: #7f7d77;
+      --lamp: #e9b872; --lamp-ink: #2a1c07; --live: #74c69d; --danger: #e08a8a;
+    }
+    .dsp { font-weight: 400; letter-spacing: -.025em; text-wrap: balance; }
+    .cap { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .row { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px;
+           padding: 12px 14px; border-radius: 16px; background: var(--surface); border: 1px solid var(--edge); }
+    .row.lit { border-color: rgba(233,184,114,.35);
+               background: linear-gradient(rgba(233,184,114,.1), rgba(233,184,114,.1)), var(--surface); }
+    .ic { width: 36px; height: 36px; border-radius: 12px; display: grid; place-items: center;
+          background: var(--surface-hi); color: var(--ink-2); }
+    .ic.on { background: var(--lamp); color: var(--lamp-ink); }
+    .t1 { font-size: 15.5px; font-weight: 500; }
+    .t2 { font-size: 13px; color: var(--muted); }
+    .btn { display: inline-flex; align-items: center; gap: 8px; padding: 13px 24px; border-radius: 999px;
+           background: var(--ink); color: var(--bg); font-weight: 500; font-size: 16px; }
+    .btn.ghost { background: var(--surface-hi); color: var(--ink); border: 1px solid var(--edge);
+                 padding: 12px 20px; font-size: 15px; }
+    .btn.sm { padding: 9px 17px; font-size: 14px; }
+    .sheet { border-radius: 26px; background: rgba(22,24,30,.94); border: 1px solid var(--edge-hi);
+             box-shadow: 0 40px 100px -30px rgba(0,0,0,.9); overflow: hidden; }
+    .bar { height: 6px; border-radius: 999px; background: rgba(255,255,255,.1); overflow: hidden; }
+    .bar i { display: block; height: 100%; border-radius: 999px; background: var(--lamp); }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--lamp); }
+    .note { padding: 13px 16px 14px; border-radius: 18px; background: var(--surface); border: 1px solid var(--edge); }
+    .chip { display: inline-flex; padding: 8px 14px; border-radius: 999px; border: 1px solid var(--edge);
+            background: var(--surface-hi); font-size: 14px; }
+    .bad { color: var(--danger); }
+    .sw { fill: #ded8cc; stroke: rgba(0,0,0,.22); stroke-width: 2; }
+    .swf { fill: #fbf8f2; stroke: rgba(0,0,0,.12); stroke-width: 1.4; }
+  </style>
+</helmet>
+
+<div style="position: relative; width: 1440px; height: 900px; overflow: hidden; background: #0c0d10; color: var(--ink); font-size: 17px; line-height: 1.4;">
+  <div style="position: absolute; inset: 0; background: radial-gradient(64% 54% at 22% 18%, rgba(72,63,135,.22), transparent 70%), radial-gradient(56% 48% at 86% 88%, rgba(92,63,57,.2), transparent 72%);"></div>
+
+  <div style="position: absolute; top: 48px; left: 56px; right: 56px;">
+    <h1 class="dsp" style="margin: 0; font-size: 42px;">Four ways to do one thing.</h1>
+    <p style="margin: 10px 0 0; font-size: 17px; color: var(--ink-2); max-width: 104ch;">Every one of these is the same sentence &mdash; <i>something new is joining the house</i> &mdash; and the house says it four different ways, with four different words for stopping and two different ideas about whether a room gets asked. Quoted from what ships today.</p>
+  </div>
+
+  <!-- ===== column 1 ===== -->
+  <div class="cap" style="position: absolute; top: 196px; left: 56px;">a wall switch</div>
+  <div class="sheet" style="position: absolute; top: 228px; left: 56px; width: 316px; height: 506px; padding: 20px 18px;">
+    <div style="font-size: 20px; margin-bottom: 4px;" class="dsp">&ldquo;Add a wall switch&rdquo;</div>
+    <div class="t2" style="margin-bottom: 16px;">AddSwitch.vue &middot; AddNearby.vue</div>
+
+    <div class="cap" style="font-size: 10.5px; margin-bottom: 6px;">starts with</div>
+    <div class="row" style="margin-bottom: 12px; padding: 10px 12px;"><span class="ic on" style="width: 28px; height: 28px; border-radius: 9px;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><rect x="5" y="3" width="14" height="18" rx="3"/><circle cx="12" cy="9" r="2.2"/></svg></span><span><span class="t1" style="font-size: 14px;">It is already in the wall</span><span class="t2" style="display: block; font-size: 12px;">I can reach the code</span></span><span></span></div>
+
+    <div class="cap" style="font-size: 10.5px; margin-bottom: 6px;">while it works</div>
+    <div class="bar" style="margin-bottom: 6px;"><i style="width: 52%"></i></div>
+    <div class="t2" style="margin-bottom: 14px;">&ldquo;Around half a minute. You can put your phone down.&rdquo;</div>
+
+    <div class="cap" style="font-size: 10.5px; margin-bottom: 6px;">it ends</div>
+    <div class="t1" style="font-size: 14px; margin-bottom: 7px;">&ldquo;It&rsquo;s in.&rdquo; &mdash; then which room</div>
+    <div style="display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 14px;">
+      <span class="chip" style="padding: 5px 11px; font-size: 12.5px;">Kitchen</span>
+      <span class="chip" style="padding: 5px 11px; font-size: 12.5px;">Hall</span>
+      <span class="chip" style="padding: 5px 11px; font-size: 12.5px;">Study</span>
+    </div>
+
+    <div class="cap" style="font-size: 10.5px; margin-bottom: 6px;">leaving</div>
+    <div style="display: flex; gap: 7px;"><span class="btn ghost" style="padding: 7px 14px; font-size: 13px;">Not now</span><span class="btn ghost" style="padding: 7px 14px; font-size: 13px;">Later</span></div>
+  </div>
+
+  <!-- ===== column 2 ===== -->
+  <div class="cap" style="position: absolute; top: 196px; left: 392px;">a z&#8209;wave or zigbee thing</div>
+  <div class="sheet" style="position: absolute; top: 228px; left: 392px; width: 316px; height: 506px; padding: 20px 18px;">
+    <div style="font-size: 20px; margin-bottom: 4px;" class="dsp">&ldquo;Add a Z&#8209;Wave device&rdquo;</div>
+    <div class="t2" style="margin-bottom: 16px;">PairPanel.vue</div>
+
+    <div class="cap" style="font-size: 10.5px; margin-bottom: 6px;">starts with</div>
+    <div style="margin-bottom: 12px;"><span class="btn" style="padding: 9px 18px; font-size: 14px;">Open the door</span></div>
+
+    <div class="cap" style="font-size: 10.5px; margin-bottom: 6px;">while it works</div>
+    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;"><span class="dot"></span><span class="t1" style="font-size: 14px;">Listening&hellip;</span></div>
+    <div class="t2" style="margin-bottom: 14px;">&ldquo;The door stays open for 3:48.&rdquo;</div>
+
+    <div class="cap" style="font-size: 10.5px; margin-bottom: 6px;">it ends</div>
+    <div class="t1" style="font-size: 14px; margin-bottom: 7px;">&ldquo;Added.&rdquo;</div>
+    <div class="note bad" style="padding: 9px 12px 10px; border-color: rgba(224,138,138,.3); background: rgba(224,138,138,.07); margin-bottom: 14px;">
+      <span style="font-size: 12.5px;">No room is asked. It lands under <b>New devices</b> and the person has to go and find it.</span>
+    </div>
+
+    <div class="cap" style="font-size: 10.5px; margin-bottom: 6px;">leaving</div>
+    <div style="display: flex; gap: 7px;"><span class="btn ghost" style="padding: 7px 14px; font-size: 13px;">Back</span><span class="btn ghost" style="padding: 7px 14px; font-size: 13px;">Stop</span></div>
+  </div>
+
+  <!-- ===== column 3 ===== -->
+  <div class="cap" style="position: absolute; top: 196px; left: 728px;">anything, by brand</div>
+  <div class="sheet" style="position: absolute; top: 228px; left: 728px; width: 316px; height: 506px; padding: 20px 18px;">
+    <div style="font-size: 20px; margin-bottom: 4px;" class="dsp">&ldquo;Add Hue&rdquo;</div>
+    <div class="t2" style="margin-bottom: 16px;">AddPanel.vue &middot; the maker&rsquo;s own form</div>
+
+    <div class="cap" style="font-size: 10.5px; margin-bottom: 6px;">starts with</div>
+    <div style="margin-bottom: 12px; display: flex; gap: 7px;"><span class="btn" style="padding: 9px 18px; font-size: 14px;">Continue</span><span class="btn" style="padding: 9px 18px; font-size: 14px;">Yes, add it</span></div>
+
+    <div class="cap" style="font-size: 10.5px; margin-bottom: 6px;">while it works</div>
+    <div class="t1" style="font-size: 14px; margin-bottom: 6px;">&ldquo;Working&hellip;&rdquo;</div>
+    <div class="t2" style="margin-bottom: 14px;">No bar, no how&#8209;long, no what&#8209;is&#8209;happening.</div>
+
+    <div class="cap" style="font-size: 10.5px; margin-bottom: 6px;">it ends</div>
+    <div class="t2" style="margin-bottom: 8px; font-size: 12.5px;">&ldquo;&hellip;is part of the house now. It will show up in a room shortly; anything without a room lands under New devices. If it cannot connect, it appears under Behind the scenes with the reason.&rdquo;</div>
+    <div class="note bad" style="padding: 9px 12px 10px; border-color: rgba(224,138,138,.3); background: rgba(224,138,138,.07); margin-bottom: 14px;"><span style="font-size: 12.5px;">Three outcomes in one paragraph, and no room asked.</span></div>
+
+    <div class="cap" style="font-size: 10.5px; margin-bottom: 6px;">leaving</div>
+    <div style="display: flex; gap: 7px; flex-wrap: wrap;"><span class="btn ghost" style="padding: 7px 14px; font-size: 13px;">Cancel</span><span class="btn ghost" style="padding: 7px 14px; font-size: 13px;">Not now</span><span class="btn ghost" style="padding: 7px 14px; font-size: 13px;">OK</span></div>
+  </div>
+
+  <!-- ===== column 4 ===== -->
+  <div class="cap" style="position: absolute; top: 196px; left: 1064px;">the bridge puck itself</div>
+  <div class="sheet" style="position: absolute; top: 228px; left: 1064px; width: 316px; height: 506px; padding: 20px 18px;">
+    <div style="font-size: 20px; margin-bottom: 4px;" class="dsp">&ldquo;A bridge is here.&rdquo;</div>
+    <div class="t2" style="margin-bottom: 16px;">BridgeSheet.vue &middot; opens itself</div>
+
+    <div class="cap" style="font-size: 10.5px; margin-bottom: 6px;">starts with</div>
+    <div style="margin-bottom: 12px; display: flex; gap: 7px;"><span class="btn" style="padding: 9px 18px; font-size: 14px;">Yes, it&rsquo;s mine</span><span class="btn ghost" style="padding: 7px 14px; font-size: 13px;">Not mine</span></div>
+
+    <div class="cap" style="font-size: 10.5px; margin-bottom: 6px;">while it works</div>
+    <div style="display: grid; gap: 4px; margin-bottom: 8px; font-size: 12.5px; color: var(--ink-2);">
+      <div>&#10003;&nbsp; Giving it its software</div>
+      <div style="color: var(--lamp)">&bull;&nbsp; Putting it on your Wi&#8209;Fi</div>
+      <div style="color: var(--muted)">&nbsp;&nbsp;&nbsp;Handing it the keys</div>
+    </div>
+    <div class="bar" style="margin-bottom: 14px;"><i style="width: 50%"></i></div>
+
+    <div class="cap" style="font-size: 10.5px; margin-bottom: 6px;">it ends</div>
+    <div class="t1" style="font-size: 14px; margin-bottom: 4px;">&ldquo;It&rsquo;s in.&rdquo; &rarr; &ldquo;Now find it a home.&rdquo;</div>
+    <div class="t2" style="margin-bottom: 14px;">&rarr; &ldquo;Leave it here&rdquo; &rarr; &ldquo;Leave its light on?&rdquo;</div>
+
+    <div class="cap" style="font-size: 10.5px; margin-bottom: 6px;">leaving</div>
+    <div style="display: flex; gap: 7px; align-items: center;"><span style="width: 30px; height: 30px; border-radius: 999px; background: var(--surface-hi); border: 1px solid var(--edge); display: grid; place-items: center;"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--ink-2)" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span><span class="t2">a close cross, and nothing else</span></div>
+  </div>
+
+  <!-- ===== the tally ===== -->
+  <div style="position: absolute; top: 762px; left: 56px; right: 56px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 18px;">
+    <div class="note" style="border-color: rgba(224,138,138,.3);">
+      <div class="t1" style="margin-bottom: 5px;">Six words for leaving</div>
+      <div class="t2">Not now &middot; Later &middot; Back &middot; Stop &middot; Cancel &middot; OK &mdash; and on the puck, a cross with no word at all.</div>
+    </div>
+    <div class="note" style="border-color: rgba(224,138,138,.3);">
+      <div class="t1" style="margin-bottom: 5px;">Four words for starting</div>
+      <div class="t2">Add it &middot; Open the door &middot; Continue &middot; Yes, it&rsquo;s mine. The same tap, named four ways.</div>
+    </div>
+    <div class="note" style="border-color: rgba(224,138,138,.3);">
+      <div class="t1" style="margin-bottom: 5px;">Half of them ask the room</div>
+      <div class="t2">A switch is placed while you stand there. A plug is not, and waits under New devices for somebody to notice.</div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

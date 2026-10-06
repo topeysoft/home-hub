@@ -1,0 +1,43 @@
+{
+  "artboards": [
+    {
+      "file": "PressIt.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "A \u2014 press the button on it"
+    },
+    {
+      "file": "ShowMe.dc.html",
+      "x": 1560,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "B \u2014 it makes itself known, and you say yes"
+    },
+    {
+      "file": "OnTheBox.dc.html",
+      "x": 3120,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "C \u2014 the code on the box"
+    }
+  ],
+  "annotations": [
+    {
+      "id": "why",
+      "x": -620,
+      "y": 0,
+      "w": 500,
+      "text": "HOW ANYTHING WE MAKE PROVES IT IS IN YOUR HOUSE\n\nOur own door is not a strip feature. A puck, a plug, a sensor and a strip all knock the same way and all need the same answer to the same question: this hub can hear you, but is the person answering actually with you?\n\nTHIS COLLECTION EXISTS BECAUSE THE ANSWER WAS DRAWN IN THE WRONG PLACE. It was settled inside design/strip/ on 21 September as PopLight -- the strip mints four counts of one to six and flashes them, and the household taps what it counts. It works, it shipped, a session completed with it on real hardware. And then somebody tried to use it and said counting flashes is a real pain, which it is; and then said the deeper thing, which is that it only works at all on something two metres long. A puck has one LED. A sensor has none. An answer that needs a strip is not an answer for our door.\n\nTHE LADDER, NOT THE WINNER. These three are rungs rather than rivals. A device says what it can do to make itself known, the hub asks for the strongest rung that device supports, and the wall asks the same one-tap question whichever rung it is. C has to exist or the ladder has no floor; A is where anything with a reachable button should land; B is for what is already mounted, sealed, or out of reach.\n\nWHAT DECIDED A OVER B is not a screen, it is that pressing a button is possession rather than a guess, and it needs no light. B's session is open before anybody has proved anything, so its tap has to gate the CREDENTIALS and not merely the session -- otherwise it is the unauthenticated link the first firmware was condemned for.\n\nAND ONE CORRECTION THAT MADE A POSSIBLE. design/strip/KnockAsked.dc.html said pressing the button asks somebody to reach a thing they have just taped behind a television. That was invented, and it is the wrong way round: a thing is unboxed, plugged in, set up and THEN placed. It had nearly ruled out the only rung that works for everything we make.\n\nRECOMMENDATION: A, with B for anything that cannot be reached and C as the floor. And the thing to write down before any board is laid out: a button, reachable, on the outside of every product. It is free now and impossible later."
+    }
+  ],
+  "reading": [
+    "why",
+    "PressIt.dc.html",
+    "ShowMe.dc.html",
+    "OnTheBox.dc.html"
+  ]
+}

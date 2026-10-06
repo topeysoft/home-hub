@@ -1,0 +1,155 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><script src="./support.js"></script></head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@200;300;400;500;600;700&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin:0; font-family:"Plus Jakarta Sans", system-ui, sans-serif; -webkit-font-smoothing:antialiased;
+      --ink:#f1eee8; --ink-2:#b9b5ad; --ink-3:#7f7d77; --rim:linear-gradient(158deg, rgba(255,255,255,.683), rgba(255,255,255,.08) 34%, rgba(14,14,22,.05) 62%, rgba(255,255,255,.393)); --drop:0 27px 61px -26px rgba(17,19,28,.666), 0 2px 10px rgba(17,19,28,.32); --inner:inset 0 -46px 56px -48px rgba(22,25,33,.9); }
+    .sf { box-shadow: inset 0 -40px 54px -48px rgba(30,20,50,.4), var(--drop); }
+    .sf::after { content:""; position:absolute; inset:0; border-radius:inherit; pointer-events:none;
+      padding:1.4px; background:var(--rim);
+      -webkit-mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite:xor;
+      mask:linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); mask-composite:exclude; }
+    .cap { font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:var(--ink-3); }
+  </style>
+</helmet>
+
+<!-- DOES THE DIAL FIT? The card at the two sizes the row actually produces, measured
+     off the running panel rather than assumed: 253x264 on a 1440x900 wall, 161x168
+     where --row bottoms out. The dial was removed twice, both times with a note; this
+     is whether those notes still hold now that the step buttons can go to the pane. -->
+
+<div style="position:relative;width:1420px;height:780px;overflow:hidden;background:#141527;color:var(--ink);font-size:17px;">
+  <div style="position:absolute;inset:0;background:linear-gradient(rgb(33,38,51) 0%, rgb(45,47,69) 44%, rgb(98,69,65) 84%, rgb(63,44,42) 100%);"></div>
+  <div style="position:absolute;left:-200px;top:-140px;width:1900px;height:1200px;background:radial-gradient(58% 54% at 30% 64%, rgba(75,66,139,.4), transparent 68%), radial-gradient(44% 42% at 74% 12%, rgba(72,58,67,.26), transparent 70%), radial-gradient(62% 52% at 54% 110%, rgba(58,54,104,.44), transparent 72%), radial-gradient(74% 64% at 6% 2%, rgba(23,26,35,.5), transparent 72%);"></div>
+  <div style="position:absolute;inset:0;background:linear-gradient(rgba(12,13,16,.3) 0%, rgba(12,13,16,.52) 45%, rgba(12,13,16,.8) 100%);"></div>
+  <div style="position:absolute;left:60px;top:34px;font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3);">Does the dial fit on the card?</div>
+  
+  <div style="position:absolute;left:60px;top:70px;width:270px;">
+    <div style="font-size:16px;font-weight:600;letter-spacing:-.01em;">What ships</div>
+    <div style="font-size:13px;color:var(--ink-3);margin-top:3px;line-height:1.4;">Step buttons, a sentence, no drawing.</div>
+  </div>
+  <div style="position:absolute;left:390px;top:70px;width:270px;">
+    <div style="font-size:16px;font-weight:600;letter-spacing:-.01em;">As drawn</div>
+    <div style="font-size:13px;color:var(--ink-3);margin-top:3px;line-height:1.4;">The dial is the readout. Temperature moves to the pane.</div>
+  </div>
+  <div style="position:absolute;left:720px;top:70px;width:270px;">
+    <div style="font-size:16px;font-weight:600;letter-spacing:-.01em;">As drawn, named</div>
+    <div style="font-size:13px;color:var(--ink-3);margin-top:3px;line-height:1.4;">The same, keeping the name a second thermostat needs.</div>
+  </div>
+  <div style="position:absolute;left:1050px;top:150px;width:300px;">
+    <div class="cap">On a 1440×900 wall</div>
+    <div style="font-size:15px;margin-top:6px;">253 &times; 264</div>
+    <div style="font-size:13.5px;color:var(--ink-2);margin-top:8px;line-height:1.5;">The card the panel actually lays out: measured off the running row, not assumed.</div>
+  </div>
+  <div style="position:absolute;left:1050px;top:520px;width:300px;">
+    <div class="cap">At the row’s floor</div>
+    <div style="font-size:15px;margin-top:6px;">161 &times; 168</div>
+    <div style="font-size:13.5px;color:var(--ink-2);margin-top:8px;line-height:1.5;">A short screen, where --row bottoms out. The size the old note said a dial could not survive.</div>
+  </div><div style="position:absolute;left:60px;top:150px;">
+  <div class="sf" style="position:relative;width:253px;height:264px;border-radius:26px;overflow:hidden;background:linear-gradient(155deg, oklch(.592 .085 250), oklch(.537 .085 256));color:#f1eee8;">
+    <div style="position:absolute;left:14px;top:14px;right:14px;display:flex;align-items:center;gap:10px;">
+      <span style="width:34px;height:34px;border-radius:11px;display:grid;place-items:center;background:rgba(255,255,255,.93);color:#16202c;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.6 19.3 7.8v8.4L12 20.4 4.7 16.2V7.8z"/><circle cx="12" cy="12" r="3"/></svg></span>
+      <span style="font-size:17px;font-weight:500;">Thermostat</span>
+    </div>
+    <div style="position:absolute;left:10px;right:10px;top:72px;display:flex;align-items:center;justify-content:space-between;">
+      <span style="width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,.14);display:grid;place-items:center;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/></svg></span>
+      <span style="font-size:50px;line-height:1;letter-spacing:-.025em;">71<span style="font-size:19px;vertical-align:super;">&deg;F</span></span>
+      <span style="width:44px;height:44px;border-radius:50%;background:rgba(255,255,255,.14);display:grid;place-items:center;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></span>
+    </div>
+    <div style="position:absolute;left:14px;right:14px;top:136px;font-size:12.5px;color:rgba(255,255,255,.72);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Currently 74&deg;F &middot; Cooling &middot; 48% humidity</div>
+  </div></div><div style="position:absolute;left:390px;top:150px;">
+  <div class="sf" style="position:relative;width:253px;height:264px;border-radius:26px;overflow:hidden;background:linear-gradient(155deg, oklch(.592 .085 250), oklch(.537 .085 256));color:#f1eee8;">
+    <div style="position:absolute;left:0;right:0;top:10px;display:grid;place-items:center;">
+  <svg width="176" height="176" viewBox="0 0 150 150">
+    <defs>
+      <linearGradient id="bz01" x1="0" y1="0" x2=".35" y2="1"><stop offset="0" stop-color="#fdf7fb"/><stop offset="52%" stop-color="#cdbcd2"/><stop offset="100%" stop-color="#8e7d98"/></linearGradient>
+      <radialGradient id="fc01" cx="38%" cy="30%" r="80%"><stop offset="0" stop-color="#3b3550"/><stop offset="72%" stop-color="#1d1930"/><stop offset="100%" stop-color="#100e1e"/></radialGradient>
+    </defs>
+    <circle cx="75" cy="75" r="62" fill="url(#bz01)"/>
+    <circle cx="75" cy="75" r="53" fill="url(#fc01)"/>
+    <circle cx="75" cy="75" r="53" fill="none" stroke="rgba(255,255,255,.16)" stroke-width="1"/>
+    <circle cx="75" cy="75" r="58" fill="none" stroke="#7fb4e8" stroke-width="4.4" stroke-linecap="round" stroke-dasharray="106 258" transform="rotate(128 75 75)" opacity=".95"/>
+    <path d="M75 25v10" stroke="#ffffff" stroke-width="2.4" stroke-linecap="round" opacity=".9"/>
+    <text x="75" y="76" text-anchor="middle" dominant-baseline="central" fill="#ffffff"
+          font-family="Plus Jakarta Sans, system-ui, sans-serif" font-size="52" font-weight="300" letter-spacing="-2">71</text>
+  </svg></div>
+    <div style="position:absolute;left:14px;bottom:12px;display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 11px;border-radius:999px;background:rgba(255,255,255,.9);color:#16202c;font-size:9.5px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7.5V12l3 2"/></svg> Cooling</div>
+  </div></div><div style="position:absolute;left:720px;top:150px;">
+  <div class="sf" style="position:relative;width:253px;height:264px;border-radius:26px;overflow:hidden;background:linear-gradient(155deg, oklch(.592 .085 250), oklch(.537 .085 256));color:#f1eee8;">
+    <div style="position:absolute;left:14px;top:13px;right:14px;display:flex;align-items:center;gap:9px;">
+      <span style="width:28px;height:28px;border-radius:9px;display:grid;place-items:center;background:rgba(255,255,255,.93);color:#16202c;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.6 19.3 7.8v8.4L12 20.4 4.7 16.2V7.8z"/><circle cx="12" cy="12" r="3"/></svg></span>
+      <span style="font-size:15.5px;font-weight:500;">Thermostat</span>
+    </div>
+    <div style="position:absolute;left:0;right:0;top:48px;display:grid;place-items:center;">
+  <svg width="146" height="146" viewBox="0 0 150 150">
+    <defs>
+      <linearGradient id="bz02" x1="0" y1="0" x2=".35" y2="1"><stop offset="0" stop-color="#fdf7fb"/><stop offset="52%" stop-color="#cdbcd2"/><stop offset="100%" stop-color="#8e7d98"/></linearGradient>
+      <radialGradient id="fc02" cx="38%" cy="30%" r="80%"><stop offset="0" stop-color="#3b3550"/><stop offset="72%" stop-color="#1d1930"/><stop offset="100%" stop-color="#100e1e"/></radialGradient>
+    </defs>
+    <circle cx="75" cy="75" r="62" fill="url(#bz02)"/>
+    <circle cx="75" cy="75" r="53" fill="url(#fc02)"/>
+    <circle cx="75" cy="75" r="53" fill="none" stroke="rgba(255,255,255,.16)" stroke-width="1"/>
+    <circle cx="75" cy="75" r="58" fill="none" stroke="#7fb4e8" stroke-width="4.4" stroke-linecap="round" stroke-dasharray="106 258" transform="rotate(128 75 75)" opacity=".95"/>
+    <path d="M75 25v10" stroke="#ffffff" stroke-width="2.4" stroke-linecap="round" opacity=".9"/>
+    <text x="75" y="76" text-anchor="middle" dominant-baseline="central" fill="#ffffff"
+          font-family="Plus Jakarta Sans, system-ui, sans-serif" font-size="54" font-weight="300" letter-spacing="-2">71</text>
+  </svg></div>
+    <div style="position:absolute;left:0;right:0;bottom:10px;text-align:center;font-size:12.5px;color:rgba(255,255,255,.8);">Cooling &middot; from 74&deg;</div>
+  </div></div><div style="position:absolute;left:60px;top:520px;">
+  <div class="sf" style="position:relative;width:161px;height:168px;border-radius:26px;overflow:hidden;background:linear-gradient(155deg, oklch(.592 .085 250), oklch(.537 .085 256));color:#f1eee8;">
+    <div style="position:absolute;left:8.96px;top:8.96px;right:8.96px;display:flex;align-items:center;gap:6.4px;">
+      <span style="width:21.76px;height:21.76px;border-radius:7.04px;display:grid;place-items:center;background:rgba(255,255,255,.93);color:#16202c;"><svg width="10.88" height="10.88" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.6 19.3 7.8v8.4L12 20.4 4.7 16.2V7.8z"/><circle cx="12" cy="12" r="3"/></svg></span>
+      <span style="font-size:10.88px;font-weight:500;">Thermostat</span>
+    </div>
+    <div style="position:absolute;left:6.4px;right:6.4px;top:46.08px;display:flex;align-items:center;justify-content:space-between;">
+      <span style="width:28.16px;height:28.16px;border-radius:50%;background:rgba(255,255,255,.14);display:grid;place-items:center;"><svg width="11.52" height="11.52" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/></svg></span>
+      <span style="font-size:32px;line-height:1;letter-spacing:-.025em;">71<span style="font-size:12.16px;vertical-align:super;">&deg;F</span></span>
+      <span style="width:28.16px;height:28.16px;border-radius:50%;background:rgba(255,255,255,.14);display:grid;place-items:center;"><svg width="11.52" height="11.52" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></span>
+    </div>
+    <div style="position:absolute;left:8.96px;right:8.96px;top:87.04px;font-size:8px;color:rgba(255,255,255,.72);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">Currently 74&deg;F &middot; Cooling &middot; 48% humidity</div>
+  </div></div><div style="position:absolute;left:390px;top:520px;">
+  <div class="sf" style="position:relative;width:161px;height:168px;border-radius:26px;overflow:hidden;background:linear-gradient(155deg, oklch(.592 .085 250), oklch(.537 .085 256));color:#f1eee8;">
+    <div style="position:absolute;left:0;right:0;top:6.4px;display:grid;place-items:center;">
+  <svg width="113" height="113" viewBox="0 0 150 150">
+    <defs>
+      <linearGradient id="bz11" x1="0" y1="0" x2=".35" y2="1"><stop offset="0" stop-color="#fdf7fb"/><stop offset="52%" stop-color="#cdbcd2"/><stop offset="100%" stop-color="#8e7d98"/></linearGradient>
+      <radialGradient id="fc11" cx="38%" cy="30%" r="80%"><stop offset="0" stop-color="#3b3550"/><stop offset="72%" stop-color="#1d1930"/><stop offset="100%" stop-color="#100e1e"/></radialGradient>
+    </defs>
+    <circle cx="75" cy="75" r="62" fill="url(#bz11)"/>
+    <circle cx="75" cy="75" r="53" fill="url(#fc11)"/>
+    <circle cx="75" cy="75" r="53" fill="none" stroke="rgba(255,255,255,.16)" stroke-width="1"/>
+    <circle cx="75" cy="75" r="58" fill="none" stroke="#7fb4e8" stroke-width="4.4" stroke-linecap="round" stroke-dasharray="106 258" transform="rotate(128 75 75)" opacity=".95"/>
+    <path d="M75 25v10" stroke="#ffffff" stroke-width="2.4" stroke-linecap="round" opacity=".9"/>
+    <text x="75" y="76" text-anchor="middle" dominant-baseline="central" fill="#ffffff"
+          font-family="Plus Jakarta Sans, system-ui, sans-serif" font-size="52" font-weight="300" letter-spacing="-2">71</text>
+  </svg></div>
+    <div style="position:absolute;left:8.96px;bottom:7.68px;display:inline-flex;align-items:center;gap:3.84px;height:15.36px;padding:0 7.04px;border-radius:999px;background:rgba(255,255,255,.9);color:#16202c;font-size:6.08px;font-weight:700;letter-spacing:.13em;text-transform:uppercase;"><svg width="7.04" height="7.04" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7.5V12l3 2"/></svg> Cooling</div>
+  </div></div><div style="position:absolute;left:720px;top:520px;">
+  <div class="sf" style="position:relative;width:161px;height:168px;border-radius:26px;overflow:hidden;background:linear-gradient(155deg, oklch(.592 .085 250), oklch(.537 .085 256));color:#f1eee8;">
+    <div style="position:absolute;left:8.96px;top:8.32px;right:8.96px;display:flex;align-items:center;gap:5.76px;">
+      <span style="width:17.92px;height:17.92px;border-radius:5.76px;display:grid;place-items:center;background:rgba(255,255,255,.93);color:#16202c;"><svg width="9.6" height="9.6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3.6 19.3 7.8v8.4L12 20.4 4.7 16.2V7.8z"/><circle cx="12" cy="12" r="3"/></svg></span>
+      <span style="font-size:9.92px;font-weight:500;">Thermostat</span>
+    </div>
+    <div style="position:absolute;left:0;right:0;top:30.72px;display:grid;place-items:center;">
+  <svg width="93" height="93" viewBox="0 0 150 150">
+    <defs>
+      <linearGradient id="bz12" x1="0" y1="0" x2=".35" y2="1"><stop offset="0" stop-color="#fdf7fb"/><stop offset="52%" stop-color="#cdbcd2"/><stop offset="100%" stop-color="#8e7d98"/></linearGradient>
+      <radialGradient id="fc12" cx="38%" cy="30%" r="80%"><stop offset="0" stop-color="#3b3550"/><stop offset="72%" stop-color="#1d1930"/><stop offset="100%" stop-color="#100e1e"/></radialGradient>
+    </defs>
+    <circle cx="75" cy="75" r="62" fill="url(#bz12)"/>
+    <circle cx="75" cy="75" r="53" fill="url(#fc12)"/>
+    <circle cx="75" cy="75" r="53" fill="none" stroke="rgba(255,255,255,.16)" stroke-width="1"/>
+    <circle cx="75" cy="75" r="58" fill="none" stroke="#7fb4e8" stroke-width="4.4" stroke-linecap="round" stroke-dasharray="106 258" transform="rotate(128 75 75)" opacity=".95"/>
+    <path d="M75 25v10" stroke="#ffffff" stroke-width="2.4" stroke-linecap="round" opacity=".9"/>
+    <text x="75" y="76" text-anchor="middle" dominant-baseline="central" fill="#ffffff"
+          font-family="Plus Jakarta Sans, system-ui, sans-serif" font-size="54" font-weight="300" letter-spacing="-2">71</text>
+  </svg></div>
+    <div style="position:absolute;left:0;right:0;bottom:6.4px;text-align:center;font-size:8px;color:rgba(255,255,255,.8);">Cooling &middot; from 74&deg;</div>
+  </div></div>
+</div>
+</x-dc>
+</body></html>

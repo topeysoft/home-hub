@@ -1,0 +1,74 @@
+# The flash-and-go image: Raspberry Pi OS Lite (64-bit) with the hub already on it. Built with pi-gen
+# on every version tag (and by hand from the Actions tab), attached to the GitHub release as a .img.xz
+# with its checksum. See driver-layer/host/pi-image/README.md.
+name: pi image
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  # A tag is not a branch: branch protection does not apply to one, so nothing otherwise stops a
+  # release being cut from a commit that never passed a test. This is what stops it.
+  verify:
+    uses: ./.github/workflows/ci.yml
+
+  image:
+    needs: verify
+    # A native arm64 runner (free for public repositories): pi-gen builds the 64-bit image without emulation, several
+    # times faster, and sidesteps the binfmt trouble that stops Trixie builds on x86 runners (usimd/pi-gen-action#179).
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - uses: actions/checkout@v4
+      - name: Which code the image carries
+        run: |
+          mkdir -p driver-layer/host/pi-image/stage-hub/00-home-hub/files
+          printf 'HOME_HUB_REF=%s\nHOME_HUB_REPO=https://github.com/%s.git\n' "${GITHUB_REF_NAME}" "${GITHUB_REPOSITORY}" \
+            > driver-layer/host/pi-image/stage-hub/00-home-hub/files/home-hub.conf
+          cat driver-layer/host/pi-image/stage-hub/00-home-hub/files/home-hub.conf
+      - name: Room on the runner
+        # The action's own "increase-runner-disk-size" purges packages with apt and fails on today's runner image
+        # (exit 100). Deleting the big toolchains nobody needs here frees space without apt; missing paths are fine.
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/.ghcup /usr/share/swift /usr/local/share/boost /opt/hostedtoolcache/CodeQL /usr/local/lib/node_modules
+          sudo docker image prune -af >/dev/null 2>&1 || true
+          df -h /
+      - uses: usimd/pi-gen-action@v1
+        id: build
+        with:
+          image-name: home-hub-${{ github.ref_name }}
+          stage-list: stage0 stage1 stage2 ./driver-layer/host/pi-image/stage-hub
+          hostname: hub
+          username: hub
+          enable-ssh: 0
+          # No password baked in, so the first-boot user rename stays on (pi-gen refuses to turn it off without one).
+          # Headless, nothing waits on it: the hub's own first-boot unit runs regardless.
+          locale: en_US.UTF-8
+          keyboard-layout: English (US)
+          keyboard-keymap: us
+          timezone: America/Chicago   # only until first boot: install.sh reads the Pi's own zone; must be an Area/City name for the action
+          compression: xz
+          compression-level: 6
+          pi-gen-version: arm64
+          release: trixie
+          increase-runner-disk-size: false
+          verbose-output: true
+      - name: Checksum
+        run: |
+          IMG="${{ steps.build.outputs.image-path }}"
+          (cd "$(dirname "$IMG")" && sha256sum "$(basename "$IMG")" | tee "$(basename "$IMG").sha256")
+          ls -lh "$(dirname "$IMG")"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: home-hub-image
+          path: ${{ steps.build.outputs.image-path }}*
+          retention-days: 14
+      - uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/v')
+        with:
+          files: ${{ steps.build.outputs.image-path }}*
+          generate_release_notes: true

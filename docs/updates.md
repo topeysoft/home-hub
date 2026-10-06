@@ -1,0 +1,586 @@
+# Updates: the plan
+
+*Decided 16 September 2026. A hub in somebody else's house stays current without being asked, undoes an update that
+does not come back, and installs nothing the maker's key did not sign. Release notes say what changed in the house,
+not what changed in the repository.*
+
+## Why this needs a plan at all
+
+Updating already works, and the shape of it is right. The brain knows which build it is, asks GitHub a few times a day
+whether there is a newer one, and when there is, Home says *An update is ready*. One tap, behind the settings code,
+writes `brain-data/update.request`; a systemd path unit on the host sees the file and runs `update.sh`, which runs
+`install.sh`, which moves the checkout to the newest tag on this hub's channel, pulls the images and starts everything
+again. `update.json` in the same directory says how it went, and the brain reads it back to the panel.
+
+Three properties of that are worth keeping and are not in question. **The brain never runs Docker and never restarts
+anything** — it parks a file and waits, so the thing with a network port is not the thing with root. **The request file
+is advisory only**: `update.sh` takes the channel from `driver-layer/.env`, never from the file, so a process that can
+write into `brain-data/` can ask for an update but cannot choose what gets installed. And **code and container move
+together**: a hub on `v0.2.0` runs the `0.2.0` image, not whatever is newest.
+
+What is missing only starts to matter when the hub is in a house that is not this one.
+
+| Gap | What it looks like in a house | What it costs |
+|---|---|---|
+| Nothing verifies what arrives | `git reset --hard` to the newest `v*` tag; `docker compose pull` by tag | The trust anchor for root-level code in someone's home is "whoever can push to GitHub" |
+| No way back | The brain does not start; the wall is dark | A family with no ssh and no recourse, and a maker who finds out by telephone |
+| Nobody taps | The hub sits three releases behind for a year | The security fixes do not land, which is the actual security problem |
+
+The third is the one that makes the other two urgent. Every appliance a household already owns — the television, the
+speakers, the thermostat — installs its own updates overnight and tells them in the morning. A hub that waits to be
+asked is a hub that is never asked, and a stale hub is not a neutral outcome: it is the one running the bug that was
+fixed in March. So this plan ends with the hub updating itself. Everything before that exists to make automatic safe:
+**a hub may only install without being asked once it can prove what it installed and undo what did not work.**
+
+## Rules that do not change
+
+- **The brain never runs Docker.** It writes a file. The host does the work, as root, out of the brain's reach.
+- **Nothing installs that the maker's key did not sign.** The transport is untrusted on purpose: a CDN, a registry and
+  a git remote are all things somebody else runs. The signature is what makes them not matter.
+- **An update that does not come back is undone by the hub, not by a person with ssh.** A household's only repair
+  tool is the wall, and the wall is the thing that is missing.
+- **A person can always still decide.** Automatic is the default because it is the right default, not because the
+  choice was taken away. One switch turns it off and it stays off.
+- **Notes are about the house.** No filename, no container, no commit subject, no version of anything rented, and —
+  the rule that already holds everywhere else — nothing that mentions Home Assistant.
+- **The house says what it did.** Every update, every refusal and every rollback is an event in the log, and the
+  morning after is where a household finds out what changed.
+- **Works with the internet down.** A hub that cannot reach the maker installs nothing and says nothing, and the house
+  is untouched. Undoing an update never needs the network, because the image it goes back to is already on the disk.
+
+## Where this stands today (16 September 2026)
+
+- `brain/hub/updates.py` — `HUB_VERSION` and `HUB_COMMIT` are baked into the image by CI (`brain-image.yml` passes
+  them as build args). `Updates.check()` runs 90 seconds after start and every six hours, asks
+  `/repos/{repo}/releases/latest` on the `release` channel or, on `main` and `development`, the newest push whose brain image finished building (not the branch head, which is there minutes before anything can pull it), and `available` is deliberately
+  three-valued: `None` when nobody can tell, because a panel saying *Up to date* when it does not know is a lie
+  somebody acts on.
+- `POST /update` is behind the settings code (`brain/hub/lock.py`), and `request()` writes the file.
+- `driver-layer/host/update.sh` — reads the channel out of `.env`, runs `install.sh`, writes `running` / `done` /
+  `failed` into `update.json`, and keeps the installer's output in `update.log`.
+- `brain/hub/health.py` — a `failed` state becomes a *Needs a look* line with *Try again*.
+- The panel — `Attention.vue` nudges on Home, `HubPage.vue` shows the version and the button.
+- **Notes: the release title, cut at 120 characters.** `fetch()` takes `d["name"]` and drops `d["body"]` on the floor,
+  so what a household reads is a commit subject: *feat(sort): implement scrolling behavior for New devices list*.
+- **There is no stable identifier for a hub.** Piece 5 needs one and nothing else in the repository provides it.
+- **The driver layer is pinned by tag, not by digest.** `2026.9.1` is a name upstream can move.
+
+One nuance the panel already gets almost right. *Tap to install; the lights keep working* is true for an ordinary
+update, because the pins in `docker-compose.yml` have not changed and `compose up -d` recreates only the brain. It is
+not true for the update that bumps Home Assistant, where the engine restarts and the house is deaf for half a minute.
+The sentence should be earned rather than assumed: the manifest of piece 2 knows which images are moving, so the panel
+can say *a minute where switches still work but the app does not* only when that is what is about to happen.
+
+## Five pieces, in order
+
+### 1. Undo *(landed 16 September 2026)*
+
+Nothing else on this list is safe to ship first, and the reason is narrow: every later piece makes updates happen more
+often and with less human attention, and the current failure mode is unbounded. `git reset --hard`, `compose up -d`,
+and if the brain does not start there is nothing on the wall to press.
+
+**Snapshot, apply, prove, keep or put back.** Before `install.sh` is called, `update.sh` records where the hub is —
+the current commit and the image the brain container is actually running, taken by digest from the daemon rather than
+from any file that could disagree with it — into `update.prev`. After the installer returns, the host proves the house
+came back by asking the brain itself, on `127.0.0.1:8300`, and waits for an answer for up to five minutes.
+
+**What counts as proof.** A single answer is not enough: an image that starts, answers, and then crash-loops would
+pass. The brain must answer, and then still be answering after a settle of forty-five seconds. That is cheap, it
+needs no new state, and it catches the two failures that actually happen — an image that will not start at all, and
+one that starts and immediately falls over on the data it found.
+
+**Putting it back needs no network.** The previous image is still in the local store, so the revert is a
+`git reset --hard` to the recorded commit, the recorded digest pinned into `.env` as `HUB_BRAIN_IMAGE`, and
+`compose up -d`. A hub that broke itself on a bad release recovers with the internet down, which is the condition it
+is most likely to be in if the thing that broke was the network.
+
+**And then it must not do it again.** `update.json` gains a fourth state, `reverted`, carrying the version that was
+rejected. The brain reads it and stops *offering* that version: Home does not nudge for it, `This hub` says
+*Version 0.3.1 did not start, so the hub put back 0.3.0*, and the button underneath still works, because a person
+choosing to try again is a different thing from a hub deciding to. Piece 3 reads the same state and will not install
+a rejected version by itself, ever.
+
+**The probe is a new route.** `GET /alive` — `{"ok": true, "version": ..., "commit": ...}`, open to strangers because
+the host asking is a stranger, and carrying nothing about the house. Everything else the brain serves is either behind
+the phone cookie or is the panel's own files, and reusing one of those to mean "alive" would tie the safety net to a
+pairing decision that has nothing to do with it.
+
+**A small latent bug closes with it.** `install.sh` exports `HUB_BRAIN_IMAGE` into the environment of its own
+`compose` call and writes it nowhere, so a hub whose containers are recreated by any other means — a person running
+`docker compose up -d` by hand — silently falls back to `:latest` and breaks the rule that code and container move
+together. The pin belongs in `.env` next to `HUB_CHANNEL`, written on every run.
+
+**What landed.** `driver-layer/host/update.sh` does the snapshot, the proof and the put-back; `update.prev` holds the
+commit and the image; `update.json` gains `reverted` and names the version in `bad`. `GET /alive` is the probe, open in
+`hub/phones.py` alongside the panel's own files. `Updates.offer` in `hub/updates.py` is `available` minus a rejected
+version, and the panel's nudge reads `offer` where it used to read `available` (`store.ts`, `Attention.vue`); *This hub*
+says which version was put back and its button becomes *Try again*. `install.sh` now writes `HUB_BRAIN_IMAGE` into
+`.env`, which is what makes the pin survive a compose run by any other hand.
+
+**What was verified**, by standing it up rather than reading it: a real git repository with two commits, a fake
+installer that moves the checkout the way the real one does, and a `curl` and a `docker` that can be told whether the
+house answers. Four endings, each one checked for the state written, where the checkout ended up, and whether the pin
+was left behind — it installed and came back (`done`, on the new commit); it installed and did not come back
+(`reverted`, back on the old commit, old digest pinned in `.env`); it did not come back and neither did the one put
+back (`failed`, `reverted: false`, and the version named rather than a rollback claimed that did not take); and the
+installer itself stopping part way (put back, `failed`). The request file is gone in all four, so a hub cannot loop.
+
+**One thing `host/tests.sh` cannot cover.** `install.sh`'s image fallback needs a real Docker daemon, so the case that
+bit hardest here was found by hand rather than by a test: a verified release pins the brain **by digest**, and nothing
+can build a digest — Docker refuses with *"refusing to create a tag with a digest reference"*. Falling back to a local
+build was therefore impossible on exactly the hubs the fallback exists for: a package that is not public, or no
+internet. It builds under a name of the hub's own now. What that costs is worth saying plainly: the code is still the
+commit the signed record named, so it is built from the source the release described, but the pinned binary is gone and
+with it the base images the Dockerfile names by tag rather than by digest. Weaker than pulling what CI built; much
+stronger than not updating.
+
+**What is not covered, and is worth knowing.** The proof is *the brain answers*. An image that starts, serves, and is
+subtly wrong — a panel that renders nothing, a migration that quietly dropped the rules — passes. Catching that needs
+the panel to check itself, which is a different piece and probably belongs with piece 5's telemetry rather than here.
+~~And CI lints `update.sh` but does not run it.~~ **Closed, 16 September 2026.** `driver-layer/host/tests.sh` is that
+harness and the two after it, made permanent and run by the `shell` job: twenty-five cases over the undo, the
+signature and the hold, needing git, openssl, curl and python3 and nothing else -- no docker, no network, no root.
+Checked that it fails when it should, by breaking the signature check and the hold check in turn and watching the
+right cases go red.
+
+### 2. A signature *(landed 16 September 2026)*
+
+Today the answer to *what may run as root in this house* is *whatever the newest `v*` tag points at*. Tags move; a
+stolen token, a compromised Action or a bad afternoon at GitHub all reach every hub. The fix is not to trust the
+transport less carefully — it is to stop trusting it at all.
+
+**A signed manifest per release.** CI publishes `release.json`: the version, the commit, the brain image **by digest**,
+the Matter bridge image **by digest** (added 18 September 2026 — it is ours and it has a contract with the brain, so
+the two are named by the release and move together; `docs/matter.md`), every driver-layer image **by digest**, the oldest version that may upgrade straight to it, the rollout state piece 5
+needs, and the notes piece 4 writes. It is signed with an ed25519 key **that does not live on GitHub**, and the public
+key is in the image and in the checkout. The hub verifies the signature before `install.sh` moves a byte, and pulls
+every image by digest. A tag that moves then changes nothing, because nothing reads a tag any more.
+
+**Two signatures, and they defend different things.** Cosign keyless on the image build is nearly free and binds *this
+image was built by this workflow, in this repository, from this commit* — it stops a registry compromise and a moved
+tag. It does **not** stop somebody who can push to the repository, because the workflow would sign their commit just as
+happily. Only the offline key does that, and the whole reason it is worth the inconvenience is that it is the one key
+an attacker who owns the GitHub account still does not have. Both, and be honest in this document about which does
+which.
+
+**Where the manifest is served** is deliberately not interesting: the maker's own zone through Cloudflare, with GitHub
+releases as the fallback, because the signature is what makes the path not matter. It is DNS and a static object, so
+it is Terraform like everything else in `docs/away.md` — nothing about it is clicked in a console.
+
+**Rented images too.** `2026.9.1` is a name Home Assistant can move, and the hub pulls it as root. Once the manifest
+carries digests, the pins in `docker-compose.yml` become the record of what was tested and the manifest becomes what
+is installed.
+
+**What landed.** `tools/release-manifest.py` builds the record for a tag, resolving every digest by asking the
+registries anonymously rather than the local Docker daemon — a laptop with an old layer cached would otherwise sign a
+digest nobody else can pull. `tools/release.sh` makes the keypair (`--new-key`, once ever) and signs a tag;
+`driver-layer/host/verify.sh` is what a hub checks with, and `install.sh` calls it before the checkout moves and then
+checks out **the commit the manifest names**, not the tag. Every image in `docker-compose.yml` became
+`${HUB_IMG_<SERVICE>:-<the tag>}`, so a verified release pins by digest and the tag stays as the readable default and
+the record of what was tested.
+
+**Where the keys live is the whole design.** Not in `$DIR`: that is the thing being updated, so a key kept only there
+could be replaced by the same push it exists to catch. They are copied once into `/etc/home-hub/release-keys.d/` on
+the first install and never added to. **The first install trusts the repository it came from; every update after it
+trusts the keys.** That boundary is real, and the flashed image narrows it, because the image was built from a tag and
+carries the keys already.
+
+**A directory, not one file**, and that part is done now because it cannot be done later. A hub never adds a key after
+its first install — a key arriving from the repository afterwards is exactly the push this exists to catch — so a
+second key has to be there from the beginning or it can never be there at all, and without one, losing the first means
+no hub in any house can be updated again, ever. `tools/release.sh --new-key spare` makes it; keep it offline,
+somewhere other than the first, and never sign with it until you have to. Any key in the directory may sign a release.
+This closes the open decision this document opened with.
+
+**Two corrections to what this document said before it was built.**
+
+- **`rollout` and `hold` are not in the release manifest.** They were written down here as fields of it, and they
+  cannot be: a signed per-release file cannot be changed without re-signing, and piece 5 wants a hold that takes
+  effect in minutes. They belong in a separate, separately signed channel file. Piece 5 owns it.
+- **A release that cannot be checked is not a failed update,** and folding the two together would have been the
+  panel's mistake, not the host's. `install.sh` exits 3, `update.sh` writes a `refused` state, and the health line
+  says the house is working and carries **no Try again** — the same tap refuses the same release, and sending a
+  household round that loop is worse than telling them plainly that this one is not theirs to fix.
+
+**Cosign is checked by the maker, not by the hub.** CI signs the image keylessly on every tag, and `tools/release.sh`
+verifies that signature — the workflow, the repository and the tag — before it will put the maker's key to a manifest.
+So the two signatures nest rather than sit side by side: hubs hold one ed25519 public key and need no cosign binary,
+no Sigstore root and no network beyond the release, and the maker's signature still cannot be given to an image this
+repository's workflow did not build.
+
+**What was verified**, again by standing it up rather than reading it: a real git repository with two tags, a real
+ed25519 keypair, real `openssl`, and a fake releases server behind a `file://` URL. It installs a release signed by
+the maker whose tag and commit agree, and refuses, with a sentence naming the reason each time: a tag moved onto
+another commit after signing; a manifest signed by a different key; a manifest edited after signing; a release with no
+signed record at all; a record naming a different version; and an upgrade path below `min_from`. A hub with no key yet
+returns 2 and says so rather than pretending either way. Separately checked that a good verification leaves the caller
+holding `VERIFIED_COMMIT`, the brain digest and one `HUB_IMG_*` per service — under exactly the names
+`docker-compose.yml` reads, which is a spelling mistake away from silently falling back to tags — and that the compose
+file still resolves to the pinned tags when nothing is set.
+
+**What is not covered.** The first install, by construction: `curl | bash` from `main` trusts the repository, and so
+does the `git clone` under it. Nothing verifies `install.sh` itself on that first run, and the honest fix is the
+flashed image rather than a cleverer script. Also `tools/release.sh` has to be run by hand after CI publishes a tag's
+images — it needs the digests to exist — so there is a window where a tagged release exists and hubs refuse it. That
+is the right way round, and it is still a reason not to leave a tag sitting unsigned.
+
+### 3. By itself, at night *(landed 16 September 2026)*
+
+Only after 1 and 2, and the order is the point: automatic updating from an unverified source is the supply-chain
+problem with the human taken out of it.
+
+**On by default, in the small hours, when nothing has been asked of the house for a while.** Not a fixed 3am for every
+hub — a window, jittered by the hub's own identifier, so a bad release does not take every house in the same minute
+and so the maker's endpoint is not asked for a manifest by ten thousand hubs at once. Never while somebody is driving
+the house, and never inside a few minutes of anyone touching the wall.
+
+**One switch, under *This hub*, and it stays where it is put.** *Install updates on its own — Yes / Ask me first*.
+Choosing *Ask me first* is the panel exactly as it is today.
+
+**Urgent is a property of the release, not of the hub.** A manifest may say `urgent: true`, and an urgent release
+installs at the next quiet moment rather than waiting for the window. It still respects a household that turned
+automatic off; what it does there is nudge harder and say why. *(Not built — see the correction below.)*
+
+**The morning after is the feature.** This is the piece that changes what notes are *for*: nobody reads them before a
+tap they never make, so they belong on the wall the next morning, as one dismissible card saying what is new. Which is
+piece 4.
+
+**What landed.** `Settings.hub_id()` is the identifier — random, made once, kept in `settings.json` so it rides the
+backup, and deliberately not derived from the hardware: a MAC address would leak something about the house to anything
+the id is ever shown to, and would change under a household that moved the hub onto a new box, which is the one moment
+it most wants to still be the same hub. `Updates.minute_of_the_night()` hashes it into a minute of the window;
+`due()` holds the conditions; the loop ticks every five minutes and asks. `EventLog.last_user()` is the "is anybody up"
+test, with an index to match. The switch is `POST /update/auto`, behind the settings code like every other change to
+the house, and a row under *This hub*.
+
+**The default resolves itself, so it needed no decision.** `auto` is on where the hub can check what it is installing
+and off where it cannot — `install.sh` writes `HUB_VERIFIED=1` into the compose environment when the key directory has
+something in it, and the brain reads that and nothing else. So the rule is one sentence: **a hub only updates itself
+without being asked if it can prove what it installed and undo what did not work**, which is pieces 2 and 1 exactly.
+A household's own answer outranks both and stays said. Getting `HUB_VERIFIED` wrong makes a hub shy, never reckless.
+
+**An automatic install is logged as `source: "hub"`**, not `"user"`. A household that finds the hub on a new version in
+the morning should be able to see under *Recent* that nobody in the house did it.
+
+**One correction.** `urgent` was written down here as part of this piece and is not built. It needs the brain to read
+the manifest, which is piece 4's fetch, and on its own it buys very little now that updates land nightly anyway: the
+gap it closes is the few hours between a fix being signed and the next window. It moves to piece 4.
+
+**What was verified.** Sixteen tests over `due()`, because it is a conjunction and every term is a way to get it
+wrong: off for a hub that cannot verify, on for one that can, the household's answer beating both; nothing at half
+nine at night, at half past midnight, at half five in the morning or at noon; nothing a minute before this hub's own
+minute and something a minute after; still due half an hour later, so a hub that was busy at its minute tries again
+the same night rather than waiting a day; six hub ids landing on more than three different minutes, all inside the
+window, and the same id landing on the same minute every night; nothing while somebody was up in the last half hour
+and something once they have been quiet for it; nothing when there is nothing to install, when the version was put
+back, when an update is already running, or when somebody has just tapped; one go a night and then the next night;
+and the log saying `hub`.
+
+### 4. Notes written for a house *(landed 16 September 2026)*
+
+`releases/0.3.0.md` in the repository, with a `what` section of two to four plain sentences about effects — *speakers
+remember their volume*, *the kitchen appears on the wall faster* — and an optional `details` for whoever wants it. CI
+folds it into the signed manifest and into the GitHub release body, so there is one copy and it is the signed one. The
+hub caches it, which is what makes notes readable with the internet down and, more to the point, readable **after** the
+update, when the household actually wants them.
+
+On the panel: a *What's new* card the morning after, dismissible, and a *What's new* sheet under *This hub* with the
+current release at the top and the history under it. The history is what answers *when did the hub start doing that?*,
+which is the question a household actually asks.
+
+**A release with no notes file does not ship.** Better a tag that fails CI than a family reading a commit subject.
+
+**What landed, and the one place it departs from the plan above.** The notes are **not fetched and not read out of the
+manifest** — they are copied into the brain's image (`COPY releases/ /srv/releases/`) and read from there. That is
+strictly better than what this document originally described, and it fell out of a constraint: the brain has no
+ed25519 anywhere in its dependencies, so it could not have verified a manifest it fetched. Reading them from the image
+means the notes a hub shows are the notes for the code it is actually running, they need no verification of their own
+because the image was already verified, they read with the internet down, and **the history is free** — the image
+carries every release file up to its own version, so *This hub → What's new* has one without storing anything.
+
+The rest: `releases/README.md` is the format and the rules; `brain/hub/notes.py` is the parser;
+`tools/release-manifest.py` **refuses to build a record for a tag whose notes are missing or read like a changelog**,
+which is the part that makes the rule real rather than aspirational. `tools/release.sh` publishes the same file as the
+GitHub release body, and `Updates.fetch()` parses it, so the release *waiting* to install is described in its own words
+too — that one is unverified, and it describes without ever deciding.
+
+**The card is on Home the morning after, and does not vanish under the tap.** It carries the words themselves rather
+than a link to them, it opens *This hub* when tapped, and **opening that page is what marks it read** — somebody who
+came to look has, by definition, looked. A hub that has only ever run the version it is on marks its own version read
+at startup and says nothing: somebody who has just plugged one in is being set up, not caught up.
+
+**Checked on the glass**, not only in tests: `WHATSNEW=1 npm run mock` puts both states in the panel. The first attempt
+put the lines in a `<ul>` inside the row and every line came out wearing the row's own pill, which is what looking at
+it is for; the second reads as prose, like every other row on that page.
+
+**What was verified.** Sixteen tests in `brain/tests/test_notes.py` over the parser (both sections, only one section,
+prose outside a heading, `*` bullets, nothing at all, the `v` prefix, a build with no notes), the history (newest by
+version and not by name, so `0.10.0` beats `0.9.0`; the README in that folder is not a release; no folder at all is an
+empty history and not a crash) and what the wall shows (nothing on a hub that has only ever run this version; once,
+and then not again, on one that updated; nothing for a release that shipped without notes; nothing for one with only
+a Details section, which is still readable on *This hub*). Nine cases against the checker: a commit subject, Home
+Assistant, entities, a filename, a commit hash, a container, no lines, too many lines, no file at all.
+
+### 5. A hold and a rollout *(landed 16 September 2026, except the telemetry)*
+
+~~**A stable hub identifier**~~ — **done with piece 3.** `Settings.hub_id()`, and `minute_of_the_night()` is the
+worked example of hashing it into a bucket that piece 5 repeats against `rollout`.
+
+**`rollout: 0.1` in the manifest**, against a hash of that identifier, so a tenth of hubs take a release first and the
+rest follow when it is raised. **`hold: true`** stops it spreading at all, in the minutes after somebody notices,
+without cutting another tag. And **`min_from`** refuses an upgrade path that was never tested rather than discovering
+it in a house.
+
+**One line of telemetry**, opt-out, and it needs to be small enough to describe in a sentence on the panel: the hub
+identifier, the version it moved from, the version it moved to, and whether it worked. Nothing about the house, ever.
+Without it a rollout that is failing looks exactly like a rollout that is going fine.
+
+**Not built, and deliberately.** It is the only thing on this list that needs somewhere to send it, and that somewhere
+is maker infrastructure — a small endpoint and something to keep the rows in — which is Terraform and a Cloudflare
+account, not code in this repository. Building the hub half of it now would mean a switch on the panel that promises a
+maker is watching when nobody is, which is the one thing this document has said not to do at every other turn. It
+waits for the endpoint, and it should be built together with the relay's registration service (`docs/away.md` piece 2)
+rather than separately: both want one small thing the maker runs, and a hub identity to speak to it with.
+
+**What landed.** `tools/channel.py` publishes it (`show`, `hold`, `unhold`, `out <version> <share>`), signing with the
+same key as a release and attaching it to a fixed `channel` release — so a hold goes up in seconds with `gh` and
+needs no infrastructure at all, which is why this piece did not have to wait for any. `driver-layer/host/channel.sh`
+fetches and checks it every half hour (`home-hub-channel.timer`) and again immediately before any install, and writes
+the verified copy into the data volume. `Updates.held()` and `Updates.reached_us()` read that copy.
+
+**The host checks it and the brain only reads the result**, which is the answer to the question this piece opened
+with. The brain has no ed25519 anywhere in its dependencies, so a channel file it fetched itself would be a stranger's
+word about whether this house should update. The split already existed for releases; this reuses it exactly.
+
+**Three rules, and the reasoning is the design.**
+
+- **It may only ever slow a hub down.** There is deliberately no way to say *install this version*. A file that could
+  name a release could name an old one, and a downgrade is the one thing a signature over a release cannot protect a
+  house from. Withholding is all it does.
+- **Missing, stale or unsigned means no hold.** Failing the other way hands anybody who can block a network the power
+  to freeze every hub on the version it is on — and the whole point of piece 3 is that updates actually land. A hold
+  is a maker's convenience; the signature over the release is the security control.
+- **`made` is inside the signature**, so an old file cannot be replayed as a new one, and after thirty days it is
+  ignored anyway. That bounds how long a replayed hold can withhold anything. A hold meant to outlive that gets
+  re-signed, which is one command.
+
+**A hold stops a person's tap too; a rollout never does.** They are different statements. *This release is broken* is
+worth more than a household's guess that it might be fine, so the button goes away and the panel says who paused it.
+*This release has only gone to a tenth of houses* is not about this house at all — somebody standing at the wall with
+Install in front of them has decided, and being in the second nine tenths is a reason for the hub to wait, not a
+reason to refuse them.
+
+**The version is mixed into the rollout hash**, not just the hub id. Hashing the id alone would make one unlucky tenth
+of houses the first to take every release this hub ever ships — a thing to do to a test fleet and not to somebody's
+home.
+
+**What was verified.** Eleven tests over the brain's half (a held release is not offered, not installed and not
+tappable, and `available` stays true because it is still true; the `v` prefix; a hold on some other release; no file;
+a mangled file; a quarter of forty hubs and not all of them; all the way out reaching everybody; the same house not
+being first for every version; an unreadable share not acting as a hold; a rollout not blocking a person) and one
+more in the nightly set. And the host's half stood up against a real keypair and a `file://` releases server: a
+genuine hold refuses the install with a sentence naming it, a hold signed by another key is not even written to disk,
+a genuine hold replayed from a year ago is ignored as stale, and a maker who stops publishing withholds nothing.
+That harness earned itself twice over — the first run passed every case while `channel.sh` was silently failing to
+find `verify.sh`, so nothing was being checked at all, and the guard that now catches that came out of it.
+
+### 6. Saying what is happening *(landed 18 September 2026)*
+
+Pieces 1 to 5 made updating safe. Nothing in them made it *legible*. The panel's whole account of an update
+is the word `Updating…` and an overlay reading *A few minutes. The lights and switches keep working* — the
+same sentence for a ninety-second brain swap and for a six-minute install that fails and rolls back. Two
+fields already arrive and are drawn nowhere: `latest.what`, the release's own words about what it changes,
+and `state.started`, the only clock anybody has.
+
+The vocabulary for fixing this was written the day before, for restarting. `restart.py` has an `ask()` that
+says what **keeps** working, what **stops**, what is **in flight** and about to be lost, **how long** —
+measured from this house's own last restart rather than guessed — whether it is **blocked**, and a **warn**
+for a phone that is not in the house. An update is a restart with a download in front of it. It should
+borrow that sheet rather than grow a second vocabulary for the same act.
+
+**The good news is where the time goes.** The brain is alive for nearly all of an update. `install.sh` fetches
+the code, verifies the release and pulls the images — minutes, on a Pi over domestic broadband — and the brain
+only dies at the final `compose up -d`. So for most of the wait the hub can say exactly where it is, over the
+live connection it already has. It goes dark for the last stretch, and that stretch is short enough to count
+down.
+
+**Phases, from a fixed set, and never a command.** `install.sh` and `update.sh` append a line to
+`brain-data/update.progress` as they go: `{"phase":"downloading","at":...,"detail":"..."}`. Append-only
+NDJSON, last line wins, so reading the current phase is a `tail -1` and the timings are the same file read
+end to end. The same rule as `restart.request` holds — the file names a phase from a list the reader owns, not
+work for anybody to do.
+
+| phase | what the household is told | the brain |
+|---|---|---|
+| `checking` | Checking this update is really ours | up |
+| `fetching` | Fetching the new version | up |
+| `downloading` | Downloading it | up |
+| `building` | Building it here — this one takes a while | up |
+| `restarting` | Restarting the house | **down** |
+| `proving` | Making sure it came back | coming up |
+| `putting_back` | That version didn't start. Putting the old one back | down, then up |
+
+`putting_back` is the one that earns this piece on its own. `WAIT=300` plus `SETTLE=45` and then a revert is
+the most frightening six minutes the product has, and today it is spelled *A few minutes*.
+
+**How much longer, measured rather than estimated.** `restart.py` learns `restart_took` per rung from
+`restart.json`; updates learn `update_took` the same way, from the phase timeline the run leaves behind. Two
+numbers, because they fail differently: the **download**, which moves with the release and the house's
+broadband, and the **dark**, which is a property of the box. A household on a slow line stops being read the
+maker's figure.
+
+**Two whys, both already in the data.** *Why now* is in the log already — `source: "hub"` against `"user"` —
+and somebody who finds the wall mid-update at twenty to three should read that nobody in the house started it.
+*Why this one* is `latest.what`, the two to four plain sentences piece 4 made mandatory, which are fetched,
+typed all the way into the panel, and rendered nowhere. The wait is the one moment a person is both captive and
+curious; it is the right place for them.
+
+**What keeps working, earned rather than assumed.** This document has said since the first draft that
+*the lights keep working* is true of an ordinary update and not of the one that moves the engine. Now it can
+be checked: piece 2's manifest names every image by digest, so `install.sh` can compare each pin against what
+the container is actually running and write the services that will really be recreated —
+`{"moving":["brain","homeassistant"]}` — into the same progress file. Brain alone: the wall blinks. The engine
+too: a minute where the wall switches still work and the app does not, said only when that is what is about
+to happen.
+
+**And the half that is not about updating at all** comes straight from `restart.py`, because it is the same
+half: motion lights and schedules pause, the assistant cannot answer, Apple Home and the rest say *no
+response*, an away phone loses the house — each asked of this house before it is offered. A pairing or a
+bridge setup half-done is named before it is lost, the rule that holds everywhere else on the panel.
+
+**One thing the ask must say that a restart's does not.** Everything keeps working *while it downloads*. The
+panel should not throw up a blackout screen the moment somebody taps: for the first several minutes the house
+is entirely usable and the update is a line at the top, not a wall. Only `restarting` earns the overlay.
+
+**Away.** `restart.ask(away=True)` warns that nobody is home to reach the plug. An update from a phone three
+hundred miles away carries that risk plus a rollback, and today says nothing at all.
+
+**The morning receipt.** The what's-new card says what changed. It does not say *installed itself at 2:41 last
+night and took four minutes*, which is the line that makes an automatic update feel like something the house
+did for the household rather than something that happened to them.
+
+**What landed.** `brain-data/update.progress` is the file, append-only NDJSON, written by `update.sh` (`checking`,
+`proving`, `putting_back`) and by `install.sh` from inside its own run (`fetching`, `downloading`, `building`,
+`restarting`) through one exported `HUB_PROGRESS`. `Updates.progress()` reads the last line and `Updates.timeline()`
+the whole of it; `Updates.seconds()` answers in this house's own figures and `Updates._learn()` puts them there, at
+start, from the run that brought this build — the same move `restart.py` makes with `restart.json`, and for the same
+reason: the brain that asked for an update is not the brain that comes back. `Updates.ask()` is the sheet and
+`GET /update/ask` serves it, open like `/restart`'s and for the same reason. `Updates.blocked()` is the refusals, and
+`request()` now goes through it rather than checking only the hold. The loop in `run()` shortens its stride to two
+seconds while an update is in the air and broadcasts on every phase change, so the wall is never five minutes behind
+what the hub is doing.
+
+On the panel: `store.updating` stopped being a boolean and became the wait itself, and `updateLink()` is what tells it
+the brain has actually gone — before that nothing counts down, because nothing is wrong. `App.vue` grew an update
+branch beside the restart one, and the branch under it stopped speaking for updates at all. `HubPage.vue`'s Software
+row turns into the question the way the Restart row does, and carries the phase underneath the version while one is
+happening. `Attention.vue`'s busy nudge says which phase and whether the house is working. The mock has `UPDATE=ready`,
+`UPDATE=running` and `UPDATE=away`, and pushes a status frame on every phase so the preview moves rather than being
+described.
+
+**The half that is restart.py's is literally restart.py's.** `ask()` calls `restart.stops("hub", away)` and
+`restart.flight("hub")` rather than writing its own, and `plainly()` moved out of `restart.py` so both quote the same
+rounding at people. A household reading two different accounts of what happens when the hub goes quiet is a household
+learning that the panel guesses.
+
+**Two corrections to what this piece said above before it was built.**
+
+- **The dark stretch is measured from `restarting` to `proving`, and that meant moving `proving`.** It used to be
+  written when the installer returned, which is before the brain has answered anything; it is now written the moment
+  `/alive` first answers, which is both a truer sentence and the only place the end of the dark stretch is knowable.
+- **The `moving` list is best effort and says nothing when it cannot tell.** It compares each service's about-to-run
+  image against the one its container is running, which catches a release pinning a new digest and a tag moving under
+  an unchanged name — but a service that is not running yet, or a daemon that answers nothing, produces no line and
+  therefore no sentence. That is the right way to fail: the base claim (*lights and switches keep working*) is true of
+  every update, and the extra sentence is only ever added when the hub has actually established it.
+
+**What was verified.** Twenty-four tests in `brain/tests/test_updates.py`: the progress file (nothing running says
+nothing; the second between the tap and the host waking up still says something; the last line wins; **a phase nobody
+has heard of is dropped on the floor**, which is the rule that stops anything able to write into the data volume
+putting a sentence on somebody's wall; a half-written line; the two dark phases; what is moving becoming what a
+household would notice, only the brain moving earning no warning, and the list being remembered after the line that
+carried it; a new request clearing the last run's timeline), the learning (a careful guess until there is a
+measurement; both figures off the disk; learned once and not on every start; the morning receipt naming the house
+rather than a person; a run that did not finish teaching nothing; an absurd figure not quoted back; a run with no
+phases still learning the total), and the sheet (the version and the release's own words; the download not being a
+blackout; this house's figures once it has any; the away warning; a held release and an update already running both
+blocking with the sentence rather than a tap that goes nowhere). Plus the door: asking is open, doing is not.
+
+Nine in `app/tests/updating.test.ts`, and the one they exist for is *does not start counting down while the house still
+works* — running the clock during the download would have it reach nought minutes before anything had restarted. Also
+that an update nobody on this screen asked for can be picked up mid-flight from the status, and that the status coming
+round again does not restart its own clock.
+
+Two more in `driver-layer/host/tests.sh`, which is where the two scripts are proved to be writing to the **same** file:
+a successful run leaves `checking restarting proving` with the fake installer's phase in the middle of it, and a
+reverted one leaves `checking restarting putting_back proving`. The seeded line from "last time" is gone in both, so a
+stale timeline cannot be read as the current phase.
+
+**Checked on the glass, not only in tests.** `UPDATE=ready` for the sheet, `UPDATE=running` traced frame by frame
+through the phases (the panel stays entirely usable, and the *the app doesn't* sentence appears only on the phase that
+carries `moving`), and then the mock killed mid-update to see what a household actually sees when the brain goes:
+*Back in about 39 seconds*, and once that runs out, *Taking longer than usual. If it doesn't come back, the hub puts
+the old version back by itself*. The first attempt put the release notes on the sheet as one line per sentence and
+they stopped reading as the reason and started reading as another column of costs; they are one line of prose now,
+like the What's new row above them.
+
+**A real bug this turned up.** `install.sh`'s `moving()` was written as `docker compose config | python3 - <<EOF`,
+where the heredoc takes stdin and the pipe is silently thrown away — the script would have read its own source as the
+compose file. It is `python3 -c` now. Nothing in the test harness could have caught it (there is no docker in there on
+purpose); shellcheck did, which is an argument for the lint job that already exists.
+
+**What is not covered.** The download has no byte count — the phase says *Downloading it* and not *312 of 480 MB*.
+`compose pull -q` does not offer one, and parsing the unquiet form is a fragile thing to put between a household and
+the truth. The dark countdown is the panel's own stopwatch, so a phone that was asleep for the whole update sees no
+count at all — it sees the house come back, which is the right outcome by a different route. And `moving` is
+established by the host during the run, which means the *ask*, before the tap, still cannot say whether the engine is
+about to move: the sheet says what is true of every update and the running screen says the rest. Closing that needs
+the next release's manifest in the data volume the way `channel.sh` already puts the channel there.
+
+## One thing to fix regardless of all of the above *(landed 19 September 2026)*
+
+`brain/hub/lock.py` only bites when a code is set, and setup *nudges* rather than requires. On a hub with no code,
+anyone on the Wi‑Fi can trigger an update, **download the backup** — which carries the radios' network keys, Ring's
+sign-in and the hub's own certificate authority — or restore one over the top. That is a defensible choice for a hub
+on the builder's own bench and not one for a hub that was handed to somebody. **A code becomes a required step of
+setup**, not a nudge that Home repeats.
+
+**What landed.** The *No code for now* button is gone from `app/src/Setup.vue`, and the step says why it is the one
+that cannot wait rather than leaving somebody to guess it. Every other step there is still skippable and still
+finishable from Home, because nothing else on that list is worse for having waited.
+
+**And the hub that was set up before it was required.** Requiring it at setup does nothing for a house that already
+skipped it, which is every hub built so far including the one here. So `GET /backup` refuses on a hub with no code
+at all, with a sentence naming the fix instead of a file. That route is singled out on purpose: every other gated
+thing is a *change* to the house, which a household can undo, and this one is a *copy* of the house walking out of
+the door — the radios' network keys, the accounts' sign-ins and the hub's own certificate authority, to anybody who
+can reach it.
+
+**`POST /restore` is deliberately not gated the same way.** A fresh hub somebody is restoring onto has no code yet,
+and never will if the restore carrying it is the thing being refused. Recovery must not require the thing it is
+recovering, and a test says so.
+
+**What was verified.** Four tests over the route: a house with no code is told to set one rather than handed the
+keys; one that has a code behaves exactly as it did; the code is still asked for on a house that has one, so the new
+gate sits in front of the old one rather than instead of it; and putting a backup back is untouched.
+
+## Open decisions
+
+- **Whether there is a spare key, and where it lives.** The mechanism no longer forces the answer — `verify.sh` trusts
+  a directory — but the answer still has to be given before the first hub ships, because a hub never adds a key after
+  its first install. Recommended: two keys, made at the same time, on different machines, the spare never used until
+  it has to be.
+- **Does a hub ever refuse to run an old build?** A release old enough to be dangerous is exactly the one on a hub
+  that has been off for a year, and refusing to start is the worst possible way to tell somebody.
+- **What the wall says while the engine is restarting.** For most updates only the brain moves and the panel blinks;
+  for an update that bumps Home Assistant the house is genuinely deaf for half a minute, and the panel should say so
+  in advance rather than apologize afterwards.
+- **Whether the driver layer can move without the hub moving.** Today it cannot, which is a good rule and also means a
+  Home Assistant security fix waits for a hub release. Probably right; worth writing down that it was chosen.
+
+## What this replaces
+
+Nothing in `docs/away.md` changes. The relay and the manifest endpoint are the same maker infrastructure and the same
+Terraform; a hub that has registered a public name has an identifier piece 5 could reuse, but pieces 3 and 5 must not
+wait on the relay, so the identifier is made locally and independently. The *Updates* line in `README.md` describes
+what is built today and is updated by each piece as it lands.

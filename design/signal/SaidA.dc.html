@@ -1,0 +1,139 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Instrument Sans", -apple-system, "SF Pro Text", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      --bg: #0c0d10; --surface: rgba(26,28,34,.68); --surface-hi: rgba(255,255,255,.08);
+      --edge: rgba(255,255,255,.1); --edge-hi: rgba(255,255,255,.18);
+      --ink: #f1eee8; --ink-2: #b9b5ad; --ink-3: #8d8a84; --muted: #7f7d77;
+      --lamp-rgb: 233,184,114; --lamp: rgb(var(--lamp-rgb)); --lamp-ink: #2a1c07;
+      --live-rgb: 134,207,160; --live: rgb(var(--live-rgb));
+      --r-lg: 22px; --r-md: 16px; --r-sm: 12px;
+      /* emitter colors, NOT the panel's pastels: an LED gives the eye no reference, so a signal's
+         off-channels sit near zero (AGENTS.md section 4). These are what the strip is sent. */
+      --em-in: #ff8a00; --em-out: #1e6bff; --em-call: #ff2a4a; --em-fill: #00d06a;
+    }
+    .dsp { font-weight: 400; letter-spacing: -.025em; text-wrap: balance; }
+    .cap { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .lbl { font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-3); }
+    .sheet { border-radius: 28px; background: rgba(20,22,27,.86); border: 1px solid var(--edge); box-shadow: 0 40px 90px -40px rgba(0,0,0,.9); }
+    .rs { font-size: 13.5px; color: var(--muted); line-height: 1.45; }
+    .button { font: inherit; font-size: 14.5px; font-weight: 500; padding: 10px 18px; border-radius: 999px; border: 0; background: var(--lamp); color: var(--lamp-ink); }
+    .button.ghost { background: rgba(255,255,255,.07); color: var(--ink); }
+
+    /* ---- the strip, and the four things it can say. Each runs ON the strip; the board only imitates it. ---- */
+    .glow { filter: drop-shadow(0 0 7px var(--c)); }
+    .run { position: relative; height: 18px; border-radius: 4px; background: rgba(255,255,255,.1); overflow: hidden;
+           -webkit-mask-image: repeating-linear-gradient(90deg, #000 0 5px, transparent 5px 9px);
+                   mask-image: repeating-linear-gradient(90deg, #000 0 5px, transparent 5px 9px); }
+    .run.small { height: 12px; }
+    .run::after { content: ""; position: absolute; top: 0; bottom: 0; }
+    .way::after  { left: 0; width: 38%; background: linear-gradient(90deg, transparent, var(--c) 80%, #fff 92%, transparent); animation: way 2.2s cubic-bezier(.45,.05,.55,.95) infinite; }
+    .way.back::after { background: linear-gradient(270deg, transparent, var(--c) 80%, #fff 92%, transparent); animation-name: back; }
+    .call::after { inset: 0; background: var(--c); animation: call 1.6s ease-in-out infinite; }
+    .fill::after { left: 0; width: 0; background: var(--c); animation: fill 3s ease-out infinite; }
+    .end::after  { right: 0; width: 14%; background: var(--c); animation: blink 1s steps(2, jump-none) infinite; }
+    @keyframes way  { from { transform: translateX(-100%); } to { transform: translateX(265%); } }
+    @keyframes back { from { transform: translateX(265%); } to { transform: translateX(-100%); } }
+    @keyframes call { 0%, 100% { opacity: 0; } 30%, 55% { opacity: 1; } }
+    @keyframes fill { 0% { width: 0; opacity: 1; } 70% { width: 64%; opacity: 1; } 100% { width: 64%; opacity: 0; } }
+    @keyframes blink { 0% { opacity: 1; } 100% { opacity: .08; } }
+
+    .sig { display: grid; grid-template-columns: 1fr; gap: 10px; padding: 16px 18px; border-radius: var(--r-md); background: rgba(255,255,255,.035); box-shadow: inset 0 0 0 1px rgba(255,255,255,.07); }
+    .sig .t1 { font-size: 15.5px; font-weight: 500; }
+  </style>
+</helmet>
+
+<div style="position: relative; width: 1440px; height: 900px; overflow: hidden; background: var(--bg); color: var(--ink); font-size: 17px; line-height: 1.4;">
+
+  <div style="position: absolute; inset: 0; background: linear-gradient(rgb(22,25,36) 0%, rgb(33,34,52) 50%, rgb(58,45,48) 100%);"></div>
+  <div style="position: absolute; inset: 0; background: rgba(6,7,9,.5);"></div>
+
+  <div style="position: absolute; left: 48px; top: 40px; right: 48px;">
+    <span class="cap">A &mdash; a signal is a thing a routine does</span>
+    <h1 class="dsp" style="margin: 10px 0 0; font-size: 40px;">You say it the way you would say it to a person, and it waits for your OK.</h1>
+  </div>
+
+  <!-- ==================== left: Routines, with a draft waiting ==================== -->
+  <div class="sheet" style="position: absolute; left: 48px; top: 176px; width: 720px; height: 680px; padding: 26px 30px;">
+    <div class="dsp" style="font-size: 34px;">Routines</div>
+
+    <div style="margin-top: 18px; display: flex; gap: 10px; align-items: center; border-radius: 999px; background: rgba(255,255,255,.05); border: 1px solid var(--edge); padding: 6px 6px 6px 20px;">
+      <span style="flex: 1; font-size: 15px; color: var(--ink-2);">When the gate opens after dark, run the drive lights up to the house</span>
+      <span class="button" style="opacity: .55;">Ask</span>
+    </div>
+
+    <div class="lbl" style="margin: 26px 0 10px;">Waiting for your OK</div>
+    <div style="border-radius: var(--r-lg); background: var(--surface); border: 1px solid rgba(var(--lamp-rgb),.35); padding: 20px 22px;">
+      <div style="font-size: 17px; font-weight: 500;">Show the way in</div>
+      <div class="rs" style="margin-top: 4px; font-size: 14px;">Driveway &middot; When the gate opens, after dark. <span style="color: var(--ink);">Driveway strip shows the way toward the house, three times, then goes back to how it was.</span></div>
+
+      <!-- the draft shows itself: the same sentence, played -->
+      <div style="margin-top: 20px; padding: 18px 18px 14px; border-radius: var(--r-md); background: rgba(0,0,0,.28);">
+        <div class="glow" style="--c: var(--em-in);"><div class="run way" style="--c: var(--em-in);"></div></div>
+        <div style="display: flex; justify-content: space-between; margin-top: 9px; font-size: 13px; color: var(--ink-2);">
+          <span>&larr; Gate</span><span style="color: var(--muted);">what it will look like, and it is on the strip too while you read this</span><span>House &rarr;</span>
+        </div>
+      </div>
+
+      <div class="rs" style="margin-top: 14px; font-style: italic;">You said: &ldquo;When the gate opens after dark, run the drive lights up to the house.&rdquo;</div>
+      <div style="display: flex; gap: 10px; margin-top: 16px;">
+        <span class="button">Approve</span><span class="button ghost">Discard</span>
+      </div>
+    </div>
+
+    <div class="lbl" style="margin: 24px 0 10px;">Driveway</div>
+    <div style="border-radius: var(--r-lg); background: var(--surface); border: 1px solid var(--edge); padding: 15px 18px; display: flex; align-items: center; gap: 16px;">
+      <span style="flex: 1;"><span style="display: block; font-size: 16px; font-weight: 500;">Show the way out</span>
+      <span class="rs">When the front door opens, then motion on the drive. Driveway strip shows the way toward the gate.</span></span>
+      <span style="width: 52px; height: 30px; border-radius: 999px; background: rgba(var(--live-rgb),.9); position: relative;"><span style="position: absolute; right: 3px; top: 3px; width: 24px; height: 24px; border-radius: 50%; background: #fff;"></span></span>
+    </div>
+  </div>
+
+  <!-- ==================== right: the whole vocabulary ==================== -->
+  <div style="position: absolute; left: 808px; top: 176px; width: 584px;">
+    <span class="cap">Everything a strip can be asked to say &mdash; four, and a fifth needs a meaning first</span>
+    <div style="margin-top: 14px; display: grid; gap: 10px;">
+      <div class="sig">
+        <div class="glow" style="--c: var(--em-in);"><div class="run small way" style="--c: var(--em-in);"></div></div>
+        <span class="t1">Shows the way <span class="rs">&middot; toward one end or the other</span></span>
+      </div>
+      <div class="sig">
+        <div class="glow" style="--c: var(--em-call);"><div class="run small call" style="--c: var(--em-call);"></div></div>
+        <span class="t1">Gets your attention <span class="rs">&middot; the whole strip, slowly, until it is seen</span></span>
+      </div>
+      <div class="sig">
+        <div class="glow" style="--c: var(--em-fill);"><div class="run small fill" style="--c: var(--em-fill);"></div></div>
+        <span class="t1">Shows how far along <span class="rs">&middot; the car is charging, the wash is two-thirds done</span></span>
+      </div>
+      <div class="sig">
+        <div class="glow" style="--c: var(--em-out);"><div class="run small end" style="--c: var(--em-out);"></div></div>
+        <span class="t1">Marks one end <span class="rs">&middot; the door that is open, the step that is there</span></span>
+      </div>
+    </div>
+
+    <div style="margin-top: 18px; border-radius: var(--r-lg); border: 1px solid rgba(var(--lamp-rgb),.3); background: linear-gradient(rgba(var(--lamp-rgb),.07), rgba(var(--lamp-rgb),.07)), rgba(255,255,255,.02); padding: 18px 22px;">
+      <span class="cap">The one question it adds, asked once, the way setup asks</span>
+      <p style="margin: 10px 0 0; font-size: 15px; line-height: 1.55;">
+        The first routine that needs a direction lights <em>one end</em> of the strip and asks <strong style="font-weight: 500;">&ldquo;What is this end nearest?&rdquo;</strong>
+        &mdash; the gate, the house. From then on &ldquo;toward the house&rdquo; means something, and nobody ever sees the word &ldquo;reverse&rdquo;.
+      </p>
+    </div>
+    <p class="rs" style="margin: 14px 4px 0; line-height: 1.6;">Nothing here is a setting on the strip. A strip with no routine that uses it behaves exactly as it does today, and the effects test on its pane still holds.</p>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>

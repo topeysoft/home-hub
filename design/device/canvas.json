@@ -1,0 +1,358 @@
+{
+  "artboards": [
+    {
+      "file": "Today.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "Today \u2014 what a long press opens now",
+      "page": "page-1"
+    },
+    {
+      "file": "Anatomy.dc.html",
+      "x": 1560,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "The grammar \u2014 one pane, five slots",
+      "page": "page-1"
+    },
+    {
+      "file": "Main.dc.html",
+      "x": 3120,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "The light \u2014 the archetype",
+      "page": "page-1"
+    },
+    {
+      "file": "Media.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "Media \u2014 what is playing",
+      "page": "page-2"
+    },
+    {
+      "file": "Climate.dc.html",
+      "x": 1560,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "Climate \u2014 the dial",
+      "page": "page-2"
+    },
+    {
+      "file": "Cover.dc.html",
+      "x": 3120,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "Cover \u2014 the blind is the control",
+      "page": "page-2"
+    },
+    {
+      "file": "Lock.dc.html",
+      "x": 0,
+      "y": 1400,
+      "w": 1440,
+      "h": 900,
+      "title": "Lock \u2014 the one that is not a tap",
+      "page": "page-2"
+    },
+    {
+      "file": "Camera.dc.html",
+      "x": 1560,
+      "y": 1400,
+      "w": 1440,
+      "h": 900,
+      "title": "Camera \u2014 the picture is the pane",
+      "page": "page-2"
+    },
+    {
+      "file": "Simple.dc.html",
+      "x": 3120,
+      "y": 1400,
+      "w": 1440,
+      "h": 900,
+      "title": "Plug, fan, mower \u2014 a single verb",
+      "page": "page-2"
+    },
+    {
+      "file": "Quiet.dc.html",
+      "x": 0,
+      "y": 2800,
+      "w": 1440,
+      "h": 900,
+      "title": "Motion, thermometer, door \u2014 the ones that only watch",
+      "page": "page-2"
+    },
+    {
+      "file": "Phone.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "title": "The light, at 390\u00d7844",
+      "page": "page-3"
+    },
+    {
+      "file": "PaneToday.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "Today \u2014 a color bulb, and nowhere to say so",
+      "page": "page-4"
+    },
+    {
+      "file": "PaneSwatches.dc.html",
+      "x": 1560,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "A \u2014 Swatches",
+      "page": "page-4"
+    },
+    {
+      "file": "PaneWheel.dc.html",
+      "x": 4680,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "B \u2014 The wheel",
+      "page": "page-4"
+    },
+    {
+      "file": "PaneOneSlider.dc.html",
+      "x": 6240,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "C \u2014 One slider",
+      "page": "page-4"
+    },
+    {
+      "file": "PaneAutomatic.dc.html",
+      "x": 3120,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "A \u2014 Automatic, which is where a light starts",
+      "page": "page-4"
+    },
+    {
+      "file": "PaneTuneWheel.dc.html",
+      "x": 7800,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "D \u2014 More colors, on a wheel",
+      "page": "page-4"
+    },
+    {
+      "file": "PaneTuneRigs.dc.html",
+      "x": 9360,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "E \u2014 More colors, on two columns",
+      "page": "page-4"
+    }
+  ],
+  "annotations": [
+    {
+      "id": "why",
+      "x": -820,
+      "y": 0,
+      "w": 520,
+      "text": "WHY THIS EXISTS\n\n\"The device detail views are still very basic.\" They are, and it is measurable rather than a matter of taste.\n\nHeld a tile of each of the nine kinds in the running panel at 1440x900 against the mock house, and read the pane off the DOM. Every kind came back identical: the pane at 0, 225, 1440 x 675; the name at 49, 295; the reading at 49, 475; one fact at most; two round buttons; a 260px watermark of the kind's own icon in the bottom right, and between 131 and 349px of pane with nothing in it at all.\n\nWorse than empty, in four cases it is wrong. Opened.vue's one big control calls act(id, 'on'), and the brain's SERVICE table has no ('lock','on'), ('cover','on'), ('camera','on') or ('vacuum','on'). Press the amber button on a locked front door and the house answers 400 and throws an error across the screen. The pane also prints the raw state where it has no phrase for it -- \"locked\", \"recording\", \"docked\", lower-case, straight out of Home Assistant.\n\nAnd three kinds cannot be opened at all: motion, a thermometer and a door contact are PASSIVE, so the room screen gives them no tile, so there is nothing to press and hold. They are the things the house knows the most about.\n\nTHE PROPOSAL, IN ONE LINE\nThe pane keeps its rise, its recede and its four beats. The right two-thirds -- the watermark -- becomes the INSTRUMENT: the one control a tile is too small for, drawn in the kind's own terms. The foot of every pane becomes what this thing has done today.",
+      "page": "page-1"
+    },
+    {
+      "id": "built",
+      "x": -820,
+      "y": 760,
+      "w": 520,
+      "page": "page-1",
+      "text": "WHAT SHIPPED, 13 SEPTEMBER\n\nThe boards were built rather than argued with, and the panel now does what they drew. What changed in the building:\n\nTHE INSTRUMENT IS THE OBJECT. The 260px watermark used to travel further than the pane and settle after it -- the move that makes a pane read as a thing rather than a picture. The instrument inherited that beat instead of the four the body uses, under both faces. e2e/face.spec.ts watches for it.\n\nTHE CAMERA LOST ITS SIGHTINGS ROW. Drawn here under the picture; in the running pane it said the same four times the foot of every pane already says. The picture takes the whole instrument and the times live along the foot with everything else. A still kept per sighting is the one thing on these boards the house still cannot do.\n\nTHE ONES THAT ONLY WATCH ARE OPENED BY THEIR READING. The open question on the Quiet board was whether a passive thing gets a tile. It does not: the room header already draws it as a reading, and a reading is now a button that can be held like any tile. No room layout moved.\n\nWHAT IS ON THE SCREEN AND NOT ON THESE BOARDS: a plug's timer chips also cancel (\"Leave it on\"), and a cover with no position -- a garage door -- falls back to the three buttons at full width, as the Cover note asked for.\n\nThe panes are app/src/panes/, the words they use are app/src/pane.ts, and both are tested: app/tests/pane.test.ts for the words, app/e2e/pane.spec.ts for what the house is actually told when a hand uses one."
+    },
+    {
+      "id": "today-note",
+      "x": 0,
+      "y": 960,
+      "w": 700,
+      "text": "TODAY\n\nNot a proposal: a trace. The television is drawn at 0.34 of full size with what was measured marked on it; the table beside it is what each kind's pane actually said, string for string, on the evening of 13 September against app/mock/brain.mjs.\n\nThe four small panes along the foot are the same pane again, four more times. That is the finding: nine kinds, one layout. A light, a mower and a front door are not the same kind of thing, and the pane treats them as though they were.",
+      "page": "page-1"
+    },
+    {
+      "id": "anatomy-note",
+      "x": 1560,
+      "y": 960,
+      "w": 700,
+      "text": "THE GRAMMAR\n\nSix slots, and only the fifth is new. 1 to 4 are what the pane already draws, in the places it already draws them. 5 is the watermark's space, spent on the one control the tile could not carry. 6 is /events?subject=<id>, which the brain already answers -- app/src/api.ts just does not pass the argument yet.\n\nWHAT THIS BUYS, AND WHAT IT COSTS\n\nEvery kind is the same object with a different instrument, so nothing new has to be learned to go from a lamp to a thermostat. The pane stops being a place you visit and find nothing.\n\nThe cost is honest: nine instruments to draw and keep, against one layout today. The right-hand column of the table is the whole engineering bill -- four actions in SERVICE (cover set_position and stop, fan percentage, vacuum start and return, a plug timer), one subject filter, and a tile for the three kinds that only watch.",
+      "page": "page-1"
+    },
+    {
+      "id": "light-note",
+      "x": 3120,
+      "y": 960,
+      "w": 700,
+      "text": "THE LIGHT -- THE ARCHETYPE\n\nEvery other board is this one with a different instrument, so it is the one to argue with first.\n\nA light has two physical properties and one habit. The two columns are the properties, at 168 and 126 wide and 312 tall -- a hand finds them from across a room without aiming, which a 4px CSS range input never will. The three cards are the habit: Reading, Evening, Night are each one brightness_pct the house can already send, so somebody who will never drag anything still gets the lamp they want. They are also where a house learns: what the three are should eventually come from what this lamp is actually set to, not from a designer.\n\nOPEN QUESTION: color. The mock house has one hs lamp (Hue color lamp 1, still in New devices) and the model keeps rgb_color and supported_color_modes. A color lamp needs a third column, and a wheel is the wrong instrument for a wall panel -- a row of eight chosen colors is probably right. Not drawn here.",
+      "page": "page-1"
+    },
+    {
+      "id": "media-note",
+      "x": 0,
+      "y": 960,
+      "w": 700,
+      "text": "MEDIA\n\nThe payload already carries media_title, media_artist, app_name, entity_picture, volume_level, and -- in the mock -- media_position and media_duration. The pane today keeps one of them and draws a speaker outline.\n\nSo this instrument is not new work in the brain at all: it is the artwork at 300px, where it is up to, the transport, and the volume. The only thing worth arguing about is what the READING should be. Here it is the show's title in serif, on the grounds that \"The Bear\" is the one thing worth saying large; the state (\"Playing\") moves into the line under it.\n\nA SPEAKER IS A DIFFERENT PANE. The Sonos in the same room has no artwork worth 300px and does have the sound chips the tile already offers (White noise, Rain, Waves). Same five slots, a narrower instrument -- not drawn here, and worth its own board before this ships.",
+      "page": "page-2"
+    },
+    {
+      "id": "climate-note",
+      "x": 1560,
+      "y": 960,
+      "w": 700,
+      "text": "CLIMATE\n\nThe one kind whose instrument is a number you SET rather than a level you drag, so it is the one place a dial earns its keep: the arc runs 60 to 86 over 270 degrees, the white handle is what you asked for, the blue is the gap the box is closing.\n\nEverything here already exists in the brain: ('climate','set'), ('climate','mode'), the fan timer at POST /devices/{id}/fan, and the sense-from-another-sensor at POST /devices/{id}/sense. This board is the clearest case that the pane, not the house, is what is thin -- the hub can do all of this today and the panel offers none of it.\n\nThe plain-language mode labels (Warm it / Cool it / Either / Off) are deliberate: heat, cool, heat_cool and off are Home Assistant's words, not a family's.",
+      "page": "page-2"
+    },
+    {
+      "id": "cover-note",
+      "x": 3120,
+      "y": 960,
+      "w": 700,
+      "text": "COVER\n\nThe blind is the control: drag its edge to where you want it, against the sky the panel already knows the color of. The three buttons are for when you do not want to aim, and Stop there is the one a blind genuinely needs.\n\nNEEDS THE BRAIN: SERVICE has ('cover','open') and ('cover','close') only. set_position and stop are two rows in that table and two lines in the adapter.\n\nA GARAGE DOOR IS NOT A BLIND. The mock house has one (Garage door, closed, no position). Where there is no current_position there is nothing to drag, and the pane should fall back to the two buttons at full width rather than draw a blind that cannot move. Worth drawing before this ships.",
+      "page": "page-2"
+    },
+    {
+      "id": "lock-note",
+      "x": 0,
+      "y": 2360,
+      "w": 700,
+      "text": "LOCK\n\nThe only pane whose main control is not a tap, and the reason is the one rule this house keeps: nothing that matters happens on a brush of a sleeve. The slide is carried the whole way or nothing changes, and what you were looking at stays exactly where it was.\n\nNo new work in the brain -- ('lock','lock') and ('lock','unlock') both exist. What has to go is the power button Opened.vue puts here today, which sends 'on' and gets a 400 back.\n\n\"Let someone in\" is drawn because the house already knows about phones and people, but it is a promise this board cannot keep on its own -- it needs the pairing work to mean anything. Treat it as a placeholder.",
+      "page": "page-2"
+    },
+    {
+      "id": "camera-note",
+      "x": 1560,
+      "y": 2360,
+      "w": 700,
+      "text": "CAMERA\n\nThe only kind where the instrument is not a control: the picture is what you came for, so the picture is the pane. The panel already fetches the still (GET /devices/{id}/image) and the viewer already relays a live stream; the pane makes you press Watch before it shows you anything.\n\nThe floodlight verb is real: the model puts the camera's own lamp on it as attrs.light (the Backyard cam's is y1l), and the camera viewer already offers it.\n\nNEEDS THE BRAIN: the strip of moments. The hub logs every sighting in its event log but keeps no picture of one, so \"when it saw something\" is currently four times and four empty frames. Either keep one still per sighting, or drop the frames and keep the times.",
+      "page": "page-2"
+    },
+    {
+      "id": "simple-note",
+      "x": 3120,
+      "y": 2360,
+      "w": 700,
+      "text": "PLUG, FAN, MOWER\n\nThree kinds whose whole instrument is one control, drawn on one sheet so the family can be judged at once rather than three boards saying the same thing.\n\nThe fan's three named speeds are a position, not a shortcut: nobody standing at a wall panel picks 37 per cent. The plug's timer is the one thing a coffee maker or a heater actually wants. The mower has nowhere to go but out and back.\n\nNEEDS THE BRAIN, all small: fan percentage, a plug timer (on for N minutes -- the thermostat's fan timer is the same shape and already exists), and vacuum start/return, which SERVICE has no rows for at all.",
+      "page": "page-2"
+    },
+    {
+      "id": "quiet-note",
+      "x": 0,
+      "y": 3760,
+      "w": 700,
+      "text": "MOTION, A THERMOMETER, A DOOR CONTACT\n\nThe gap this canvas is least comfortable about. store.ts marks these PASSIVE, the room screen leaves them out, and a thing with no tile cannot be held -- so the three kinds the house knows the most about are the three you cannot look at.\n\nThey have no verb, so their instrument is the only thing they have: the day they have had. All three strips come from the event log the brain already keeps and already filters by subject.\n\nThe middle one is not decoration. The thermostat next door can be told to go by this reading instead of its own (POST /devices/{id}/sense, already built), so the thermometer's pane is where that decision actually belongs.\n\nTHE DECISION THIS NEEDS: whether a passive thing gets a tile in the room (and changes what the Rooms tab looks like), or whether these panes are reached some other way -- from the room's Why sheet, or from the thermostat that is sensing from them.",
+      "page": "page-2"
+    },
+    {
+      "id": "phone-note",
+      "x": 0,
+      "y": 960,
+      "w": 520,
+      "text": "THE SAME PANE, FOLDED\n\nThe panel's own phone rules, unchanged: the pane starts at 16vh rather than 25, the body pads 30/24, the name drops to 34px and the reading to 44.\n\nThe instrument turns on its side -- brightness and warmth become full-width bars, the three levels become a row -- and the day strip becomes one line. Nothing is dropped, which is the test: if a kind's instrument cannot fold into 342px, it is too clever for this house.",
+      "page": "page-3"
+    },
+    {
+      "id": "color-why",
+      "x": -820,
+      "y": 0,
+      "w": 520,
+      "text": "SAYING WHAT COLOR, which is the half that is still missing.\n\nThe panel now DRAWS a bulb in the color it is: the card, the light it throws, the pool, the dimmer. What it cannot do is change it. A household with color bulbs still has to open Home Assistant's own screens to make a lamp pink, and that is the one thing the box is not supposed to need.\n\nTHE DEEPER ONE, and any answer here has to fix it. The Warmth column DISAPPEARS when a bulb is in a color mode -- `v-if=\"warmth != null\"`, and a bulb in hs mode reports no color_temp_kelvin. That is Home Assistant's mode system showing through the panel as a control that comes and goes, and the panel is supposed to never surface that vocabulary. Set your lamp to pink and the warmth slider vanishes; there is no way back to white from this screen at all.\n\nAND THE THREE PRESETS LIE. Reading, Evening and Night send a color temperature. Tap one on a pink lamp and it goes white, with nothing on the screen having said it would. Whichever board wins has to answer that too -- it is the same bug wearing a different hat.\n\nTHE CONSTRAINT is LightPane's own note: the columns are 168 wide \"because the hand that reaches for them is not looking -- this is a panel on a wall\". A control that needs a fingertip and a look is the wrong answer here however good it is on a phone.",
+      "page": "page-4"
+    },
+    {
+      "id": "color-today",
+      "x": 0,
+      "y": 960,
+      "w": 700,
+      "text": "TODAY. A trace, not a proposal: this is the shipped pane, opened on the mock's Philips Hue with the bulb in hs mode and set to pink.\n\nThere is a brightness column, three presets that are all whites, and nothing anywhere that says the lamp is pink. No Warmth column either -- see the note to the left; its absence is the mode system leaking.\n\nThe amber is real and it is a gap the display work left: the TILE now carries the bulb's color and the pane does not, so a pink card opens into an amber screen. Small -- the pane needs the same two custom properties the tile sets -- but it should land with whichever of these wins rather than on its own, because what the accent should BE depends on the answer.",
+      "page": "page-4"
+    },
+    {
+      "id": "color-swatches",
+      "x": 1560,
+      "y": 960,
+      "w": 700,
+      "text": "A -- SWATCHES. No wheel, no modes, no precision. Eight colors and the four whites, in one grid, all the same size.\n\nTHE CASE. Nobody standing at a wall panel wants to hunt for a hue; they want the lamp warm for the evening, or red because it is somebody's birthday. These are 62px targets a hand finds without looking, which is the rule the rest of this pane was built to. The eight sit at one chroma and even spacing round the wheel so that no swatch is louder than its neighbour and the row reads as a set rather than a ranking.\n\nAnd it kills the mode leak outright: white is a swatch in the same grid as pink, so a person never learns that their bulb has two modes, never loses a control, and always has a way back to white.\n\nAGAINST. A house that wants one particular shade cannot get it. Twelve answers is all there is, and somebody will want the thirteenth.",
+      "page": "page-4"
+    },
+    {
+      "id": "color-wheel",
+      "x": 4680,
+      "y": 960,
+      "w": 700,
+      "text": "B -- THE WHEEL. Every color the bulb can do, as a third thing you drag beside the two you already drag.\n\nTHE CASE. It is the complete answer, and it is the only one of the three that is. It also sits in the vocabulary the pane already has: brightness is a column you drag, warmth was a column you drag, and this is a disc you drag. Saturation comes for free as distance from the middle, so the one thing swatches cannot express -- a pale wash of a color rather than a saturated one -- is here without a fourth control.\n\nAGAINST, and it is the reason this is not the obvious pick. A wheel wants a fingertip and a look, on the one screen in the house explicitly built for neither. It is also a technical object: a color wheel is what an app for enthusiasts has, and the box is for somebody who does not want one. And it does not fix the mode leak on its own -- the whites still need their own row underneath, so there are still two places to go and a person can still get lost between them.",
+      "page": "page-4"
+    },
+    {
+      "id": "color-oneslider",
+      "x": 6240,
+      "y": 960,
+      "w": 700,
+      "text": "C -- ONE SLIDER. Warmth does not stop at its warm end; it keeps going, round into color. One control where there were two, in the exact shape of the column beside it.\n\nTHE CASE, and it is a product argument rather than a visual one. \"Warmth\" and \"color\" are not two things a person has; they are two MODES a bulb has, which is Home Assistant's idea and not the household's. Put them on one track and nobody ever learns the difference: you slide toward the warm end for lamplight and past it for a color, the control never disappears, and the way back to white is the way you came. That is the mode leak not worked around but gone.\n\nIt is also the only one that costs no new gesture. The pane already teaches this drag twice.\n\nAGAINST. Saturation has nowhere to live -- every color on this track is at one chroma, so it can say pink but not a pale dusty pink. And the whites are a band in the middle of a strip whose two ends are colors, which is a real thing to look at and understand; the label carries more weight here than on either of the others.",
+      "page": "page-4"
+    },
+    {
+      "id": "color-automatic",
+      "x": 3120,
+      "y": 960,
+      "w": 700,
+      "page": "page-4",
+      "text": "AUTOMATIC -- the answer for the household that does not want to pick one, and the state a light is in until somebody does.\n\nTwelve swatches with no way to say \"I don't mind\" makes not-choosing into a non-state: a bulb would sit at whatever color it happened to be, which nobody chose and nothing explains. This is the same shape the panel already uses everywhere else it can avoid asking -- layout and nav are `auto` because the screen knows better than the person tapping, and the default tone is `follow` because the light outside is a better answer than a preference.\n\nWHAT IT MEANS is already named. \"Follow the light -- cool and open by day, lamplit after sunset\" is the tone's own wording, and a lamp on Automatic does that with its white: the house drives color_temp_kelvin off the same curve every card already holds its distance from. A bulb that cannot change its white simply stays on and Automatic is the only entry it has.\n\nIT IS ALSO THE DEFAULT, and that is the point rather than a convenience. A house out of the box has nobody who has opened this pane; every lamp in it is on Automatic and warms after sunset without anyone having asked, which is the whole promise of the box. Picking a swatch is what TAKES a light off it, and picking Automatic again is how you give it back.\n\nTHE DECISION THIS FORCES, and it should be made before it is built: the house would now be changing bulbs nobody touched. That is not new -- rooms already move by rule, `set_by: \"rule:...\"`, and why.ts already says \"by a routine\" with a Why? beside it -- so the machinery for making it visible and attributable exists. What has to be true is that a lamp that retunes itself says so on the card, in that same line, or it is a light changing on its own in somebody's living room with no account of why."
+    },
+    {
+      "id": "color-thirteenth",
+      "x": 7800,
+      "y": 960,
+      "w": 700,
+      "page": "page-4",
+      "text": "THE THIRTEENTH COLOR. A's own note said somebody would want it, and there are two of them.\n\nOne: the color you want is not one of the twelve. Two, and it is the sharper one: the color you want IS one of the twelve, and the lamp does not show it. A bulb's idea of pink is not the swatch's pink -- rendering varies by make, by model, by how warm the phosphor has gone -- so a preset is an instruction, not a result. The person is not picking a color out of a space, they are matching one against the thing glowing in the room.\n\nThat second case decides the shape. Both boards put what the LAMP IS SHOWING at the top, beside the way back, and say to nudge until it matches the room. It is not a color picker with a preview; it is a dial you turn while looking at the lamp, and the swatch at the top is the readout rather than the target.\n\nAND IT GETS KEPT. A color somebody tuned by eye against their own bulb is worth more than any preset, and asking them to find it twice is the real failure. \"Add to this room's colors\" puts it in the grid, which is also where LightPane already says it is going: the three levels are \"fixed for now and deliberately few; what they should eventually be is what THIS lamp keeps being set to, which the event log already knows\". Same argument, same log.\n\nSo A is not twelve answers. It is twelve to start with, a way through to all of them, and a grid that grows into the house's own."
+    },
+    {
+      "id": "color-tune-rigs",
+      "x": 9360,
+      "y": 960,
+      "w": 700,
+      "page": "page-4",
+      "text": "E -- TWO COLUMNS instead of the disc, and the case is the one this pane already made for itself.\n\nLightPane's own note: the columns are 168 wide \"because the hand that reaches for them is not looking -- this is a panel on a wall\". A disc breaks that. A dot on a disc has to be AIMED: two axes at once, with a fingertip, on a screen somebody is standing in front of rather than holding. Two columns are two drags, each in one direction, each the same gesture the pane teaches for brightness and taught for warmth.\n\nIt is also better at the job that matters here. Matching a lamp by eye is nudging -- a little warmer, a little less of it -- and a one-dimensional track is something you can nudge. On the disc the same correction is a small diagonal move that changes both things at once, which is why D has to carry four nudge buttons to be usable and this does not.\n\nWHAT IT GIVES UP is the picture. A disc SHOWS you the space: you can see that there is a teal over there and wander to it. Two columns are exact and blind -- you cannot browse them, you can only tune. Which is right depends on whether the thirteenth color is one somebody is looking for or one they already have in mind, and the second case above says it is usually the second."
+    }
+  ],
+  "launch": {
+    "view": "canvas",
+    "page": "page-1"
+  },
+  "pages": [
+    {
+      "id": "page-1",
+      "name": "The case"
+    },
+    {
+      "id": "page-2",
+      "name": "Each kind"
+    },
+    {
+      "id": "page-3",
+      "name": "On a phone"
+    },
+    {
+      "id": "page-4",
+      "name": "Saying what color"
+    }
+  ]
+}

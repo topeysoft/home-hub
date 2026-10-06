@@ -1,0 +1,120 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Instrument Sans", -apple-system, "SF Pro Text", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      --bg: #0c0d10; --surface: rgba(26,28,34,.68); --surface-hi: rgba(255,255,255,.08);
+      --edge: rgba(255,255,255,.1); --edge-hi: rgba(255,255,255,.18);
+      --ink: #f1eee8; --ink-2: #b9b5ad; --muted: #7f7d77;
+      --lamp-rgb: 233,184,114; --lamp: rgb(var(--lamp-rgb)); --lamp-ink: #2a1c07;
+      --live-rgb: 116,198,157; --live: rgb(var(--live-rgb));
+      --danger-rgb: 224,138,138; --danger: rgb(var(--danger-rgb));
+      --r-lg: 22px; --r-md: 16px;
+    }
+    .dsp { font-weight: 400; letter-spacing: -.025em; text-wrap: balance; }
+    .cap { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .sheet { width: 560px; border-radius: 26px; background: rgba(22,24,30,.92);
+             border: 1px solid var(--edge-hi); box-shadow: 0 40px 100px -30px rgba(0,0,0,.9); overflow: hidden; }
+    .sheet h2 { margin: 0; font-size: 34px; line-height: 1.05; font-weight: 400; letter-spacing: -.025em; }
+    .lede { margin: 0 0 18px; color: var(--ink-2); font-size: 15px; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 14px 26px;
+           border-radius: 999px; background: var(--ink); color: var(--bg); font-weight: 500; font-size: 17px; }
+    .btn.ghost { background: var(--surface-hi); color: var(--ink); border: 1px solid var(--edge); }
+    .t1 { font-size: 15.5px; font-weight: 500; }
+    .t2 { font-size: 13px; color: var(--muted); }
+    .row { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 12px;
+           padding: 12px 14px; border-radius: var(--r-md); background: var(--surface); border: 1px solid var(--edge); }
+    .strip { height: 22px; border-radius: 4px;
+             background: repeating-linear-gradient(90deg, rgb(255,96,0) 0 4px, transparent 4px 7px);
+             filter: drop-shadow(0 0 9px rgba(255,140,40,.7)); }
+    .field { height: 56px; border-radius: var(--r-md); background: var(--surface-hi);
+             border: 1px solid var(--edge); display: flex; align-items: center; padding: 0 18px;
+             font-size: 22px; letter-spacing: .14em; color: var(--ink); }
+    .stage { position: relative; padding: 40px 24px 34px; border-radius: 20px;
+             background: rgba(255,255,255,.03); border: 1px solid var(--edge); overflow: hidden; }
+    .glow { position: absolute; left: 0; right: 0; top: -40px; height: 160px;
+            background: radial-gradient(42% 54% at 50% 50%, rgba(255,140,40,.26), transparent 72%); }
+  </style>
+</helmet>
+
+<div style="position: relative; width: 1440px; height: 900px; overflow: hidden; background: var(--bg); color: var(--ink); font-size: 17px; line-height: 1.4;">
+  <div style="position: absolute; inset: 0; background: linear-gradient(rgb(29,33,46) 0%, rgb(41,42,63) 44%, rgb(92,63,57) 84%, rgb(62,44,42) 100%);"></div>
+  <div style="position: absolute; left: -222px; top: -135px; width: 1855px; height: 1156px; background: radial-gradient(58% 54% at 30% 64%, rgba(72,63,135,.4), transparent 68%), radial-gradient(62% 52% at 54% 110%, rgba(55,51,100,.44), transparent 72%);"></div>
+  <div style="position: absolute; inset: 0; background: rgba(6,7,9,.58);"></div>
+
+  <div class="cap" style="position: absolute; left: 60px; top: 44px;">B &mdash; the hub already knows, because we made it</div>
+
+  <div class="sheet" style="position: absolute; left: 130px; top: 130px;">
+    <div style="display: flex; align-items: flex-start; gap: 14px; padding: 24px 22px 6px 28px;">
+      <h2 class="dsp" style="flex: 1;">A light strip is here.</h2>
+      <div style="width: 38px; height: 38px; border-radius: 999px; background: var(--surface-hi); border: 1px solid var(--edge); display: grid; place-items: center;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink-2)" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </div>
+    </div>
+    <div style="padding: 4px 28px 26px;">
+      <p class="lede">Something was plugged in nearby a moment ago. If it is a light strip of yours, it is the one that just came on.</p>
+      <div class="stage" style="margin-bottom: 18px;">
+        <div class="glow"></div>
+        <div style="position: relative;" class="strip"></div>
+        <div class="t2" style="position: relative; text-align: center; margin-top: 16px;">
+          <span style="display: inline-flex; align-items: center; gap: 8px;">
+            <span style="width: 8px; height: 8px; border-radius: 50%; background: rgb(255,140,40);"></span>It is lit right now</span>
+        </div>
+      </div>
+      <div class="row" style="margin-bottom: 18px;">
+        <span style="width: 34px; height: 34px; border-radius: 12px; display: grid; place-items: center; background: var(--surface-hi);">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ink-2)" stroke-width="1.7" stroke-linecap="round"><path d="M12 3v7M8 10h8v4a4 4 0 0 1-8 0z"/><path d="M12 18v3"/></svg>
+        </span>
+        <span><span class="t1">Nothing has been let in yet</span><span class="t2" style="display: block;">Until you say yes it is only knocking. Nothing of yours is on it.</span></span>
+      </div>
+      <div style="display: flex; gap: 10px;">
+        <span class="btn" style="flex: 1;">That&rsquo;s the one</span>
+        <span class="btn ghost" style="flex: 1;">Not mine</span>
+      </div>
+    </div>
+  </div>
+
+  <div style="position: absolute; left: 740px; top: 110px; width: 640px;">
+    <h3 class="dsp" style="margin: 0 0 14px; font-size: 26px; font-weight: 400;">Identical to the board we already agreed.</h3>
+    <p style="margin: 0 0 20px; color: var(--ink-2); font-size: 15.5px; line-height: 1.6;">
+      No number, because the hub works the passcode out. We make these, so we can decide at manufacture what a
+      given unit&rsquo;s code is &mdash; derived from its serial and a secret the hub also has &mdash; and the wall then asks
+      the one question design/puck/Knock.dc.html says it should: is the thing that just lit up yours.
+    </p>
+    <div style="border-radius: var(--r-lg); border: 1px solid rgba(var(--live-rgb),.3); background: linear-gradient(rgba(var(--live-rgb),.07), rgba(var(--live-rgb),.07)), rgba(255,255,255,.02); padding: 20px 22px; margin-bottom: 16px;">
+      <span class="cap">For</span>
+      <p style="margin: 10px 0 0; font-size: 15px; line-height: 1.6;">
+        One tap, and the promise of the whole product holds: plug it in, the wall notices, say yes. It is the only
+        direction here where <strong style="font-weight: 500;">our hub is better at this than anybody else&rsquo;s app</strong>,
+        which is a reason to own one. The label still carries a code for other ecosystems, so nothing is lost.
+      </p>
+    </div>
+    <div style="border-radius: var(--r-lg); border: 1px solid rgba(var(--danger-rgb),.3); background: rgba(var(--danger-rgb),.05); padding: 20px 22px;">
+      <span class="cap" style="color: rgba(var(--danger-rgb),.85);">Against, and it is serious</span>
+      <p style="margin: 10px 0 0; font-size: 15px; line-height: 1.6;">
+        <strong style="font-weight: 500;">Every unit we sell becomes commissionable by anybody holding the
+        derivation.</strong> The serial is in the advertisement. So the secret is the only thing between a stranger
+        in range and somebody&rsquo;s light &mdash; and it is in every hub we ship, which means it leaks the first time
+        anybody reads a flash chip. A passcode that can be computed is not a passcode.
+      </p>
+      <p style="margin: 12px 0 0; font-size: 15px; line-height: 1.6;">
+        It is also the one option that <em>fails certification</em>: the standard requires the passcode to be
+        unguessable and forbids a fixed relationship to anything public.
+      </p>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

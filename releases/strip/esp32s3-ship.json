@@ -1,0 +1,2 @@
+{"env": "strip", "chip": "esp32s3", "fw": "0.4.0", "offset": 0, "flash_mode": "dio", "flash_freq": "80m", "flash_size": "8MB",
+ "sha256": "221a8009bbabfb9a997eb7e62a321c6da84b0631b68e2a92de13e94fe28fdd91", "built": "2026-09-24T20:23:36Z", "commit": "64f2ed2"}

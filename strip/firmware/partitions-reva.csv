@@ -1,0 +1,32 @@
+# The strip controller, rev A: the same table as partitions-matter.csv, on the 16 MB part it carries.
+#
+# THIS IS THE ONE THING THAT CANNOT BE CHANGED OVER THE AIR, and that is why it is laid down now, before
+# the first board exists rather than after the first one ships. An update writes the other app slot and
+# flips otadata; it cannot move the slots themselves. partitions-matter.csv was sized for 8 MB and is
+# what every strip already in a house carries, so it stays exactly as it is and loads unchanged on any
+# part. This table is for rev A only, and only a cable ever writes it.
+#
+# Why 16 MB at all, when 8 would fit today (home-hub-hardware, strip/parts.md, "The module and its
+# pins"): the firmware is about 1.7 MB of a 3.75 MB slot, and this board has the most growing ahead of it
+# of anything we make -- two outputs, two-wire strips, effects and occasions, a clock shared with its
+# neighbors, and Matter getting larger every release. So the two app slots go from 3.75 to 7.5 MB each.
+# The rest keeps its NAMES and its PURPOSES, because esp-matter, the factory and our own code find them by
+# name:
+#   nvs, otadata, phy_init   unchanged, at the same offsets
+#   esp_secure_cert, fctry   the certified-Matter pair, laid down for the same reason as on the 8 MB
+#                            table: free while unused, unrecoverable if left out
+#   coredump                 128 KB rather than 64: there is room, and a board that also holds PSRAM
+#                            and a second output has more to write down when it crashes
+#   storage                  whatever is left, to the end of the flash
+# Every app slot starts on a 64 KB boundary, which an app partition must.
+#
+# Name,           Type, SubType,  Offset,   Size,     Flags
+nvs,              data, nvs,      0x9000,   0x6000,
+otadata,          data, ota,      0xF000,   0x2000,
+phy_init,         data, phy,      0x11000,  0x1000,
+esp_secure_cert,  0x3F, 0x00,     0x12000,  0x2000,
+fctry,            data, nvs,      0x14000,  0x6000,
+ota_0,            app,  ota_0,    0x20000,  0x780000,
+ota_1,            app,  ota_1,    0x7A0000, 0x780000,
+coredump,         data, coredump, 0xF20000, 0x20000,
+storage,          data, spiffs,   0xF40000, 0xC0000,

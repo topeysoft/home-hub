@@ -1,0 +1,146 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Instrument Sans", -apple-system, "SF Pro Text", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      --bg: #0c0d10; --surface: rgba(26,28,34,.68); --surface-hi: rgba(255,255,255,.08);
+      --edge: rgba(255,255,255,.1); --edge-hi: rgba(255,255,255,.18);
+      --ink: #f1eee8; --ink-2: #b9b5ad; --muted: #7f7d77;
+      --lamp: #e9b872; --lamp-ink: #2a1c07; --live: #74c69d; --danger: #e08a8a;
+    }
+    .dsp { font-weight: 400; letter-spacing: -.025em; text-wrap: balance; }
+    .cap { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .t1 { font-size: 15.5px; font-weight: 500; }
+    .t2 { font-size: 13px; color: var(--muted); line-height: 1.45; }
+    .panel { border-radius: 20px; background: var(--surface); border: 1px solid var(--edge); padding: 18px 20px 20px; }
+
+    .chip { display: inline-flex; align-items: center; gap: 7px; padding: 10px 16px; border-radius: 999px;
+            font-size: 15px; background: var(--surface); border: 1px solid var(--edge); color: var(--ink-2); }
+    .chip.already { background: transparent; border-color: var(--edge-hi); color: var(--ink-2); }
+    .chip.already svg { color: var(--muted); }
+    .chip.picked { background: var(--ink); color: var(--bg); border-color: transparent; font-weight: 500; }
+    .chip.picked svg { color: var(--lamp-ink); }
+    .chip.oldfixed { background: var(--ink); color: var(--bg); border-color: transparent; font-weight: 500; opacity: .7; }
+
+    .btn { display: inline-flex; align-items: center; padding: 13px 24px; border-radius: 999px;
+           background: var(--ink); color: var(--bg); font-weight: 500; font-size: 15.5px; }
+    .btn.ghost { background: var(--surface-hi); color: var(--ink); border: 1px solid var(--edge); font-weight: 400; }
+
+    .was { color: var(--danger); }
+    .now { color: var(--live); }
+    .arrow { color: var(--muted); font-size: 18px; padding: 0 4px; }
+    .xrow { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .kv { display: grid; grid-template-columns: 148px 1fr; gap: 6px 14px; font-size: 13.5px; }
+    .kv dt { color: var(--muted); }
+    .kv dd { margin: 0; color: var(--ink-2); }
+  </style>
+</helmet>
+
+<div style="position: relative; width: 1440px; height: 900px; overflow: hidden; background: #0c0d10; color: var(--ink); font-size: 17px; line-height: 1.4;">
+  <div style="position: absolute; inset: 0; background: radial-gradient(64% 54% at 22% 18%, rgba(72,63,135,.22), transparent 70%), radial-gradient(56% 48% at 86% 88%, rgba(92,63,57,.2), transparent 72%);"></div>
+
+  <div style="position: absolute; top: 40px; left: 56px; right: 56px;">
+    <h1 class="dsp" style="margin: 0; font-size: 40px;">Three small things that were saying the wrong word.</h1>
+    <p style="margin: 9px 0 0; font-size: 16.5px; color: var(--ink-2); max-width: 106ch;">None of these is a layout problem. Each is a control whose appearance meant something other than what it did.</p>
+  </div>
+
+  <!-- 1. the chips -->
+  <div class="panel" style="position: absolute; top: 152px; left: 56px; width: 646px; height: 400px;">
+    <div class="cap" style="color: var(--lamp); margin-bottom: 4px;">one &middot; which rooms do you have?</div>
+    <div class="dsp" style="font-size: 23px; margin-bottom: 14px;">A room you already have is not a dimmed copy of one you just picked.</div>
+
+    <div class="cap" style="margin-bottom: 9px;">before &mdash; two states, and they were the same state</div>
+    <div class="xrow" style="margin-bottom: 8px;">
+      <span class="chip oldfixed"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Kitchen</span>
+      <span class="t2" style="color: var(--danger);">already in the house &mdash; opacity .7</span>
+      <span class="arrow">&middot;</span>
+      <span class="chip picked"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Porch</span>
+      <span class="t2" style="color: var(--danger);">you tapped it a second ago</span>
+    </div>
+    <div class="t2" style="margin-bottom: 16px;">The first read as <i>unavailable</i>. Glance away and you could no longer tell which rooms you had chosen from the ones that were always there.</div>
+
+    <div class="cap" style="margin-bottom: 9px;">after &mdash; three states, three shapes</div>
+    <div class="xrow">
+      <span class="chip already"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Kitchen</span>
+      <span class="chip">Hallway</span>
+      <span class="chip picked"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>Porch</span>
+    </div>
+    <div class="t2" style="margin-top: 10px;">Outlined &mdash; already yours, nothing to do. Filled dark &mdash; tap to add. Filled light &mdash; you just picked it. Captioned once under the lede: <i>&ldquo;The outlined ones are already in the house.&rdquo;</i></div>
+  </div>
+
+  <!-- 2. the location screen -->
+  <div class="panel" style="position: absolute; top: 152px; left: 738px; width: 646px; height: 400px;">
+    <div class="cap" style="color: var(--lamp); margin-bottom: 4px;">two &middot; where is home?</div>
+    <div class="dsp" style="font-size: 23px; margin-bottom: 14px;">The loudest button on the screen was the one that walks past the question.</div>
+
+    <div class="cap" style="margin-bottom: 9px;">before</div>
+    <div class="xrow" style="margin-bottom: 8px;">
+      <span class="btn ghost">Keep it</span>
+      <span class="t2" style="color: var(--danger);">&hellip;and nothing else, until you had already chosen a place</span>
+    </div>
+    <div class="t2" style="margin-bottom: 18px;">The real action lived inside <code style="color:var(--lamp)">LocationPicker</code> and only appeared once a town was picked. So the screen&rsquo;s whole visible offer was <i>skip</i>, and a person who did want to set a location had to find a second action row further down.</div>
+
+    <div class="cap" style="margin-bottom: 9px;">after &mdash; there is always a primary, and it is never the way past</div>
+    <div class="xrow" style="margin-bottom: 8px;">
+      <span class="btn">Continue</span>
+      <span class="t2">a place is set &mdash; the hub found one, or you picked one</span>
+    </div>
+    <div class="xrow">
+      <span class="btn ghost">Skip for now</span>
+      <span class="t2">nothing is set &mdash; and it says so plainly</span>
+    </div>
+  </div>
+
+  <!-- 3. the add field -->
+  <div class="panel" style="position: absolute; top: 574px; left: 56px; width: 646px; height: 180px;">
+    <div class="cap" style="color: var(--lamp); margin-bottom: 4px;">three &middot; another room&hellip;</div>
+    <div class="dsp" style="font-size: 23px; margin-bottom: 14px;">A magnifying glass on a field that adds.</div>
+    <div class="xrow" style="gap: 16px;">
+      <span style="display: inline-flex; align-items: center; gap: 10px; padding: 13px 16px; border-radius: 16px; background: rgba(255,255,255,.06); border: 1px solid var(--edge); width: 250px;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#e08a8a" stroke-width="1.8" stroke-linecap="round"><circle cx="11" cy="11" r="6.5"/><path d="M16 16l4 4"/></svg>
+        <span class="t2" style="color: var(--danger);">Another room&hellip;</span>
+      </span>
+      <span class="arrow">&rarr;</span>
+      <span style="display: inline-flex; align-items: center; gap: 10px; padding: 13px 16px; border-radius: 16px; background: rgba(255,255,255,.06); border: 1px solid var(--edge); width: 250px;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#e9b872" stroke-width="1.8" stroke-linecap="round"><path d="M12 5.5v13M5.5 12h13"/></svg>
+        <span class="t2">Another room&hellip;</span>
+      </span>
+    </div>
+    <div class="t2" style="margin-top: 12px;">There is nothing to search. Typing here makes a room that did not exist a moment ago.</div>
+  </div>
+
+  <!-- the word list -->
+  <div class="panel" style="position: absolute; top: 574px; left: 738px; width: 646px; height: 288px;">
+    <div class="cap" style="color: var(--lamp); margin-bottom: 12px;">the whole of first run, in buttons</div>
+    <dl class="kv">
+      <dt>Get started</dt><dd>welcome, once</dd>
+      <dt>Continue</dt><dd>every question that has been answered</dd>
+      <dt>Skip for now</dt><dd>every question that may be walked past &mdash; steps 3 and 5</dd>
+      <dt>Open Home</dt><dd>the last screen, once</dd>
+      <dt>Bring its backup over</dt><dd>welcome, in the footnote</dd>
+      <dt>Add</dt><dd>inside the rooms field, only while there is something typed</dd>
+    </dl>
+    <div style="height: 1px; background: rgba(255,255,255,.08); margin: 16px 0 14px;"></div>
+    <div class="t1" style="margin-bottom: 5px;">And the one that is gone</div>
+    <div class="t2"><span class="was">Keep it</span> / <span class="was">Later</span> &mdash; two words for one button, chosen by whether a location happened to be set, and both of them meaning <i>don&rsquo;t answer this</i> while being the only button on the screen.</div>
+  </div>
+
+  <div style="position: absolute; top: 774px; left: 56px; width: 646px; padding: 14px 17px; border-radius: 18px; background: var(--surface); border: 1px solid var(--edge);">
+    <div class="t1" style="margin-bottom: 5px;">Nothing here changes the brain</div>
+    <div class="t2">Same endpoints, same order, same <code style="color:var(--lamp)">setup/status</code>. Two files: <code style="color:var(--lamp)">app/src/Setup.vue</code> and the first&#8209;run block of <code style="color:var(--lamp)">app/src/panel.css</code>. <code style="color:var(--lamp)">Join</code> and <code style="color:var(--lamp)">Away</code> share <code style="color:var(--lamp)">.setup</code> and get the centering for free.</div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

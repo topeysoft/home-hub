@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+# Refuses a commit that would publish a secret. This repository is public and every hub clones it whole,
+# so a key that lands here has been handed out, and deleting it afterwards does not take it back.
+#
+# Two checks, on the lines being added:
+#
+#   house keys  every key in the files that hold this house's real ones (~/.config/brilliant-mesh/ by
+#               default), looked for in any spelling -- plain hex, 0x byte arrays, split across lines,
+#               base64. A pattern cannot know a house's keys; this can, on the machine that has them,
+#               which is the only machine that can leak them.
+#   gitleaks    the tokens and private keys of the services the hub talks to, with the rules in
+#               .gitleaks.toml. Skipped with a note when gitleaks is not installed; CI runs it anyway.
+#
+# Turned on once per checkout:   git config core.hooksPath tools/hooks
+# Extra key files, colon-separated:   HUB_SECRET_FILES=~/a.json:~/b.json
+set -euo pipefail
+
+root="$(git rev-parse --show-toplevel)"
+
+git diff --cached -U0 --no-color --diff-filter=ACMR | python3 -c '
+import base64, glob, os, re, sys
+
+files = glob.glob(os.path.expanduser("~/.config/brilliant-mesh/*.json"))
+files += [os.path.expanduser(f) for f in os.environ.get("HUB_SECRET_FILES", "").split(":") if f]
+keys = set()
+for f in files:
+    try:
+        keys |= {k.lower() for k in re.findall(r"\b[0-9a-fA-F]{32,64}\b", open(f).read())}
+    except OSError:
+        pass
+if not keys:
+    sys.exit(0)
+
+# Everything each file adds, as one run of hex: "0xbb, 0x1c," and "bb:1c" and "BB 1C" all become "bb1c",
+# and an array split over two lines becomes one key again.
+added, name = {}, None
+for line in sys.stdin:
+    if line.startswith("+++ "):
+        name = line[6:].strip()
+    elif line.startswith("+") and name:
+        added[name] = added.get(name, "") + line[1:]
+
+found = []
+for name, text in added.items():
+    soup = re.sub(r"[^0-9a-f]", "", re.sub(r"0x", "", text.lower()))
+    for k in keys:
+        b64 = base64.b64encode(bytes.fromhex(k)).decode()
+        if k in soup or b64 in text:
+            found.append(f"  {name}: a key from your house ({k[:4]}...)")
+if found:
+    print("pre-commit: refusing to commit a real key. This repository is public.", file=sys.stderr)
+    print("\n".join(sorted(set(found))), file=sys.stderr)
+    print("Keep it in the file it came from and read it at run time; a test uses the spec sample key.", file=sys.stderr)
+    sys.exit(1)
+'
+
+if command -v gitleaks >/dev/null 2>&1; then
+  gitleaks git --pre-commit --staged --redact --no-banner -c "$root/.gitleaks.toml" "$root"
+else
+  echo "pre-commit: gitleaks is not installed, so only the house-keys check ran (brew install gitleaks)." >&2
+fi

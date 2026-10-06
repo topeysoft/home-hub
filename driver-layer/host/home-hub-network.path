@@ -1,0 +1,11 @@
+# Watches for the file the brain writes when somebody changes the network from the panel.
+# install.sh copies this (with its own directory in place of /opt/home-hub) and enables it.
+[Unit]
+Description=Home Hub: watch for a network request from the panel
+
+[Path]
+PathExists=/opt/home-hub/driver-layer/brain-data/network.request
+Unit=home-hub-network.service
+
+[Install]
+WantedBy=multi-user.target

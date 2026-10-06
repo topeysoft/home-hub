@@ -1,0 +1,288 @@
+# The whole hub on the hub host (Pi 5 + NVMe or a mini PC): the rented driver layer, each part in
+# its own container, plus the brain and the front door. `install.sh` writes .env and starts this.
+# Radios are profiles: COMPOSE_PROFILES=zigbee,zwave in .env turns them on when a stick is present.
+
+services:
+  mosquitto:
+    image: ${HUB_IMG_MOSQUITTO:-eclipse-mosquitto:2}
+    container_name: mosquitto
+    restart: unless-stopped
+    ports:
+      - "1883:1883"
+    volumes:
+      - ./mosquitto/config:/mosquitto/config
+      - ./mosquitto/data:/mosquitto/data
+      - ./mosquitto/log:/mosquitto/log
+
+  zigbee2mqtt:
+    image: ${HUB_IMG_ZIGBEE2MQTT:-koenkk/zigbee2mqtt:2.14.1}
+    container_name: zigbee2mqtt
+    restart: unless-stopped
+    profiles: [zigbee]
+    depends_on: [mosquitto]
+    ports:
+      - "127.0.0.1:8080:8080"    # Zigbee2MQTT's own UI: on the hub itself only (ssh -L 8080:localhost:8080), never the Wi-Fi
+    volumes:
+      - ./zigbee2mqtt:/app/data
+      - /run/udev:/run/udev:ro
+    devices:
+      - "${ZIGBEE_SERIAL:-/dev/null}:/dev/zigbee"     # a network coordinator maps /dev/null and sets the port below
+    environment:
+      - TZ=${TZ}
+      - ZIGBEE2MQTT_CONFIG_SERIAL_PORT=${ZIGBEE_PORT:-/dev/zigbee}
+      - ZIGBEE2MQTT_CONFIG_SERIAL_ADAPTER=${ZIGBEE_ADAPTER:-ember}   # the chip family; .env.example says which stick wants which
+      - ZIGBEE2MQTT_CONFIG_MQTT_USER=${MQTT_USER:-}            # the broker's password, from mqtt-auth.sh
+      - ZIGBEE2MQTT_CONFIG_MQTT_PASSWORD=${MQTT_PASSWORD:-}
+
+  zwave-js-ui:
+    image: ${HUB_IMG_ZWAVE_JS_UI:-zwavejs/zwave-js-ui:11.23.0}
+    container_name: zwave-js-ui
+    restart: unless-stopped
+    profiles: [zwave]
+    tty: true
+    stop_signal: SIGINT
+    ports:
+      - "127.0.0.1:8091:8091"    # Z-Wave JS UI's own UI: on the hub itself only, never the Wi-Fi
+      - "127.0.0.1:3000:3000"    # websocket server consumed by Home Assistant, on the same host
+    volumes:
+      - ./zwave-js-ui:/usr/src/app/store
+    devices:
+      - "${ZWAVE_SERIAL:-/dev/null}:/dev/zwave"       # a network dongle maps /dev/null; radios.sh puts its tcp:// address in settings.json
+    environment:
+      - TZ=${TZ}
+      - SESSION_SECRET=${ZWAVE_SESSION_SECRET}
+
+  matter-server:
+    image: ${HUB_IMG_MATTER_SERVER:-ghcr.io/home-assistant-libs/python-matter-server:8.1.0}
+    container_name: matter-server
+    restart: unless-stopped
+    network_mode: host      # Matter commissioning needs mDNS and IPv6 on the LAN
+    security_opt:
+      - apparmor=unconfined
+    volumes:
+      - ./matter-server:/data
+      - /run/dbus:/run/dbus:ro
+    # The image's own command plus the websocket pinned to loopback: on the host network it would
+    # otherwise answer the whole Wi-Fi, and it has no password of its own. ws://localhost:5580/ws.
+    command: ["--storage-path", "/data", "--paa-root-cert-dir", "/data/credentials", "--listen-address", "127.0.0.1", "--listen-address", "::1"]
+
+  homeassistant:
+    image: ${HUB_IMG_HOMEASSISTANT:-ghcr.io/home-assistant/home-assistant:2026.9.1}
+    container_name: homeassistant
+    restart: unless-stopped
+    network_mode: host      # discovery (mDNS, SSDP, Cast, HomeKit) needs the real LAN
+    privileged: false
+    depends_on: [mosquitto]
+    volumes:
+      - ./homeassistant:/config
+      - /etc/localtime:/etc/localtime:ro
+      - /run/dbus:/run/dbus:ro
+    environment:
+      - TZ=${TZ}
+    # UI on http://<host>:8123 — the Advanced door only.
+    # The brain talks to ws://<host>:8123/api/websocket with a long-lived token.
+
+  brain:
+    # The product: the semantic home, scenes, the event log, and the panel it serves on :8300.
+    # CI publishes this image for amd64 and arm64; `build` is the fallback when the pull fails.
+    image: ${HUB_BRAIN_IMAGE:-ghcr.io/topeysoft/home-hub-brain:latest}
+    build:
+      context: ..
+      dockerfile: brain/Dockerfile
+    container_name: brain
+    restart: unless-stopped
+    network_mode: host      # talks to HA on localhost:8123; the panel is on :8300
+    depends_on: [homeassistant]
+    volumes:
+      - ./brain-data:/data  # settings.json (names, location, the engine login), events.db, rules.json, scenes.json
+      - .:/driver:ro        # read-only view of the driver layer, for backups
+      # A bridge puck on the hub's USB is set up by the brain over its serial port (hub/bridge.py). The
+      # device node appears after the container started, so /dev is shared rather than a device
+      # listed, and the cgroup rules below are what let the brain open a tty that was not there at
+      # start: 188 is ttyUSB (a bridge chip), 166 is ttyACM (a native USB port). Read-only would not
+      # do -- flashing and talking are both writes.
+      - /dev:/dev
+      # AND THE SYSTEM BUS, WHICH IS HOW BLUETOOTH IS REACHED AT ALL. A light strip knocks over BLE
+      # and the brain talks to BlueZ through D-Bus, not through a device node -- so network_mode
+      # host is not enough on its own and /dev does nothing for it. Without this the brain has bleak
+      # installed, raises on every scan, and a strip flashing a metre from the hub simply never
+      # appears: our door and Matter's both go quiet at once, with nothing on any screen to say why.
+      # Found on 21 September with a strip knocking and the panel showing nothing.
+      - /run/dbus:/run/dbus:ro
+    device_cgroup_rules:
+      - 'c 188:* rmw'
+      - 'c 166:* rmw'
+    environment:
+      - TZ=${TZ}
+      - HUB_DRIVER=/driver
+      # Which code this hub follows, so the panel offers the same thing install.sh would install.
+      # release: the newest version tag. main: the branch, for a hub being worked on. install.sh writes it.
+      - HUB_CHANNEL=${HUB_CHANNEL:-release}
+      # Bridge firmware from a folder instead of the image's own, on a hub that follows a branch only
+      # (hub/bridge.py, ship()). A path inside this container: /data/... is ./brain-data/... on the host.
+      - HUB_PUCK_FIRMWARE=${HUB_PUCK_FIRMWARE:-}
+      # Whether the host holds release keys. It decides one thing: whether this hub is allowed to
+      # install updates in the night without being asked. install.sh writes it; docs/updates.md.
+      - HUB_VERIFIED=${HUB_VERIFIED:-}
+      # The broker's password (mqtt-auth.sh), so the brain can give it to the engine's Messages part.
+      - MQTT_USER=${MQTT_USER:-}
+      - MQTT_PASSWORD=${MQTT_PASSWORD:-}
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}   # the assistant's key, if it is not pasted into the panel instead
+      # The Matter bridge's way past the phone gate (hub/share.py, token). The bridge presents it and the
+      # brain checks it, so both have to be handed the same one. It was given to the bridge alone when
+      # sharing landed, and every request the bridge made was refused -- found 2 October 2026.
+      - HUB_SHARE_TOKEN=${HUB_SHARE_TOKEN:-}
+      # The house's own address outside (hub/address.py). HUB_AWAY_OFFER=on is the maker's own hub, offered
+      # an address by hand before payments exist; every other house leaves it unset and is offered one only
+      # when the service says it can be paid for. HUB_RELAY_API is the registration service, for a relay
+      # of your own. docs/away.md, step 4.
+      - HUB_AWAY_OFFER=${HUB_AWAY_OFFER:-}
+      - HUB_RELAY_API=${HUB_RELAY_API:-https://api.elyir.app}
+      # Whether this house can answer out loud, and in whose voice. Empty is off and is every house
+      # today: the panel then answers on the glass exactly as it does now. Set VOICE_TTS=piper with
+      # COMPOSE_PROFILES=voice to turn the pair on together. docs/voice.md.
+      - VOICE_TTS=${VOICE_TTS:-}
+      - VOICE_TTS_PORT=${VOICE_TTS_PORT:-10200}
+      - VOICE_TTS_VOICE=${VOICE_TTS_VOICE:-}
+
+  matter-bridge:
+    # The house as Apple Home, Google Home and Alexa see it: one Matter bridge with an endpoint per
+    # shared thing. docs/matter.md. CI publishes this image beside the brain's; `build` is the fallback.
+    #
+    # NOT a profile, and that is deliberate. The switch is the one on the panel, and this container is
+    # silent until somebody throws it: with nothing shared it builds no endpoints and announces nothing
+    # to the network at all. A profile would put the switch in a shell on the host instead, which is
+    # the move the whole product is shaped to avoid.
+    image: ${HUB_BRIDGE_IMAGE:-ghcr.io/topeysoft/home-hub-matter-bridge:latest}
+    build:
+      context: ../matter-bridge
+    container_name: matter-bridge
+    restart: unless-stopped
+    network_mode: host      # Matter needs mDNS and IPv6 on the real LAN, the same reason matter-server does
+    depends_on: [brain]
+    volumes:
+      # Fabric credentials and the endpoint numbers each controller remembers a device by. Losing this
+      # is every ecosystem in the house starting again, so it is a volume and it rides the backup.
+      - ./matter-bridge-data:/data
+    environment:
+      - TZ=${TZ}
+      - HUB_URL=http://localhost:8300
+      # The key that gets it past the phone gate, from mqtt-auth.sh's neighbor in install.sh. Without
+      # one it exits at once and says so, rather than running as something the brain will not answer.
+      - HUB_SHARE_TOKEN=${HUB_SHARE_TOKEN:-}
+      - HUB_MATTER_PORT=${HUB_MATTER_PORT:-5540}
+
+  caddy:
+    # The front door: http://hub.local on :80 with no setup at all, https alongside for those who install the root certificate.
+    image: ${HUB_IMG_CADDY:-caddy:2}
+    container_name: caddy
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      - HUB_HTTP=http://${HUB_HOST:-hub.local}, http://${HUB_IP:-localhost}, http://localhost
+      - HUB_HOSTS=https://${HUB_HOST:-hub.local}, https://${HUB_IP:-localhost}
+      # The door the tunnel feeds, once there is a tunnel. On loopback deliberately: the relay's client
+      # runs on this machine, and nothing on the Wi-Fi is meant to reach it. docs/away.md, piece 2.
+      - HUB_RELAY_BIND=127.0.0.1
+      # Whether that door is the house's public name on a real certificate (on) or the plain one with
+      # nothing behind it (off, every house until it has a name). caddy/away/ has both.
+      - HUB_AWAY=${HUB_AWAY:-off}
+      # The house's whole public name, made here from the one part .env holds, so the two can never disagree.
+      - HUB_AWAY_NAME=${HUB_AWAY_HOUSE:-}.${HUB_AWAY_ZONE:-elyir.app}
+      - HUB_ACME_CA=${HUB_ACME_CA:-https://acme-v02.api.letsencrypt.org/directory}
+      # The house's name at home, 192-168-86-53.<house>.home.elyir.app, written by host/away.sh from the hub's
+      # real address. Only read while the away door is on (caddy/away/on.caddy).
+      - HUB_LAN_NAME=${HUB_LAN_NAME:-}
+      - BRAIN_UPSTREAM=localhost:8300
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      # The away door is one of two files the Caddyfile imports, and an import Caddy cannot find stops it
+      # starting at all -- the whole front door, not only the away one. Found 2 October 2026 on a real hub.
+      - ./caddy/away:/etc/caddy/away:ro
+      # That name's certificate, kept by lan-cert below; read through a loopback-only file server.
+      - ./lan-cert/data:/lan:ro
+      - ./caddy/data:/data
+
+  frpc:
+    # The house's end of the relay: one connection out on 443, held open, carrying phones away back to
+    # the away door on loopback. docs/away.md, piece 2. A profile, like the radios: COMPOSE_PROFILES
+    # with `away` in it, beside HUB_AWAY=on and the house's name, turns it on. Off is every house until
+    # it has a name, and with it off nothing leaves the house and nothing comes in.
+    #
+    # Pinned to the version the relay's pass-through was checked against. The relay is blind to what it
+    # carries because of what is NOT in frp/frpc.toml -- read the comment there before adding anything.
+    image: ${HUB_IMG_FRPC:-fatedier/frpc:v0.71.0}
+    container_name: frpc
+    restart: unless-stopped
+    profiles: [away]
+    network_mode: host      # the away door is on loopback, and only this container may reach it
+    depends_on: [caddy]
+    command: ["-c", "/etc/frp/frpc.toml"]
+    volumes:
+      - ./frp/frpc.toml:/etc/frp/frpc.toml:ro
+    environment:
+      - HUB_RELAY_ADDR=${HUB_RELAY_ADDR:-relay.elyir.app}
+      - HUB_RELAY_TOKEN=${HUB_RELAY_TOKEN:-}
+      - HUB_AWAY_HOUSE=${HUB_AWAY_HOUSE:-}
+      - HUB_AWAY_NAME=${HUB_AWAY_HOUSE:-}.${HUB_AWAY_ZONE:-elyir.app}
+      - HUB_RELAY_SECRET=${HUB_RELAY_SECRET:-}
+
+  lan-cert:
+    # The certificate for the house's name at home (lan-cert/run.sh): the stock lego image proving it over
+    # DNS-01 through the relay's own DNS server, renewed twice a day. Beside frpc, behind the same `away`
+    # profile, because it means nothing until the house has an address. docs/away.md.
+    image: ${HUB_IMG_LEGO:-goacme/lego:v4.26.0}
+    container_name: lan-cert
+    restart: unless-stopped
+    profiles: [away]
+    network_mode: host
+    entrypoint: ["/bin/sh", "/run.sh"]
+    volumes:
+      - ./lan-cert/run.sh:/run.sh:ro
+      - ./lan-cert/data:/lan
+    environment:
+      - HUB_LAN_NAME=${HUB_LAN_NAME:-}
+      - HUB_AWAY_HOUSE=${HUB_AWAY_HOUSE:-}
+      - HUB_RELAY_SECRET=${HUB_RELAY_SECRET:-}
+      - HUB_RELAY_API=${HUB_RELAY_API:-https://api.elyir.app}
+
+  ring-mqtt:
+    # Ring Alarm and everything paired to its base station (Z-Wave locks, switches, plugs, contact and
+    # motion sensors) via Ring's cloud, published to Mosquitto with HA discovery. First run: open
+    # http://<host>:55123, sign in to Ring (with 2FA); the token is kept in ./ring-mqtt after that.
+    image: ${HUB_IMG_RING_MQTT:-tsightler/ring-mqtt:5.9.3}
+    container_name: ring-mqtt
+    restart: unless-stopped
+    depends_on: [mosquitto]
+    ports:
+      - "55123:55123"        # Ring's own sign-in form; still on the Wi-Fi, see docs/shipping.md
+    environment:
+      # In Docker ring-mqtt reads only ./ring-mqtt/config.json, which mqtt-auth.sh renders from
+      # config.template.json with the broker's password in its mqtt_url. Nothing here names the broker.
+      - ENABLEMODES=true
+    volumes:
+      - ./ring-mqtt:/data
+
+  wyoming-piper:
+    # The house's own voice. docs/voice.md, *Where the voice comes out*: the brain synthesizes an answer
+    # here and the PANEL plays it, as audio in the page, from a URL on the hub's own LAN address — the
+    # same arrangement sounds.py has with a Cast speaker, so it keeps working with the internet down.
+    #
+    # A profile, like the radios: COMPOSE_PROFILES=voice in .env turns it on. Off is the right default
+    # and is what every house is today — nothing can HEAR yet, and a house with no microphone has
+    # nothing to answer. Nothing else in the stack changes when it is on; the brain finds it on
+    # loopback because both run with network_mode: host.
+    #
+    # Which voice a household hears is still open (docs/voice.md's tier table sizes the quality per
+    # host, and the name below is a placeholder that a .env wins over). The first run fetches the model
+    # into ./piper-data and needs the internet once; after that it is local like everything else.
+    image: ${HUB_IMG_WYOMING_PIPER:-rhasspy/wyoming-piper:2.5.2}
+    container_name: wyoming-piper
+    restart: unless-stopped
+    profiles: [voice]
+    network_mode: host
+    command: --uri tcp://0.0.0.0:${VOICE_TTS_PORT:-10200} --voice ${VOICE_TTS_VOICE:-en_GB-alba-medium}
+    environment:
+      - TZ=${TZ}
+    volumes:
+      - ./piper-data:/data

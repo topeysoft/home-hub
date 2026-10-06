@@ -1,0 +1,6 @@
+# What the tests need on top of requirements.txt. Not installed on a hub.
+-r requirements.txt
+pytest>=9            # runs the unittest files as they are; `python -m unittest` still works locally
+pytest-cov>=7        # for the coverage floor CI holds the brain to
+httpx>=0.28          # FastAPI's TestClient talks through this
+ruff>=0.14

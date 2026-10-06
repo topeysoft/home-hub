@@ -1,0 +1,11 @@
+# Runs restart.sh once per request from the panel. Started by home-hub-restart.path; never on its own.
+[Unit]
+Description=Home Hub: restart the house at the rung the panel asked for
+After=network-online.target docker.service
+
+[Service]
+Type=oneshot
+Environment=HOME_HUB_DIR=/opt/home-hub
+ExecStart=/opt/home-hub/driver-layer/host/restart.sh
+StandardOutput=journal
+TimeoutStartSec=0

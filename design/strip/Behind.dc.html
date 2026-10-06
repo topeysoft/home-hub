@@ -1,0 +1,112 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Instrument Sans", -apple-system, "SF Pro Text", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      --bg: #0c0d10; --surface-hi: rgba(255,255,255,.08);
+      --edge: rgba(255,255,255,.1);
+      --ink: #f1eee8; --ink-2: #b9b5ad; --muted: #7f7d77;
+      --lamp-rgb: 233,184,114; --lamp: rgb(var(--lamp-rgb));
+    }
+    .dsp { font-weight: 400; letter-spacing: -.025em; }
+    .lbl { font-size: 12.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-2); }
+    .card { display: flex; align-items: center; gap: 16px; height: 84px; padding: 0 22px;
+            border-radius: 24px; border: 1px solid var(--edge); background: rgba(255,255,255,.05); color: var(--ink); }
+    .card.on { border-color: rgba(var(--lamp-rgb),.55); background: rgba(var(--lamp-rgb),.14); }
+    .ico { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 50%;
+           background: rgba(255,255,255,.08); color: var(--lamp); flex: 0 0 auto; }
+    .nm { display: block; font-size: 19px; }
+    .nm em { font-style: normal; color: var(--muted); }
+    .sb { display: block; margin-top: 2px; font-size: 14px; color: var(--muted); }
+    .card.on .sb { color: var(--ink-2); }
+    /* a strip at sixty lights to the metre: thin marks, close together, so the end reads as an edge */
+    .px { position: relative; height: 22px; border-radius: 4px;
+          background: repeating-linear-gradient(90deg, rgba(255,255,255,.13) 0 4px, transparent 4px 7px); }
+    .px span { position: absolute; left: 0; top: 0; bottom: 0; overflow: hidden; border-radius: 4px;
+               filter: drop-shadow(0 0 8px rgba(var(--lamp-rgb),.65)); }
+    .px span i { display: block; width: 640px; height: 22px; border-radius: 4px;
+                 background: repeating-linear-gradient(90deg, var(--lamp) 0 4px, transparent 4px 7px); }
+    .chan { height: 22px; border-radius: 4px; flex: 1; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 9px; height: 56px;
+           padding: 0 26px; border-radius: 999px; background: var(--ink); color: #14151a; font-size: 17px; font-weight: 500; }
+    .btn.ghost { background: var(--surface-hi); color: var(--ink); border: 1px solid var(--edge); font-weight: 400; }
+  </style>
+</helmet>
+<div style="position:relative;width:1920px;height:1080px;overflow:hidden;background:var(--bg);color:var(--ink);font-size:17px;line-height:1.4;">
+  <div style="position:absolute;inset:0;background:linear-gradient(rgb(24,26,37) 0%, rgb(34,35,52) 46%, rgb(58,44,48) 88%, rgb(44,34,38) 100%);"></div>
+  <div style="position:absolute;inset:0;background:rgba(6,7,9,.62);"></div>
+
+  <!-- the light's pane, still there and taken down: the sheet is a beat in front of it, not a place
+       you navigated to, which is the rule every other sheet in this panel is built to -->
+  <div style="position:absolute;left:0;top:260px;width:1920px;height:820px;border-radius:34px 34px 0 0;
+              background:linear-gradient(rgba(26,28,34,.8), rgba(16,17,21,.94));opacity:.42;">
+    <div style="position:absolute;left:49px;top:45px;font-size:16px;color:var(--ink-2);">Living room</div>
+    <div class="dsp" style="position:absolute;left:49px;top:74px;font-size:58px;">Shelf lights</div>
+    <div style="position:absolute;left:644px;top:73px;width:1228px;height:634px;border-radius:32px;border:1px solid var(--edge);background:rgba(255,255,255,.035);"></div>
+  </div>
+  <div style="position:absolute;inset:0;background:rgba(6,7,9,.46);"></div>
+
+  <!-- WHAT IS BEHIND THE DOOR. Two questions, and they are the two the strip was set up with --
+       the same conversation reopened, which is what revisit() already does today. Nothing new is
+       invented in here: no effects, no segments, no zones. -->
+  <div style="position:absolute;left:680px;top:196px;width:560px;border-radius:26px;background:rgba(22,24,30,.96);
+              border:1px solid rgba(255,255,255,.18);box-shadow:0 40px 100px -30px rgba(0,0,0,.9);overflow:hidden;">
+    <div style="padding:26px 28px 6px;">
+      <span class="lbl">Shelf lights</span>
+      <h2 class="dsp" style="margin:10px 0 0;font-size:30px;font-weight:400;">Set up as a strip</h2>
+      <p style="margin:10px 0 0;font-size:15px;color:var(--ink-2);line-height:1.6;">Two things this was told once, and both of them go stale. A strip gets cut down, joined onto, or replaced by one that is not the same make.</p>
+    </div>
+
+    <div style="padding:22px 28px 28px;display:flex;flex-direction:column;gap:14px;">
+
+      <!-- THE LENGTH, OPENED IN PLACE. The walk built on 22 September, moved in here: the card is
+           the door and the control is what the card becomes, so nothing is stacked on a sheet. -->
+      <div style="border-radius:24px;border:1px solid rgba(var(--lamp-rgb),.5);background:rgba(var(--lamp-rgb),.12);padding:20px 22px;display:flex;flex-direction:column;gap:16px;">
+        <div style="display:flex;align-items:center;gap:16px;">
+          <span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-6.2 7-11a7 7 0 10-14 0c0 4.8 7 11 7 11z"/><circle cx="12" cy="10" r="2.4"/></svg></span>
+          <span style="flex:1;"><span class="nm">Ends here <em>about 3.0 m</em></span><span class="sb" style="color:var(--ink-2);">Move it until the light stops where the strip stops.</span></span>
+        </div>
+        <div class="px"><span style="width:62%;"><i></i></span></div>
+        <div style="display:flex;gap:12px;">
+          <span class="btn ghost" style="flex:1;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14"/></svg> Shorter</span>
+          <span class="btn ghost" style="flex:1;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg> Longer</span>
+        </div>
+        <div style="display:flex;gap:12px;">
+          <span class="btn" style="flex:1;">That&rsquo;s it</span>
+          <span class="btn ghost" style="flex:1;">Measure it again</span>
+        </div>
+      </div>
+
+      <div style="display:flex;align-items:center;gap:16px;border-radius:24px;border:1px solid var(--edge);background:rgba(255,255,255,.05);padding:18px 22px;">
+        <span class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9.5 18h5M10.5 21h3M12 3a6 6 0 00-3.7 10.7c.7.6 1.1 1.4 1.2 2.3h5c.1-.9.5-1.7 1.2-2.3A6 6 0 0012 3z"/></svg></span>
+        <span style="flex:1;"><span class="nm">The colors look wrong</span><span class="sb">Asks the red question again.</span></span>
+        <span style="display:flex;gap:6px;width:150px;">
+          <span class="chan" style="height:18px;background:repeating-linear-gradient(90deg, #e2483e 0 4px, transparent 4px 7px), rgba(255,255,255,.03);"></span>
+          <span class="chan" style="height:18px;background:repeating-linear-gradient(90deg, #4ac46a 0 4px, transparent 4px 7px), rgba(255,255,255,.03);"></span>
+          <span class="chan" style="height:18px;background:repeating-linear-gradient(90deg, #4b86e8 0 4px, transparent 4px 7px), rgba(255,255,255,.03);"></span>
+        </span>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--muted)" stroke-width="2" stroke-linecap="round"><path d="M9 6l6 6-6 6"/></svg>
+      </div>
+    </div>
+  </div>
+
+  <div style="position:absolute;left:1320px;top:196px;width:460px;color:var(--ink-2);font-size:15px;line-height:1.7;">
+    <span class="lbl" style="display:block;margin-bottom:12px;">Whichever door it is</span>
+    A and B open this. It is the same sheet the strip was set up in, reopened &mdash; <span style="font-family:ui-monospace,Menlo,monospace;font-size:13px;color:var(--ink);">revisit(&lsquo;length&rsquo;)</span> and <span style="font-family:ui-monospace,Menlo,monospace;font-size:13px;color:var(--ink);">revisit(&lsquo;colors&rsquo;)</span> already exist and already draw it.<br><br>
+    What is new is only that they are behind ONE door and that the length no longer starts the whole measurement from nothing: the walk is here, and &ldquo;Measure it again&rdquo; is the way back to the fill for the household who cut a metre off.
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

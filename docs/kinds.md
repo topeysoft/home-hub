@@ -1,0 +1,294 @@
+# Kinds: what a thing is, when the house has it wrong
+
+*Written 14 September 2026, from the question "is it possible or advisable to let somebody set a device's kind
+by hand if it was assigned the wrong one?" The short answer is yes and yes, and almost all of this file is about
+the word ONLY in the sentence that makes it safe. Built the same day; the design below is what shipped, and
+**What was built** at the foot says where each part of it lives.*
+
+## The question, and the short answer
+
+**Yes, and the house already does this twice.** `POST /devices/{id}/rename` and `POST /devices/{id}/move` are both
+the same shape: the driver says one thing, the owner says another, and the house remembers the owner. A kind is the
+third field of the three a person can see and disagree with, and it is the only one they currently cannot touch.
+
+**But a kind is not a label, and that is the whole of the design.** A name is what a thing is called. A room is where
+it is. A kind decides what the house will *do* — which controls a pane draws, which words in `commands.py` reach it,
+what a scene sweeps up, and, today, which service the brain calls on Home Assistant. Handing that to a text field
+would promise abilities the device has not got.
+
+So: a person may say what a thing IS, and may not say what it CAN DO.
+
+## Where the kind comes from now
+
+`brain/hub/model.py`'s `capability_for(domain, device_class, words)`, and it is short enough to quote the whole rule:
+
+- HA's **domain** decides it outright for the nine that matter — `CAP_BY_DOMAIN` maps light, switch, media_player,
+  cover, climate, lock, fan, camera, vacuum.
+- A `binary_sensor` becomes motion or contact by its **device class**.
+- A `sensor` becomes `sensor.<class>` for temperature, humidity and illuminance, unless the words naming it look
+  like an appliance — the fridge-thermometer rule.
+- Everything else is not a device as far as this house is concerned.
+
+That is a good rule and it is right nearly always. What it cannot know is what a thing is FOR. A smart plug with a
+lamp on it is `switch.something`, and HA is not wrong — it is a switch. It is also, in the only sense the person
+living there cares about, a light.
+
+## Why this is worth building, and it is not tidiness
+
+Three reasons, in the order they matter.
+
+**The plug-and-a-lamp case is the common one.** A lamp on a smart plug is in a great many houses, and today
+"kitchen lights off" does not touch it: `commands.py` matches the word "lights" to the capability `light`, and this
+thing is a `switch`. The house is wrong in the one place it is least forgivable — the plain sentence a person said
+out loud. Good night misses it. So does Everything off.
+
+**It is exactly the wrongness the panel exists to absorb.** `docs/apps.md` and the product direction both hold that
+the panel must never require Home Assistant's own UI. Re-typing a device is, today, something you can only fix by
+leaving the panel and editing an entity in HA — which is the one move the whole box is shaped to avoid. A name and
+a room can be fixed from the panel. A kind cannot, and it is the one that changes behavior.
+
+**The failure is silent.** A light that shows as a plug still turns on and off, so nothing looks broken. It simply
+never joins in — not in a scene, not in a sentence, not in Everything off. Nobody reports it as a bug; they just
+stop expecting the house to include it.
+
+## The rule that makes it safe
+
+> A device may be shown as any kind whose controls it can already serve, and no other.
+
+A switch can be shown as a light, a fan or a plug: the controls those need are on and off, which is all a switch
+has. A switch may **not** be shown as a cover, which needs a position, or a climate, which needs a temperature. The
+offer is computed from what the entity actually supports, not typed in.
+
+This is not a rule about tidiness either. It is what stops the panel drawing a brightness slider that does nothing.
+
+## The one thing that must not be overridden, and it is a trap
+
+**The override must not be the `capability` field.** `brain/hub/api.py`'s `act()`:
+
+    key = (dev.capability.split(".")[0], action)
+    if key not in SERVICE: raise ValueError(f"{dev.capability} cannot {action}")
+    domain, service = SERVICE[key]
+    await self.ha.call(domain, service, dev.id, **data)
+
+`SERVICE` is keyed by capability, so capability is what picks the Home Assistant service. Write "light" into the
+capability of a `switch.porch_lamp` and the brain calls `light.turn_on` on a switch entity, and HA refuses it. The
+device would then be worse than mis-typed: it would be untouchable, and the panel would have done it.
+
+**And there is a second place, which is the one that would be found last.** `intents.py`'s `plan()` builds a scene's
+service the same way, from the scene's capability rather than the device's:
+
+    if d.capability == cap and (cap, action) in SERVICE:
+        domain, service = SERVICE[(cap, action)]
+
+Selecting the device has to read the override — that is the point, so a re-typed lamp joins Good night. Building the
+call must not. Both lines are in the same `if`, which is exactly how one of them gets changed and the other does not,
+and the failure is silent: the scene runs, the lamp does not move, and nobody is told. Whatever lands here needs a
+test with a re-typed device in a scene, not just a re-typed device.
+
+A third guard in `api.py` reads the same way — the timer route at line 1037 asks whether `(capability, "off")` is in
+`SERVICE` before putting a thing on a timer. That one is correct as it stands and should stay on capability: a timer
+has to know what can really be turned off.
+
+So the shape is two fields, not one:
+
+| | |
+|---|---|
+| `capability` | what the driver says, unchanged, and what `act()` keeps calling the service by |
+| `kind` (new) | what the owner says, where they have said anything. Presentation and grammar read it; the service call never does |
+
+Everything downstream reads `kind or capability`. `act()` alone keeps reading `capability`, and it is worth a
+comment in the code saying why, because it looks like an oversight and is the point.
+
+## What has to read it
+
+- **`commands.py`** — the KINDS table matches words to a capability. This is the reason to build the feature at all;
+  if the grammar does not read the override, the plug-and-a-lamp case is not fixed and only the picture changes.
+- **The panel** — `cap()` in `store.ts` and `paneKind()` in `pane.ts`, which is where a tile, its pane and its verbs
+  are chosen. (An earlier draft of this thinking put the override HERE and only here. That is wrong: the grammar runs
+  in the brain, so a panel-only override would fix the tile and leave the sentence broken.)
+- **Scenes and intents** — `intents.py`, so a re-typed lamp joins Good night with everything else.
+
+## Where it does not apply
+
+**Locks, and covers that are a garage.** `docs/voice.md` gates what voice may do by direction — closing and locking
+from anywhere, opening and unlocking only with more than a voice — and a kind override is a way to walk around that
+gate by re-typing the thing the gate is about. Nothing may be re-typed INTO a lock or a cover, and nothing that is
+one may be re-typed out. The rule costs nobody anything: a lock is a domain HA is never vague about.
+
+**Sensors.** `sensor.*` and the binary sensors are a reading, not a thing to control. The fridge-thermometer rule in
+`capability_for` is a different problem — a device the house should not show at all — and if that rule is wrong for
+a house, the fix is to show or hide the reading, not to re-type it.
+
+## What it looks like on the screen
+
+Where the name is changed, because that is where somebody already is when they notice: the device's own pane, under
+the name. Not a settings page and not a list of every device in the house — a kind is noticed one device at a time,
+standing in front of the thing.
+
+The words matter more than usual here, because "capability" and "domain" are not words this panel uses: **Show this
+as** — a short list of what it may be, with what it is now selected, and one sentence saying why the list is short
+("this plug can be switched on and off, so it can be shown as anything that switches on and off"). A thing whose
+list would have one entry offers nothing at all rather than a menu with no choices in it.
+
+## Decisions to make before building
+
+| Question | Proposal |
+|---|---|
+| One field or two | Two. `capability` is the driver's and keeps picking the HA service; `kind` is the owner's. See the trap above |
+| Where the override is stored | With the other per-device overrides, beside rename and move, so a restore brings it back with the rest of the house |
+| What may be offered | Computed from the entity, never typed. On/off things may become each other; anything needing a position, a temperature or a volume may not |
+| May a lock or a garage be re-typed | No, either way in. It is the one kind a safety rule is written against |
+| Does the grammar read it | Yes, and this is the reason to build it. A panel-only override fixes the picture and leaves the sentence broken |
+| What happens when the driver changes its mind | The owner's `kind` wins and stays. A device whose capability changes underneath — a plug replaced by a real bulb — keeps the owner's answer until they change it, and *This hub* is where that would be visible if it ever matters |
+| Does it need the assistant | No. This is a list computed from one entity's own abilities |
+| Does a re-typed thing say so | On its own pane, quietly — "shown as a light" under the name. Not on the tile: a tile is a glance, and the point of the override is that the thing stops looking unusual |
+
+## Not in this plan
+
+Inventing kinds the house does not have, splitting one entity into two devices, joining two into one, and anything
+that changes what the driver reports rather than how the house reads it. A device that is genuinely wrong IN Home
+Assistant is a Home Assistant problem, and the Advanced door is how you get to it.
+
+## An alarm, and the tap that woke the baby
+
+*Added 15 September 2026, from the report that a stray tap on a tile set off a siren in the night. The
+question asked with it was the right one: "there's no option to show this as an alarm, and a thing like
+this should not just be a switch."*
+
+**Nothing above had considered alarms, and that is the honest answer to "what was the thought here".**
+A siren is not a domain this house knows -- `CAP_BY_DOMAIN` has nine and `siren` is not one, and
+`alarm_control_panel` is read only by `presence.py`, to decide whether anybody is home. So a siren
+arrives as whatever it exposes, which is a `switch`, and from there one rule applies: a switch's tile is
+a toggle, one tap, run at once. Nobody decided a siren should be one-touch. The switch bucket decided
+it, because a siren that presents itself as a switch is indistinguishable from a plug with a lamp on it.
+
+**The rule it should have met already existed, for exactly one action.** `PlainTile.vue` armed on
+`unlock` and nothing else: a door opens on the second tap, never the first. And `docs/voice.md` states
+the principle in general -- *the direction matters more than the device*, and closing and locking are
+free because the failure mode of a misheard "close the garage" is a closed garage. Put a siren through
+that test and it fails: the failure mode of a stray finger is a noise the whole house hears, at 2am,
+and unlike an unlocked door it cannot be put back. So the gap was in which actions the rule named, not
+in the rule.
+
+**`alarm` is therefore a kind, in the on/off group, and the second tap is what hangs off it.** The kind
+is the only way the panel can know: a person tells the house which of the two things it is holding, and
+`asksTwice()` in `app/src/twice.ts` -- one table, read by the tile, the pane's verb row and the
+instrument under it -- decides what waits. Only ONE direction of each pair is in that table. Silencing,
+like locking, is always one tap: a house made quieter should never be made to wait.
+
+Three things went with it, and each is a place the plug's own behavior would have been wrong:
+
+- **No scene names an alarm, in either direction,** and the omission in `intents.py` is the decision
+  rather than an oversight. A siren shown as a plug used to go off with the plugs at Everything off,
+  which looks like a mercy until you notice how many sirens put their ARMED state on that same switch:
+  a nightly Good night would then disarm the house, silently. Sounding one from a scene is worse again.
+  Silencing stays one tap, on the tile, in *On right now*, or in a sentence.
+- **No timer.** The plug's instrument offers *for 10 min / 30 min / an hour* beside its button, one tap
+  each. "Sound the siren for an hour" is not a sentence anybody meant to say. The route refuses it too,
+  and that guard is the one place in `device_timer` that reads `kind_of` rather than `capability` --
+  because a timer switches a thing ON, which is the half that is never free.
+- **It leaves the plug bucket in the grammar.** "Turn on the plugs" reached it while it was a plug.
+  `commands.py` gives the alarm its own word, ahead of the plugs, and its own branch ahead of the
+  generic on/off -- which ends `or rest == ""`, so a bare "the alarm" used to mean turn it on. Silencing
+  answers to every word anybody would use; sounding one needs a word that means it.
+
+The words change with the kind, and that is half of why the second tap is not a surprise: *Sounding* and
+*Silent* rather than On and Off, *Sound it* and *Silence it* on the pane, and a room whose siren is going
+says **Alarm sounding** before it says anything about its lamps.
+
+**What is still a switch: everything the driver does.** `act()` calls `switch.turn_on`, as it does for a
+lamp on a plug, and for the same reason. Nothing here is a new service, a new domain or a new kind of
+device -- it is the house being told what the thing in the hall is for.
+
+## An appliance, and the fridge that has four of them
+
+*Added 16 September 2026, from "the refrigerator's ice maker shows up as a switch, which works, but should it not
+be shown as what it is?" -- and, once it was being built, "keep it generic: the stove, the dishwasher, the washer
+and the dryer arrive the same way."*
+
+**The problem is behavior before it is looks.** A fridge's ice maker reaches the hub as `switch.refrigerator_ice_maker`,
+and HA is not wrong: it is a switch. Shown as a plug it gets a plug's behavior, and a plug makes one promise a fridge's
+feature must not keep -- it goes off when the house empties. Everything off sweeps `("switch", "off")`, so leaving the
+house switched the ice maker off, and "turn off the plugs" reached it through the plug bucket. That is the siren story
+again, with the opposite sign: nothing about an ice maker needs a second tap, and nothing about it should be swept up.
+
+**So `appliance` is a kind, in the on/off group,** and the one sentence under the offer is the whole distinction:
+*a plug goes off with Everything off; an appliance is part of a machine and is left alone.* A space heater on a plug
+stays a plug, on purpose. Nothing in `intents.py` changed to make this true -- `plan()` selects by `kind_of`, and an
+appliance is not a `switch` -- but it is held down by a test, because it is the reason the kind exists.
+
+**One kind, not one per feature.** Ice maker, Ice Bites, power cool, sabbath mode, a dishwasher's delay start, a
+dryer's steam: they all behave the same way, and a catalog of feature kinds would never end and would bloat *Show
+this as*. What tells them apart is their name, and the panel reads it -- a feature with ice in its name wears the
+snowflake the weather already draws, anything else its machine.
+
+**The house guesses, and the owner can overrule.** `guessed_kind()` in `model.py`: a `switch` that HA has not
+classed as an outlet, whose words (the entity's and its hardware's together, the same `words` the fridge-thermometer
+rule reads) match `MACHINE`, is shown as an appliance until somebody says otherwise. `MACHINE` is narrower than
+`APPLIANCE` on purpose: a kettle or a coffee maker on a smart plug is exactly what a plug is for, so those words are
+not in it. The guess lives in `Device.guess`, under the owner's word and over the driver's -- `kind_of(d)` is now
+`kind or guess or capability` -- and the stored override is measured against `default_kind(d)` rather than against
+`capability`, so "it is a plug" on a switch the house took for an appliance is a record that survives a rebuild, and
+"it is an appliance" on the same switch is the way back and leaves nothing behind. `shown_as()` takes the guess for
+the same reason.
+
+**A feature answers to its own name.** "Refrigerator Ice Maker" is also "ice maker" in a sentence, the way "Kitchen
+counter" is also "counter" inside the Kitchen: `_by_name()` shortens by the unit's name (`Device.hw_name`) as well
+as by the room's. "Turn off the plugs" walks past it; "turn off the ice maker" reaches it; so does "the appliances".
+
+**What is on right now does not list it.** An ice maker is on all year, and a card for it in the row of what is on
+would be a card that never leaves. `whatsOn()` and `roomActive()` leave appliances out; the room's line does not
+count them among the plugs; the tile is where its state is, and that is enough.
+
+**And the machine is one thing on the wall.** The threshold for this was "once one machine has three or more
+features on the panel", and the house that asked already had one. `app/src/machines.ts`: two or more appliance
+features on one unit (`hw`, the driver's own grouping) are a machine, drawn by `MachineTile.vue` as one card named
+after the unit with a row per feature -- a tap flips the row, a hold opens it, and the card has no on of its own,
+because "the fridge is on" is not a thing anybody at a wall panel needs telling. Three rows fit a third; more take a
+half. One feature on its own stays a tile. The grouping reads what a thing is SHOWN as, so a feature the owner has
+called a plug leaves the card, and two plugs on one strip never form one.
+
+**The card opens, too.** Held anywhere but on a row, the card opens the machine's own page -- the brain has no
+such device, so `asDevice()` in `machines.ts` hands the pane one: named after the machine, in its room, with its
+features as the instrument (`MachinePane.vue`), a reading that counts what is running, and a day made of its
+features' days. Rename or move from there goes through the first feature, which the brain carries as the
+hardware. A row held opens that feature's own page as before; `hold.ts` keeps a press on a row for the row.
+
+**Not built, and why.** The readings inside the machine -- the fridge and freezer temperatures -- are still not
+devices at all; `capability_for()` hides `APPLIANCE` sensors until there is an appliances view. The card is most of
+that view, and putting the temperatures on it is the next step, but it needs a capability the room strip and the
+thermostat's sensor picker both ignore, and that is its own piece of work. No timer on an appliance: "ice maker for
+ten minutes" is a plug's sentence.
+
+## What was built
+
+1. **The second field.** `Device.kind` beside `capability` in `model.py`, with `kind_of(d)` — `kind or capability` —
+   as the one way everything else reads it. The offer is `kinds_for(capability)`, computed from a `CONTROLS` table
+   of what each kind needs of a device: kinds that want the same controls may stand in for each other and no others,
+   which is why the only group with more than one member is light / plug / fan. Stored in `settings.json` under
+   `kinds`, so a backup carries it; held on `Home.kinds` so a registry rebuild does not forget it.
+
+2. **The three that keep reading `capability`**, each with a comment saying why it looks like an oversight and is not:
+   `act()`, the timer guard beside it, and `intents.plan()`. `plan()` is the one that would have been found last —
+   selecting the device reads `kind_of`, building the call reads `capability`, and they used to be the same `if`.
+   There is a fourth thing the trap turned up: a scene's *data* is shaped for the kind it was written for, so Movie's
+   `brightness_pct: 15` reaches a re-typed plug as a bare on. `act()` drops the extras the same way.
+
+3. **The grammar reads it.** `commands.py` is `kind_of` throughout — the KINDS table, a thing named in full, the room
+   verbs, what is on, what the house answers with. That is the whole reason to build it.
+
+4. **The control on the pane.** *Show this as*, quietly under the name in `Opened.vue`: the line says what it is
+   shown as where somebody has disagreed with the driver, and opens a row of what it may be with the one sentence
+   under it. Nothing is drawn where the offer has fewer than two entries. `GET /devices/{id}/kinds` computes the
+   offer; `POST /devices/{id}/kind` sets it, and the driver's own word clears it.
+
+5. **The gate.** `GATED = ("lock", "cover")` in `model.py`, refused both ways in and tested both ways.
+
+6. **An appliance.** `appliance` in `CONTROLS`; `MACHINE` and `guessed_kind()` beside `APPLIANCE`; `Device.guess`
+   and `Device.hw_name`; `default_kind()` next to `kind_of()`, read by `show_as()` and `shown_as()`. `commands.py`
+   shortens a name by its unit's, and has a word for the kind. On the panel: `cap()` reads the guess, `iconFor()`
+   reads the name, `machines.ts` and `tiles/MachineTile.vue` draw a unit as one card, `RoomView.vue` places it.
+   Tests: the `Appliance*` classes in `brain/tests/test_kinds.py`, and `app/tests/machines.test.ts`.
+
+Tests: `brain/tests/test_kinds.py` (the offer, the scene plan, where it is stored, the service calls, and the
+sentence this is all for) and `app/tests/kinds.test.ts` (what the panel treats a thing as, and what it says).

@@ -1,0 +1,138 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Instrument Sans", -apple-system, "SF Pro Text", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      /* the panel's own tokens, unchanged -- app/src/panel.css */
+      --bg: #0c0d10; --surface: rgba(26,28,34,.68); --surface-hi: rgba(255,255,255,.08);
+      --edge: rgba(255,255,255,.1); --edge-hi: rgba(255,255,255,.18);
+      --ink: #f1eee8; --ink-2: #b9b5ad; --muted: #7f7d77;
+      --lamp: #e9b872; --lamp-ink: #2a1c07; --live: #74c69d; --danger: #e08a8a;
+    }
+    .dsp { font-weight: 400; letter-spacing: -.025em; text-wrap: balance; }
+    .cap { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    /* the sheet, as the panel builds it */
+    .sheet { width: 560px; border-radius: 26px; background: rgba(22,24,30,.92);
+             border: 1px solid var(--edge-hi); box-shadow: 0 40px 100px -30px rgba(0,0,0,.9); overflow: hidden; }
+    .sheet h2 { margin: 0; font-size: 36px; line-height: 1.05; font-weight: 400; letter-spacing: -.025em; }
+    .lede { margin: 0 0 20px; color: var(--ink-2); font-size: 15px; }
+    .btn { display: inline-flex; align-items: center; gap: 8px; padding: 12px 20px; border-radius: 999px;
+           background: var(--ink); color: var(--bg); font-weight: 500; font-size: 17px; }
+    .btn.big { padding: 15px 28px; }
+    .btn.ghost { background: var(--surface-hi); color: var(--ink); border: 1px solid var(--edge); }
+    .btn.sm { padding: 8px 14px; font-size: 14px; }
+    /* a found thing, as the Add screen already draws one */
+    .found { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px;
+             padding: 12px 14px; border-radius: 16px; border: 1px solid rgba(233,184,114,.3);
+             background: linear-gradient(rgba(233,184,114,.1), rgba(233,184,114,.1)), var(--surface); }
+    .found .ic { width: 36px; height: 36px; border-radius: 12px; display: grid; place-items: center;
+                 background: var(--lamp); color: var(--lamp-ink); }
+    .row { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px;
+           padding: 12px 14px; border-radius: 16px; background: var(--surface); border: 1px solid var(--edge); }
+    .t1 { font-size: 15.5px; font-weight: 500; }
+    .t2 { font-size: 13px; color: var(--muted); }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--lamp); }
+    .field { height: 50px; padding: 0 14px; border-radius: 14px; background: var(--surface-hi);
+             border: 1px solid var(--edge); display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 17px; }
+    .bar { height: 6px; border-radius: 999px; background: rgba(255,255,255,.1); overflow: hidden; }
+    .bar i { display: block; height: 100%; border-radius: 999px; background: var(--lamp); }
+  </style>
+</helmet>
+
+<div style="position: relative; width: 1440px; height: 900px; overflow: hidden; background: var(--bg); color: var(--ink); font-size: 17px; line-height: 1.4;">
+
+  <div style="position: absolute; inset: 0; background: linear-gradient(rgb(29,33,46) 0%, rgb(41,42,63) 44%, rgb(92,63,57) 84%, rgb(62,44,42) 100%);"></div>
+  <div style="position: absolute; left: -222px; top: -135px; width: 1855px; height: 1156px; background: radial-gradient(58% 54% at 30% 64%, rgba(72,63,135,.4), transparent 68%), radial-gradient(62% 52% at 54% 110%, rgba(55,51,100,.44), transparent 72%);"></div>
+  <div style="position: absolute; inset: 0; background: linear-gradient(rgba(12,13,16,.14) 0%, rgba(12,13,16,.3) 45%, rgba(12,13,16,.58) 100%);"></div>
+
+  <div style="position: absolute; left: 40px; top: 104px; display: flex; gap: 20px; filter: blur(9px); opacity: .8;">
+    <div style="width: 300px; height: 422px; border-radius: 26px; background: rgba(233,184,114,.16); border: 1px solid rgba(255,255,255,.12);"></div>
+    <div style="width: 300px; height: 422px; border-radius: 26px; background: rgba(26,28,34,.7); border: 1px solid rgba(255,255,255,.1);"></div>
+    <div style="width: 300px; height: 422px; border-radius: 26px; background: rgba(26,28,34,.7); border: 1px solid rgba(255,255,255,.1);"></div>
+    <div style="width: 300px; height: 422px; border-radius: 26px; background: rgba(26,28,34,.7); border: 1px solid rgba(255,255,255,.1);"></div>
+  </div>
+  <div style="position: absolute; inset: 0; background: rgba(6,7,9,.5);"></div>
+
+  <!-- ================================ the sheet ================================ -->
+  <div class="sheet" style="position: absolute; left: 440px; top: 140px;">
+    <div style="display: flex; align-items: flex-start; gap: 14px; padding: 26px 22px 6px 28px;">
+      <h2 class="dsp" style="flex: 1;">Setting up the bridge.</h2>
+    </div>
+    <div style="padding: 4px 28px 26px;">
+      <p class="lede">It is on the hub&rsquo;s cable, so everything it needs is going on it now. About a minute. You can walk away; the wall will say when it is done.</p>
+
+      <!-- the cable, drawn: the puck, a lead, the hub. The picture is the instruction. -->
+      <div style="position: relative; height: 208px; border-radius: 20px; background: rgba(255,255,255,.03); border: 1px solid var(--edge); margin-bottom: 20px; overflow: hidden;">
+        <svg width="504" height="208" viewBox="0 0 504 208" fill="none" style="position: absolute; left: 0; top: 0;">
+          <defs>
+            <linearGradient id="cMatte" x1="0" y1="0" x2=".25" y2="1"><stop offset="0" stop-color="#454954"/><stop offset="1" stop-color="#23262d"/></linearGradient>
+            <linearGradient id="cDark" x1="0" y1="0" x2=".4" y2="1"><stop offset="0" stop-color="#2b2e36"/><stop offset="1" stop-color="#16181d"/></linearGradient>
+            <linearGradient id="cMetal" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#6d7079"/><stop offset="45%" stop-color="#b6bac4"/><stop offset="1" stop-color="#6d7079"/></linearGradient>
+            <radialGradient id="cPool" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#f6dcae" stop-opacity=".85"/><stop offset="55%" stop-color="#e9b872" stop-opacity=".26"/><stop offset="1" stop-color="#e9b872" stop-opacity="0"/></radialGradient>
+          </defs>
+          <!-- the puck: the same object as on board A, prongs and all -->
+          <rect x="92" y="30" width="9" height="30" rx="2.5" fill="url(#cMetal)"/>
+          <rect x="118" y="30" width="9" height="30" rx="2.5" fill="url(#cMetal)"/>
+          <rect x="60" y="56" width="98" height="104" rx="26" fill="url(#cMatte)"/>
+          <rect x="60.8" y="56.8" width="96.4" height="102.4" rx="25.2" stroke="rgba(255,255,255,.16)" stroke-width="1.5"/>
+          <circle cx="109" cy="104" r="34" fill="url(#cPool)"/>
+          <circle cx="109" cy="104" r="6.5" fill="#f8e6c4"/>
+          <!-- the lead: one curve, the way the panel draws anything flexible -->
+          <path d="M158 108 C 206 108, 214 150, 262 150 C 310 150, 316 104, 344 104" stroke="#4a4e58" stroke-width="7" stroke-linecap="round"/>
+          <rect x="152" y="98" width="16" height="20" rx="4" fill="url(#cMetal)"/>
+          <rect x="336" y="94" width="16" height="20" rx="4" fill="url(#cMetal)"/>
+          <!-- the hub -->
+          <rect x="352" y="62" width="112" height="92" rx="20" fill="url(#cDark)"/>
+          <rect x="352.8" y="62.8" width="110.4" height="90.4" rx="19.2" stroke="rgba(255,255,255,.12)" stroke-width="1.5"/>
+          <circle cx="408" cy="108" r="4" fill="#74c69d"/>
+          <ellipse cx="408" cy="156" rx="64" ry="9" fill="rgba(0,0,0,.34)"/>
+        </svg>
+        <span class="t2" style="position: absolute; left: 76px; bottom: 14px;">the bridge</span>
+        <span class="t2" style="position: absolute; left: 388px; bottom: 14px;">the hub</span>
+      </div>
+
+      <div class="bar" style="margin-bottom: 20px;"><i style="width: 64%;"></i></div>
+
+      <!-- what is happening, in the order it happens. Three lines, no jargon in any of them. -->
+      <div style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 22px;">
+        <div style="display: grid; grid-template-columns: 24px 1fr; gap: 12px; align-items: center;">
+          <span style="width: 24px; height: 24px; border-radius: 999px; background: var(--live); display: grid; place-items: center;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#0b2216" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>
+          </span>
+          <span style="color: var(--ink-2); font-size: 15px;">Giving it its software</span>
+        </div>
+        <div style="display: grid; grid-template-columns: 24px 1fr; gap: 12px; align-items: center;">
+          <span style="width: 24px; height: 24px; border-radius: 999px; background: var(--live); display: grid; place-items: center;">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#0b2216" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>
+          </span>
+          <span style="color: var(--ink-2); font-size: 15px;">Putting it on your Wi&#8209;Fi</span>
+        </div>
+        <div style="display: grid; grid-template-columns: 24px 1fr; gap: 12px; align-items: center;">
+          <span style="width: 24px; height: 24px; border-radius: 999px; border: 1.5px solid var(--lamp); display: grid; place-items: center;"><span class="dot"></span></span>
+          <span style="font-size: 15px;">Handing it the keys to your switches</span>
+        </div>
+      </div>
+
+      <div class="row">
+        <span style="width: 36px; height: 36px; border-radius: 12px; display: grid; place-items: center; background: var(--surface-hi);">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ink-2)" stroke-width="1.7" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v5l3 2"/></svg>
+        </span>
+        <span><span class="t1">Nothing to type</span><span class="t2" style="display: block;">No app, no password screen, no code on the box. The hub already knows all of it.</span></span>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

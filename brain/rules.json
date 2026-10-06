@@ -1,0 +1,25 @@
+{
+  "_comment": "Rules as data: when <trigger> [if <conditions>] then <outcome>. File order is priority within a room. Edit and save: the brain reloads on the next use. Vocabulary in docs/phase4-intelligence.md.",
+  "rules": [
+    {
+      "id": "welcome-home",
+      "name": "Lights on where you come in when someone gets home after dark",
+      "room": "entry",
+      "when": {"presence": "somebody"},
+      "if": [["sun", "below", 0]],
+      "then": {"intent": "occupied"},
+      "enabled": true,
+      "by": "user"
+    },
+    {
+      "id": "everyone-out",
+      "name": "Everything off once the last person has been gone five minutes",
+      "room": "home",
+      "when": {"presence": "nobody", "for": 300},
+      "then": {"intent": "away"},
+      "enabled": true,
+      "by": "user"
+    }
+  ],
+  "drafts": []
+}

@@ -1,0 +1,50 @@
+# The front door. Plain http on :80 so a phone can just type hub.local; https alongside it, from
+# Caddy's own little certificate authority, for anyone who installs its root certificate (that is
+# what browsers need before they allow device location, web push and a clean Add-to-Home-Screen).
+#   root certificate: caddy/data/caddy/pki/authorities/local/root.crt
+{
+	local_certs
+	auto_https disable_redirects
+
+	# The away door learns who is really asking. Every connection the relay carries arrives from
+	# `frpc` on loopback, so without this every phone away would be 127.0.0.1 and would share one
+	# bucket of wrong codes (hub/lock.py). `frpc` opens each connection with a PROXY header naming the
+	# phone, and this reads it -- only from loopback, the one place `frpc` runs, so nothing else can
+	# name an address. A connection from loopback without one is taken as it is. docs/away.md, *What
+	# was verified*.
+	servers {$HUB_RELAY_BIND:127.0.0.1}:9443 {
+		listener_wrappers {
+			proxy_protocol {
+				timeout 5s
+				allow 127.0.0.1/32 ::1/128
+			}
+			tls
+		}
+	}
+}
+
+{$HUB_HTTP:http://localhost:8080} {
+	encode gzip
+	reverse_proxy {$BRAIN_UPSTREAM:localhost:8300} {
+		header_up -X-Hub-Via
+	}
+}
+
+{$HUB_HOSTS:https://localhost:8443} {
+	tls internal
+	encode gzip
+	reverse_proxy {$BRAIN_UPSTREAM:localhost:8300} {
+		header_up -X-Hub-Via
+	}
+}
+
+# Away from home: the door the tunnel feeds, and nothing else. It is bound to loopback, so nothing on
+# the Wi-Fi can reach it; a request that arrives here came from outside the house, which is the whole
+# reason it is a door of its own rather than a share of the two above. The stamp is what the brain
+# reads (hub/phones.py, from_away); the two doors above delete any copy a client brought, so it cannot
+# be forged from either side. The relay never adds it: it does not terminate TLS and could not.
+#
+# Which door it is depends on whether the house has a name. HUB_AWAY=on, with HUB_AWAY_NAME, is the
+# public name on a real certificate (away/on.caddy); anything else is the plain door steps 1 and 2 were
+# built on (away/off.caddy). docs/away.md, pieces 2 and 3.
+import away/{$HUB_AWAY:off}.caddy

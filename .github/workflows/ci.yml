@@ -1,0 +1,351 @@
+# Every push and pull request. Eight jobs, and a change has to get past all of them:
+#
+#   brain   the hub's own tests, its linter, and the coverage floor
+#   relay   the registration service the maker runs beside the relay: its tests, its linter, its image
+#   panel   the screens: types, linter, unit tests, coverage floor, and that it builds
+#   e2e     the built panel driven in a real browser against the mock brain, in four shards
+#   shell   the scripts that run on the hub host
+#   secrets that no key or token is being published: the repository is public and every hub clones it
+#   kiosk   the wall's launcher: its own tests, and that it still builds
+#   image   the brain's container, built for both kinds of host but not pushed
+#
+# The image job is here rather than only in brain-image.yml so a Dockerfile that no longer builds is
+# caught on the pull request instead of on main, where it would break the thing install.sh pulls.
+name: ci
+
+on:
+  push:
+    # Every branch, not only main: a long-lived one like panel-bento is exactly where a regression
+    # has time to settle in unnoticed. `development` is the exception, and only because it always
+    # has an open pull request to main -- a push there fired BOTH this and the pull_request trigger,
+    # two full runs of the same commit, and the concurrency group below cannot collapse them because
+    # github.ref differs between the two events. The pull_request run is the one worth keeping: it
+    # tests refs/pull/N/merge, development merged INTO main, which is the thing being decided.
+    # If that PR is ever closed, development stops being covered -- put it back here if so.
+    branches-ignore: ["development"]
+  pull_request:
+  workflow_call:              # the release workflows run this against a tag before they publish
+
+# A second push to the same branch makes the first one's run pointless; stop it rather than queue behind it.
+#
+# github.workflow is the CALLER's name when this runs as a reusable workflow, and it has to be in the
+# group. Both release workflows verify the same tag, so without it they share one group and the second
+# cancels the first — which is exactly what happened to v0.2.0: the brain image's verification was
+# killed three seconds in by the Pi image's, and the build refused to publish a release it could not
+# confirm. Right call by the guard, wrong reason.
+#
+# And the BRANCH, not github.ref, is what the group is keyed on. A push to a branch with a pull request
+# open fired both triggers, and github.ref differs between them (refs/heads/x for the push,
+# refs/pull/N/merge for the pull request), so they sat in two groups and every push ran the whole suite
+# twice -- noticed 2 October 2026, five pull requests in a row. head_ref is the branch on a pull request
+# and empty otherwise; ref_name is the branch (or the tag) on everything else. So both runs of one push
+# now share a group and the second to start cancels the first; it is usually the pull_request run that
+# survives, which is the one worth keeping, but GitHub does not promise the order. The repository is in
+# the group too, so a fork's pull request from a branch called main never cancels a push to ours. A tag
+# has no head_ref, so the release verifications above keep their own groups exactly as before.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.head.repo.full_name || github.repository }}-${{ github.head_ref || github.ref_name }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  brain:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: brain/requirements-dev.txt
+      - run: pip install -r brain/requirements-dev.txt
+      - name: lint
+        run: cd brain && ruff check .
+      - name: tests
+        run: cd brain && python -m pytest tests -q --cov=hub --cov-report=xml --cov-report=term
+      - name: coverage may not go down
+        run: python .github/coverage-check.py brain brain/coverage.xml
+
+  # Not on any hub, but it decides whether every house is carried, and the relay box builds it from a
+  # pinned ref of this repository -- so a ref that does not build is a box that does not come up.
+  relay:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: pip
+          cache-dependency-path: relay/service/requirements-dev.txt
+      - run: pip install -r relay/service/requirements-dev.txt
+      - name: lint
+        run: cd relay/service && ruff check .
+      - name: tests
+        run: cd relay/service && python -m pytest -q
+      - name: the image the relay box builds
+        run: docker build -t relay-service:ci relay/service
+
+  panel:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - run: cd app && npm ci --no-audit --no-fund
+      - name: lint
+        run: cd app && npm run lint
+      # The tokens at the top of panel.css are only the source of the panel's look for as long as
+      # nothing writes their values out by hand. This is the rule that keeps that true -- and the
+      # one that catches a class name colliding with another component's, which neither the
+      # typecheck nor the browser below will ever report.
+      - name: the styles still spell the tokens by name
+        run: cd app && npm run lint:css
+      - name: types
+        run: cd app && npm run typecheck
+      - name: tests
+        run: cd app && npm run test:coverage
+      - name: coverage may not go down
+        run: python3 .github/coverage-check.py panel app/coverage/coverage-summary.json
+      - name: build
+        run: cd app && npm run build
+      # the design sheets are generated from src/art.ts and src/sky.ts; a drawing
+      # changed in one and not the other is exactly the drift they exist to stop
+      - name: the device sheet still matches the panel
+        run: cd app && npm run art-sheet:check
+      - name: the weather sheet still matches the panel
+        run: cd app && npm run weather-sheet:check
+
+  # The Matter bridge. It is the one part of the hub whose bugs land in somebody ELSE's app, so the
+  # unit conversions are checked here: three of them are inversions -- a cover counted from the other
+  # end, a contact whose true means shut, a lock bitmap whose set bit means "not supported" -- and none
+  # of them shows up in a typecheck. matter-bridge/src/units.test.ts.
+  matter-bridge:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: matter-bridge/package-lock.json
+      - run: cd matter-bridge && npm ci --no-audit --no-fund
+      - name: types
+        run: cd matter-bridge && npm run check
+      - name: tests
+        run: cd matter-bridge && npm test
+
+  # Split four ways, because the suite is nearly all of this job's time: 200-odd tests that each
+  # load the panel and wait out real animations. One machine took seven minutes. More machines, not
+  # more workers on one: at four workers a runner is busy enough that the panel's own transitions
+  # run long, and the specs that measure a pane once it has arrived measured it mid-flight instead.
+  # Each shard builds its own panel -- a build is ten seconds, and handing one dist between jobs
+  # would cost more than that in upload and download.
+  e2e-shard:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false        # one red shard should not hide what the other two would have found
+      matrix:
+        shard: [1, 2, 3, 4]
+    name: e2e ${{ matrix.shard }}/4
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - run: cd app && npm ci --no-audit --no-fund
+      # The mock brain serves ../dist, so the panel has to exist before a browser can be pointed at it.
+      - run: cd app && npm run build
+      - run: cd app && npm run build:houses     # the Houses app, which e2e/houses.spec.ts serves itself
+      # The browser is the same download every run until Playwright itself moves, so key it on the
+      # version the lockfile pins. The system libraries it needs are not in the cache and are
+      # installed either way.
+      - id: pw
+        run: echo "version=$(node -p "require('./app/node_modules/@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
+      - id: browser-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-chromium-${{ runner.os }}-${{ steps.pw.outputs.version }}
+      - name: browser
+        if: steps.browser-cache.outputs.cache-hit != 'true'
+        run: cd app && npx playwright install --with-deps chromium
+      - name: browser's libraries
+        if: steps.browser-cache.outputs.cache-hit == 'true'
+        run: cd app && npx playwright install-deps chromium
+      - name: the panel, driven
+        run: cd app && npx playwright test --shard=${{ matrix.shard }}/4
+      - if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-${{ matrix.shard }}
+          # Both: the report is the readable one, test-results/ carries the raw traces that
+          # `npx playwright show-trace` opens.
+          path: |
+            app/playwright-report/
+            app/test-results/
+          retention-days: 7
+
+  # main's protection requires a check called exactly "e2e", and the shards report as "e2e 1/4" and
+  # so on. This is that check: green only when every shard was. `always()` matters -- without it a
+  # failed shard skips this job, and a skipped required check reads as passing.
+  e2e:
+    needs: e2e-shard
+    # Not always(): a run the concurrency group cancelled (the duplicate of a push, above) would still
+    # run this, find its jobs cancelled, and report a failure that is not one. !cancelled() still runs
+    # it -- and still fails it -- when a job it waits on really failed.
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    steps:
+      - run: test "${{ needs.e2e-shard.result }}" = success
+
+  shell:
+    runs-on: ubuntu-latest
+    # One list for both steps below. Job-level rather than a YAML anchor, because Actions does not
+    # support anchors -- a workflow using one does not run at all.
+    env:
+      SHELLS: >-
+        install.sh
+        tools/add-sound.sh
+        tools/dev.sh
+        tools/hooks/pre-commit
+        tools/release.sh
+        driver-layer/radios.sh
+        driver-layer/mqtt-auth.sh
+        driver-layer/host/harden.sh
+        driver-layer/host/firstboot.sh
+        driver-layer/host/update.sh
+        driver-layer/host/restore.sh
+        driver-layer/host/restart.sh
+        driver-layer/host/watchdog.sh
+        driver-layer/host/network.sh
+        driver-layer/host/away.sh
+        driver-layer/host/verify.sh
+        driver-layer/host/channel.sh
+        driver-layer/host/tests.sh
+        driver-layer/host/pi-image/stage-hub/prerun.sh
+        driver-layer/host/pi-image/stage-hub/00-home-hub/*.sh
+    steps:
+      - uses: actions/checkout@v4
+      # `bash -n a.sh b.sh` reads a.sh as the script and everything after it as that script's
+      # arguments, so for the life of this job the syntax step checked install.sh and nothing else:
+      # a broken script anywhere further down the list passed in silence. Hence the loop.
+      - name: syntax
+        run: for f in $SHELLS; do bash -n "$f" || exit 1; done
+      - name: shellcheck
+        run: |
+          sudo apt-get install -y shellcheck >/dev/null
+          shellcheck -S warning -e SC2154 $SHELLS
+
+      # Linting these was the weakest possible guarantee about the three scripts a household most
+      # depends on and can least repair: the undo, the signature that decides what runs as root, and
+      # the hold. This runs them, against a real keypair and a file:// releases server.
+      - name: the update path, run rather than read
+        run: driver-layer/host/tests.sh
+
+  # This repository is public and every hub clones it whole, so a secret that reaches a branch here has
+  # already been handed out. gitleaks, with the rules in .gitleaks.toml, over the tree as it stands and, on
+  # a pull request, over every commit in it, so a key added in one commit and removed in the next still
+  # fails. tools/hooks/pre-commit runs the same scan before a commit, plus a check against the house's real
+  # keys that no pattern here could make.
+  secrets:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: gitleaks
+        env:
+          VERSION: "8.30.1"
+          SHA256: 551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb
+          BASE: ${{ github.event.pull_request.base.sha }}
+          HEAD: ${{ github.event.pull_request.head.sha }}
+        run: |
+          cd "$RUNNER_TEMP"
+          curl -sSfLo gl.tgz "https://github.com/gitleaks/gitleaks/releases/download/v${VERSION}/gitleaks_${VERSION}_linux_x64.tar.gz"
+          echo "$SHA256  gl.tgz" | sha256sum -c -
+          tar -xzf gl.tgz gitleaks
+          cd "$GITHUB_WORKSPACE"
+          "$RUNNER_TEMP/gitleaks" dir . -c .gitleaks.toml --redact --no-banner
+          if [ -n "$BASE" ]; then
+            "$RUNNER_TEMP/gitleaks" git . -c .gitleaks.toml --redact --no-banner --log-opts="$BASE..$HEAD"
+          fi
+
+  kiosk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+      - uses: gradle/actions/setup-gradle@v4
+      - name: tests
+        run: cd kiosk && ./gradlew testDebugUnitTest
+      - name: the wall still builds
+        run: cd kiosk && ./gradlew assembleDebug
+
+  # Built natively on each architecture rather than once under QEMU. Emulating arm64 on an x86
+  # runner cost most of this job's time -- npm ci, npm run build and pip install are exactly the
+  # CPU-bound work emulation is worst at -- and arm64 runners are free for public repositories, the
+  # same ones pi-image.yml already uses. The two now run in parallel, so the job costs the slower
+  # one rather than the sum.
+  #
+  # Every cache needs its own scope. Both builds used to write `type=gha` with no scope, which means
+  # the default key `buildkit` for both: the bridge evicted the brain's cache on every single run and
+  # neither was ever warm. Scope is per image AND per architecture, because the layers differ.
+  image-build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { runner: ubuntu-latest,    platform: linux/amd64, arch: amd64 }
+          - { runner: ubuntu-24.04-arm, platform: linux/arm64, arch: arm64 }
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3      # no setup-qemu-action: the runner IS this architecture
+      - name: the brain's image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: brain/Dockerfile
+          platforms: ${{ matrix.platform }}
+          push: false                       # brain-image.yml publishes; this only proves it still builds
+          cache-from: type=gha,scope=brain-${{ matrix.arch }}
+          cache-to: type=gha,mode=max,scope=brain-${{ matrix.arch }}
+      # The same proof for the bridge, and it earns its minutes on arm64 in particular: a Pi that
+      # cannot pull the image builds it, and a build that only ever worked on amd64 would be found
+      # by the household rather than here.
+      - name: the Matter bridge's image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./matter-bridge
+          file: matter-bridge/Dockerfile
+          platforms: ${{ matrix.platform }}
+          push: false                       # bridge-image.yml publishes; this only proves it still builds
+          cache-from: type=gha,scope=bridge-${{ matrix.arch }}
+          cache-to: type=gha,mode=max,scope=bridge-${{ matrix.arch }}
+
+  # `image` is a required status check on main. A matrix job reports as `image-build (amd64)` and
+  # `image-build (arm64)`, names branch protection has never heard of, so a pull request would wait
+  # for an `image` that never arrives. This keeps that one name, green only if both architectures
+  # built. Change the matrix freely; leave this job's name alone.
+  image:
+    needs: image-build
+    # Not always(): a run the concurrency group cancelled (see e2e above) would still
+    # run this, find its jobs cancelled, and report a failure that is not one. !cancelled() still runs
+    # it -- and still fails it -- when a job it waits on really failed.
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: both architectures built
+        run: |
+          echo "image-build: ${{ needs.image-build.result }}"
+          [ "${{ needs.image-build.result }}" = "success" ]

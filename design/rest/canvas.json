@@ -1,0 +1,195 @@
+{
+  "artboards": [
+    {
+      "file": "Today.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "Today \u2014 a clock and a line about the house",
+      "page": "page-1"
+    },
+    {
+      "file": "GlanceA.dc.html",
+      "x": 1560,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "A \u2014 a row of glance cards along the bottom",
+      "page": "page-2"
+    },
+    {
+      "file": "LedgerB.dc.html",
+      "x": 0,
+      "y": 1180,
+      "w": 1440,
+      "h": 900,
+      "title": "B \u2014 the one line opens into a ledger",
+      "page": "page-2"
+    },
+    {
+      "file": "LeadC.dc.html",
+      "x": 1560,
+      "y": 1180,
+      "w": 1440,
+      "h": 900,
+      "title": "C \u2014 the clock left, ranked cards right",
+      "page": "page-2"
+    },
+    {
+      "file": "GlanceA2.dc.html",
+      "x": 0,
+      "y": 2460,
+      "w": 1440,
+      "h": 900,
+      "title": "A2 \u2014 glance cards, the fact as the big type",
+      "page": "page-2"
+    },
+    {
+      "file": "LedgerB2.dc.html",
+      "x": 3120,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "B2 \u2014 the ledger at across-the-room size (shipped, then revised)",
+      "page": "page-2"
+    },
+    {
+      "file": "FiguresD.dc.html",
+      "x": 3120,
+      "y": 2460,
+      "w": 1440,
+      "h": 900,
+      "title": "D \u2014 A's layout without the cards",
+      "page": "page-2"
+    },
+    {
+      "file": "BesideE.dc.html",
+      "x": 0,
+      "y": 4400,
+      "w": 1440,
+      "h": 900,
+      "title": "E \u2014 the drawing beside the clock",
+      "page": "page-2"
+    },
+    {
+      "file": "CornerF.dc.html",
+      "x": 1560,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "F \u2014 the weather in the top right corner (chosen)",
+      "page": "page-1"
+    },
+    {
+      "file": "FirstG.dc.html",
+      "x": 3120,
+      "y": 4400,
+      "w": 1440,
+      "h": 900,
+      "title": "G \u2014 the weather leads the row",
+      "page": "page-2"
+    }
+  ],
+  "annotations": [
+    {
+      "id": "today",
+      "x": 0,
+      "y": 940,
+      "w": 1100,
+      "page": "page-1",
+      "text": "Today, from App.vue: after three minutes the wall rests to the sky and five centered lines of type. It is calm, but it says very little. \"Something is on in 2 rooms\" does not say which, and does not say it is warm inside or that music is still playing in the kitchen. A household walking past has to wake the panel to find out anything, and waking it drops them on Home rather than on what they wanted to know."
+    },
+    {
+      "id": "glance",
+      "x": 1560,
+      "y": 940,
+      "w": 1100,
+      "page": "page-2",
+      "text": "A, the reference photo. The clock takes the top left, the weather the top right, and four equal cards run edge to edge along the bottom: Home, Lights, Climate, Music. A card is drawn only for something the house has. Music is there only while something plays; when nothing does, its place goes to Next, the soonest routine. A tap on a card wakes the panel onto that thing rather than onto Home. This says the most, and it is the one that looks most like a product. It is also the brightest at 3am, so after bedtime the cards dim with the sky."
+    },
+    {
+      "id": "ledger",
+      "x": 0,
+      "y": 2120,
+      "w": 1100,
+      "page": "page-2",
+      "text": "B keeps today's centered wall and adds no new surfaces. The one line about the house opens into a ledger of four short facts with an icon each, and the weather moves up to share the date's line. Lamp color marks the fact that is live. This reads as a clock first and a dashboard never, and it is the one that sits best in a dark bedroom corridor. Its limit is length: every fact has to fit in two or three words, and there is nothing to tap except the whole screen."
+    },
+    {
+      "id": "lead",
+      "x": 1560,
+      "y": 2120,
+      "w": 1100,
+      "page": "page-2",
+      "text": "C is ranked like the Rooms bento. The clock and weather hold the left half. On the right, the thing most worth knowing leads as a large card (here the music, with its cover), and the rest follow as rows: lights, the warmest room, the house, the next routine. The lead card changes with the house. A door left unlocked, somebody at the door, or a phone asking to join would take it over. This carries the most information without looking busy, but it is the most work to build and needs a ranking rule the house agrees with."
+    },
+    {
+      "id": "round2",
+      "x": 0,
+      "y": 2300,
+      "w": 2900,
+      "page": "page-2",
+      "text": "Round two, 28 September. A and B were close, but the status has to read from across the room, not only when standing in front of the wall. In A and B the fact was 16 to 19px of prose beside an icon. Here the fact is the big type: one or two words at 52 to 76px (Calm, 3 on, 21\u00b0, Playing), with the where below it at 21 to 22px, which is still readable from a few steps away. The clock gives up some size to pay for it."
+    },
+    {
+      "id": "glance2",
+      "x": 0,
+      "y": 3400,
+      "w": 1100,
+      "page": "page-2",
+      "text": "A2 keeps A's cards and makes them taller, with a 64px figure in each. It is the closest to the reference photo. The cards give every fact a clear edge and a place to tap, but four slabs of glass on the wall all night is a lot of surface for a screen at rest."
+    },
+    {
+      "id": "ledger2",
+      "x": 3120,
+      "y": 940,
+      "w": 1100,
+      "page": "page-2",
+      "text": "B2 keeps B's centered clock with a 52px ledger under it. It is the calmest of the three, and everything sits in one block the eye finds at once. Four facts at this size fill the width, so a fifth (Next, a door) has to replace one rather than join them."
+    },
+    {
+      "id": "figures",
+      "x": 3120,
+      "y": 3400,
+      "w": 1100,
+      "page": "page-2",
+      "text": "D sits between the two: A's layout with B's restraint. There are no cards. Each fact stands on the sky under a hairline rule, with a small label above, a 76px figure, and the where below. It has the largest status type of the three and the least chrome, and the rule over Lights turns lamp-colored while something is on. It relies on the sky being dark enough behind the bottom third, which the resting veil already ensures."
+    },
+    {
+      "id": "round3",
+      "x": 0,
+      "y": 4240,
+      "w": 2900,
+      "page": "page-2",
+      "text": "Round three, 28 September. Two notes on the shipped B2. First, the rest screen should draw the weather the way Home does, with WeatherArt's own sun, moon, cloud, rain and snow, not just a word on the date line. Second, a long routine name ran the row off both edges of the wall. On all three boards the line under a fact now wraps to two lines at most and then ends in an ellipsis, and each fact is capped at 330px wide, so the row always stays centered on the screen. The drawing is the real one, taken from the running panel."
+    },
+    {
+      "id": "beside",
+      "x": 0,
+      "y": 5340,
+      "w": 1100,
+      "page": "page-2",
+      "text": "E puts the drawing beside the clock as one lockup, like a complication on a watch face. Nothing else moves, and the temperature stays in words on the date line. It is the smallest change, but the clock is no longer centered on its own, and the drawing sits far from the row it is part of."
+    },
+    {
+      "id": "corner",
+      "x": 1560,
+      "y": 940,
+      "w": 1100,
+      "page": "page-1",
+      "text": "F gives the weather the top right corner at the same size Home gives it, with a large temperature, as in the reference photo. The clock and the row keep the center untouched. It reads the best from across the room, but it is the only thing on the wall that is not in the centered block. Chosen on 28 September, with one change: the clock keeps its AM or PM, as it did before B2, and the time of the next routine carries one too, so the two read the same way. The AM or PM is set at about a third of the digit size, on the same baseline. The digits are what people read from across the room, and the sky and the date already say which half of the day it is, so a full-size PM would nearly double the clock's width for the least useful word on the wall."
+    },
+    {
+      "id": "first",
+      "x": 3120,
+      "y": 5340,
+      "w": 1100,
+      "page": "page-2",
+      "text": "G makes the weather the first fact in the row, with the drawing where the others have an icon: 78\u00b0 large, and Partly cloudy under it. The whole screen stays one centered block, and the weather follows the same grammar as the other facts. That makes five facts, which only fits because the long lines now wrap. The drawing is the smallest of the three here."
+    }
+  ],
+  "launch": {
+    "view": "canvas"
+  }
+}

@@ -1,0 +1,61 @@
+node_modules/
+app/dist/
+brain/.venv/
+brain/events.db
+brain/events.db-journal
+brain/events.db-wal
+brain/events.db-shm
+.DS_Store
+__pycache__/
+*.pyc
+brain/settings.json
+brain/phones.json
+brain/update.json
+brain/restore.json
+brain/coverage.xml
+brain/.coverage
+brain/.pytest_cache/
+brain/.ruff_cache/
+driver-layer/caddy/data/
+driver-layer/host/pi-image/stage-hub/00-home-hub/files/
+driver-layer/ring-mqtt/*
+!driver-layer/ring-mqtt/config.template.json
+driver-layer/matter-bridge-data/
+matter-bridge/data/
+brain/sounds/
+
+
+# The bridge puck: build output, a desk build's secrets, and a module linked in (puck/platformio.ini)
+puck/.pio/
+puck/include/secrets*.h
+puck/private
+puck/.vscode
+
+# Light strip controller: build output
+strip/firmware/.pio/
+brain/mesh-keys.json
+brain/bridge-push/
+strip/firmware/.vscode/extensions.json
+strip/firmware/build
+
+# Light strip controller: ESP-IDF build output and generated config
+strip/firmware/build/
+strip/firmware/build-*/
+strip/firmware/sdkconfig
+strip/firmware/sdkconfig.old
+strip/firmware/managed_components/
+strip/firmware/dependencies.lock
+strip/firmware/.vscode
+
+# Bench scratch, and it has a household Wi-Fi password in it. Never committed.
+test.sh
+
+# The wall panel's boards live in the hardware repository; a checkout may link them in here to view
+# them with tools/dev.sh design, and the link must never be committed.
+design/wall
+relay/terraform/.env
+relay/terraform/relay.plan
+
+# A house's own device scans (tools/discover.py): its addresses and names stay on the machine that made them
+docs/inventory*.md
+docs/discovery.json

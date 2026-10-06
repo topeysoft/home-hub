@@ -1,0 +1,119 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Instrument Sans", -apple-system, "SF Pro Text", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      /* the panel's own tokens, unchanged -- app/src/panel.css */
+      --bg: #0c0d10; --surface: rgba(26,28,34,.68); --surface-hi: rgba(255,255,255,.08);
+      --edge: rgba(255,255,255,.1); --edge-hi: rgba(255,255,255,.18);
+      --ink: #f1eee8; --ink-2: #b9b5ad; --muted: #7f7d77;
+      --lamp: #e9b872; --lamp-ink: #2a1c07; --live: #74c69d; --danger: #e08a8a;
+    }
+    .dsp { font-weight: 400; letter-spacing: -.025em; text-wrap: balance; }
+    /* This hub's rows at their real size: panel.css .hub-rows, not a new look for one row.
+       90px uppercase key, 14.5px value, 13px sub on its own line. */
+    .rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+    .rows > li { display: grid; grid-template-columns: 90px 1fr auto; align-items: center; gap: 14px;
+                 padding: 14px 0; border-bottom: 1px solid var(--edge); }
+    .rows > li:last-child { border-bottom: 0; }
+    .k { font-size: 11.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .v { font-size: 14.5px; line-height: 1.4; }
+    .sub { color: var(--muted); font-size: 13px; }
+    .sub.line { display: block; margin-top: 3px; }
+    .button { display: inline-flex; align-items: center; white-space: nowrap; padding: 7px 14px; border-radius: 999px;
+              background: var(--surface-hi); color: var(--ink); border: 1px solid var(--edge); font-size: 13px; font-weight: 500; }
+    .toggle { width: 42px; height: 25px; border-radius: 999px; background: var(--lamp); position: relative; }
+    .toggle i { position: absolute; right: 3px; top: 2.5px; width: 19px; height: 19px; border-radius: 50%; background: #2a1c07; }
+  </style>
+</helmet>
+
+<div style="position: relative; width: 1440px; height: 900px; overflow: hidden; background: var(--bg); color: var(--ink); font-size: 17px; line-height: 1.4;">
+
+  <!-- the panel's ground -->
+  <div style="position: absolute; inset: 0; background: linear-gradient(rgb(29,33,46) 0%, rgb(41,42,63) 44%, rgb(92,63,57) 84%, rgb(62,44,42) 100%);"></div>
+  <div style="position: absolute; left: -222px; top: -135px; width: 1855px; height: 1156px; background: radial-gradient(58% 54% at 30% 64%, rgba(72,63,135,.4), transparent 68%), radial-gradient(62% 52% at 54% 110%, rgba(55,51,100,.44), transparent 72%);"></div>
+  <div style="position: absolute; inset: 0; background: linear-gradient(rgba(12,13,16,.2) 0%, rgba(12,13,16,.42) 45%, rgba(12,13,16,.66) 100%);"></div>
+
+  <!-- the stage: panel.css pads 34px 40px and stops the content at 1360 -->
+  <div style="position: absolute; inset: 0; padding: 34px 40px 48px;">
+
+    <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 26px;">
+      <span style="width: 36px; height: 36px; border-radius: 999px; background: var(--surface); border: 1px solid var(--edge); display: grid; place-items: center;">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--ink-2)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>
+      </span>
+      <span style="font-size: 11.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted);">Home</span>
+    </div>
+
+    <h1 class="dsp" style="margin: 0; font-size: 56px; line-height: 1.02;">This hub</h1>
+    <p style="margin: 10px 0 30px; color: var(--ink-2); font-size: 18px; max-width: 60ch;">The little computer running the house. It looks after itself; this is where you check on it.</p>
+
+    <ul class="rows" style="max-width: 1360px;">
+      <li>
+        <span class="k">Software</span>
+        <span class="v">2.4.1<span class="sub"> &middot; checked Thu 9:12</span></span>
+        <span class="sub">Up to date</span>
+      </li>
+
+      <!-- ===================== the new row ===================== -->
+      <li>
+        <span class="k">Network</span>
+        <span class="v">
+          On a cable.
+          <!-- The sub is the whole point of the row. A household would never otherwise learn that the
+               hub is ALSO handing a Wi-Fi out, or to how many things. And a hub on a cable cannot
+               check that password, so the row says so rather than stating it as a fact. -->
+          <span class="sub line">Your eleven bridges are on <b style="color: var(--ink-2); font-weight: 600;">Upstairs</b>. The hub can&rsquo;t check that one from a cable, so it takes your word for it.</span>
+        </span>
+        <span class="button">Change</span>
+      </li>
+
+      <li>
+        <span class="k">Updates</span>
+        <span class="v">Installed overnight, on their own.<span class="sub line">Only ones this hub can check, and it puts back any that won&rsquo;t start.</span></span>
+        <span class="toggle"><i></i></span>
+      </li>
+      <li>
+        <span class="k">Backup</span>
+        <span class="v">Everything the house knows, in one file.<span class="sub line">Settings, rooms, routines, the engine&rsquo;s setup and the radios&rsquo; keys. It holds the house&rsquo;s keys, so keep the file private.</span></span>
+        <span class="button">Back up</span>
+      </li>
+      <li>
+        <span class="k">Restore</span>
+        <span class="v">Put a backup back, here or on a new hub.<span class="sub line">Everything running now is replaced by what is in the file.</span></span>
+        <span class="button">Choose a file</span>
+      </li>
+      <li>
+        <span class="k">Restart</span>
+        <span class="v">If something&rsquo;s stuck, turn the hub off and on again.<span class="sub line">Lights and switches keep working. It takes under a minute and this screen comes back on its own.</span></span>
+        <span class="button">Restart</span>
+      </li>
+    </ul>
+
+    <!-- The same row on a hub that is itself on the Wi-Fi. Here rather than on a board of its own
+         because the argument IS the difference between the two sentences: one is a fact the hub
+         checked, the other is a thing it was told. -->
+    <div style="margin-top: 52px; max-width: 1360px; padding: 16px 20px 18px; border-radius: 18px;
+                background: rgba(255,255,255,.03); border: 1px dashed var(--edge);">
+      <span style="display: block; margin-bottom: 12px; font-size: 11.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--lamp); opacity: .8;">The same row on a hub that is on the Wi&#8209;Fi</span>
+      <div style="display: grid; grid-template-columns: 90px 1fr auto; align-items: center; gap: 14px;">
+        <span class="k">Network</span>
+        <span class="v">On <b style="font-weight: 600;">Upstairs</b>. Strong.<span class="sub line">Your eleven bridges are on it too. Change it here and they come with it.</span></span>
+        <span class="button">Change</span>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

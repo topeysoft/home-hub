@@ -1,0 +1,103 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Instrument Sans", -apple-system, "SF Pro Text", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      --bg: #0c0d10; --surface: rgba(26,28,34,.68); --surface-hi: rgba(255,255,255,.08);
+      --edge: rgba(255,255,255,.1); --edge-hi: rgba(255,255,255,.18);
+      --ink: #f1eee8; --ink-2: #b9b5ad; --muted: #7f7d77;
+      --lamp: #e9b872; --lamp-ink: #2a1c07; --live: #74c69d; --danger: #e08a8a;
+    }
+    .dsp { font-weight: 400; letter-spacing: -.025em; text-wrap: balance; }
+    .cap { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .sheet { width: 560px; border-radius: 26px; background: rgba(22,24,30,.92);
+             border: 1px solid var(--edge-hi); box-shadow: 0 40px 100px -30px rgba(0,0,0,.9); overflow: hidden; }
+    .sheet h2 { margin: 0; font-size: 36px; line-height: 1.05; font-weight: 400; letter-spacing: -.025em; }
+    .lede { margin: 0 0 20px; color: var(--ink-2); font-size: 15px; line-height: 1.5; }
+    .t1 { font-size: 15.5px; font-weight: 500; }
+    .t2 { font-size: 13px; color: var(--muted); }
+    .bar { height: 6px; border-radius: 999px; background: rgba(255,255,255,.1); overflow: hidden; }
+    .bar i { display: block; height: 100%; border-radius: 999px; background: var(--lamp); }
+    /* one bridge, by the room it is in. The chip id is never shown: it tells a household nothing. */
+    .b { display: grid; grid-template-columns: 26px 1fr auto; align-items: center; gap: 13px; padding: 10px 4px; }
+    .b + .b { border-top: 1px solid rgba(255,255,255,.055); }
+    .tick { width: 22px; height: 22px; border-radius: 999px; display: grid; place-items: center; }
+    .tick.done { background: var(--live); }
+    .tick.wait { border: 1.5px solid rgba(255,255,255,.22); }
+    .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--lamp); }
+    .row { display: grid; grid-template-columns: auto 1fr; align-items: start; gap: 12px;
+           padding: 13px 15px; border-radius: 16px; background: var(--surface); border: 1px solid var(--edge); }
+    .ic { width: 34px; height: 34px; border-radius: 11px; display: grid; place-items: center; background: var(--surface-hi); }
+  </style>
+</helmet>
+
+<div style="position: relative; width: 1440px; height: 900px; overflow: hidden; background: var(--bg); color: var(--ink); font-size: 17px; line-height: 1.4;">
+
+  <div style="position: absolute; inset: 0; background: linear-gradient(rgb(29,33,46) 0%, rgb(41,42,63) 44%, rgb(92,63,57) 84%, rgb(62,44,42) 100%);"></div>
+  <div style="position: absolute; left: -222px; top: -135px; width: 1855px; height: 1156px; background: radial-gradient(58% 54% at 30% 64%, rgba(72,63,135,.4), transparent 68%), radial-gradient(62% 52% at 54% 110%, rgba(55,51,100,.44), transparent 72%);"></div>
+  <div style="position: absolute; inset: 0; background: rgba(6,7,9,.6);"></div>
+
+  <div class="sheet" style="position: absolute; left: 440px; top: 78px;">
+    <div style="padding: 26px 28px 6px;">
+      <h2 class="dsp">Moving them over.</h2>
+    </div>
+    <div style="padding: 4px 28px 26px;">
+      <!-- "You can walk away" is the same promise the bridge setup sheet makes, and it is true for
+           the same reason: the work is the hub's and the wall will say when it is done. -->
+      <p class="lede">Each one takes the new Wi&#8209;Fi, restarts, and comes back on it. A couple of minutes for all eleven. You can walk away &mdash; the wall will say how it went.</p>
+
+      <div class="bar" style="margin-bottom: 8px;"><i style="width: 27%;"></i></div>
+      <p class="t2" style="margin: 0 0 18px;">Three of eleven are back</p>
+
+      <div style="padding: 2px 2px 4px; margin-bottom: 20px;">
+        <div class="b">
+          <span class="tick done"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#0b2216" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg></span>
+          <span class="t1">Kitchen</span><span class="t2">Back on Downstairs</span>
+        </div>
+        <div class="b">
+          <span class="tick done"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#0b2216" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg></span>
+          <span class="t1">Living room</span><span class="t2">Back on Downstairs</span>
+        </div>
+        <div class="b">
+          <span class="tick done"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#0b2216" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg></span>
+          <span class="t1">Landing</span><span class="t2">Back on Downstairs</span>
+        </div>
+        <div class="b">
+          <span class="tick wait"><span class="dot"></span></span>
+          <span class="t1">Hallway</span><span class="t2" style="color: var(--lamp);">Restarting&hellip;</span>
+        </div>
+        <div class="b">
+          <span class="tick wait"></span>
+          <span class="t1">Back bedroom</span><span class="t2">Waiting its turn</span>
+        </div>
+        <div class="b" style="opacity: .55;">
+          <span class="tick wait"></span>
+          <span class="t1">Study</span><span class="t2">Waiting its turn</span>
+        </div>
+        <p class="t2" style="margin: 12px 0 0 39px;">and five more</p>
+      </div>
+
+      <!-- The one sentence that matters while somebody is watching a progress bar about their house. -->
+      <div class="row">
+        <span class="ic">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--live)" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18h6"/><path d="M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9c.5.4.8 1 .8 1.6v.5h5.4v-.5c0-.6.3-1.2.8-1.6A6 6 0 0 0 12 3z"/></svg>
+        </span>
+        <span><span class="t1">Your switches keep working</span><span class="t2" style="display: block; margin-top: 3px;">The switches on the wall talk to each other directly, so the lights are unaffected by any of this. What pauses is the panel&rsquo;s view of them, one bridge at a time.</span></span>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

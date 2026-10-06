@@ -1,0 +1,73 @@
+// SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+// SPDX-License-Identifier: AGPL-3.0-or-later
+/* After an update the hub comes back on a new build, and the page has to come with it: until it
+ * reloads, the wall is last week's panel talking to this week's brain, and nothing on the glass says
+ * so. What is under test is that the page reloads by itself when the hub answers with a different
+ * version, and that the page after the reload still says what happened -- a toast does not survive
+ * a reload on its own.
+ *
+ * The new version is spoken into the page's own stream by the test, as the hub would speak it when
+ * it comes back: the mock does not restart, and the real one takes the link down for a minute, which
+ * is exactly why the reload rides the version and not the link.
+ */
+import { expect, test } from '@playwright/test'
+
+const WALL = '/?face=glass&layout=wall&nav=top&at=19:40'
+
+test('the wall follows the hub onto the new build, and says so', async ({ page }) => {
+  let speak: ((msg: string) => void) | undefined
+  await page.routeWebSocket('**/stream', ws => { ws.connectToServer(); speak = m => ws.send(m) })
+  await page.goto(WALL, { waitUntil: 'networkidle' })
+  const status = await (await page.request.get('/setup/status')).json()
+  expect(status.version, 'the mock has to say which build it is').toBe('v0.3.0')
+
+  const before = await page.evaluate(() => performance.timeOrigin)
+  const reloaded = page.waitForEvent('load')
+  speak!(JSON.stringify({ type: 'status', status: { ...status, version: 'v0.3.1' } }))
+  await reloaded
+  const after = await page.evaluate(() => performance.timeOrigin)
+  expect(after, 'the page did not reload').toBeGreaterThan(before)
+  await expect(page.locator('.toast')).toHaveText(/Updated to v0\.3\.1\./)
+  // ...and it is the house again, not a page stuck on a message
+  await expect(page.locator('.offline')).toHaveCount(0)
+})
+
+test('the same build again is not an update', async ({ page }) => {
+  let speak: ((msg: string) => void) | undefined
+  await page.routeWebSocket('**/stream', ws => { ws.connectToServer(); speak = m => ws.send(m) })
+  await page.goto(WALL, { waitUntil: 'networkidle' })
+  const status = await (await page.request.get('/setup/status')).json()
+  const before = await page.evaluate(() => performance.timeOrigin)
+  speak!(JSON.stringify({ type: 'status', status }))
+  await page.waitForTimeout(500)
+  expect(await page.evaluate(() => performance.timeOrigin)).toBe(before)
+  await expect(page.locator('.toast')).toHaveCount(0)
+})
+
+/* THE DARK PART OF AN UPDATE CLOSES WHATEVER WAS OPEN. The countdown is drawn on the page under the
+   panes and sheets, so a sheet left up sat over "Updating the hub" and its buttons talked to a hub
+   that had gone. The update is spoken into the stream and then the stream is dropped, which is what
+   the real brain does as it goes. Asked of the browser: what is in the middle of the screen. */
+test('an update going dark closes what was open, so the countdown is what shows', async ({ page }) => {
+  let speak: ((msg: string) => void) | undefined, drop: (() => void) | undefined, gone = false
+  await page.routeWebSocket('**/stream', ws => {
+    if (gone) return                     // the brain is away: nothing answers until it is back
+    ws.connectToServer(); speak = m => ws.send(m); drop = () => ws.close()
+  })
+  await page.goto('/?face=glass&layout=wall&nav=top&at=19:40&sheet=house&outside=1', { waitUntil: 'networkidle' })
+  await expect(page.locator('.house')).toHaveCount(1)
+  await expect(page.locator('.opened.outside')).toHaveCount(1)
+
+  const status = await (await page.request.get('/setup/status')).json()
+  speak!(JSON.stringify({ type: 'status', status: { ...status, update: { requested: true, state: { state: 'running' }, dark_seconds: 45 } } }))
+  // downloading: the house still works, and nothing is taken away from under anyone
+  await page.waitForTimeout(300)
+  await expect(page.locator('.house')).toHaveCount(1)
+
+  gone = true
+  drop!()
+  await expect(page.getByText('Updating the hub')).toBeVisible()
+  await expect(page.locator('.house, .opened, .sheet-back')).toHaveCount(0)
+  const onTop = await page.evaluate(() => !!document.elementFromPoint(innerWidth / 2, innerHeight / 2)?.closest('.offline'))
+  expect(onTop).toBe(true)
+})

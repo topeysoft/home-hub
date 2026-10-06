@@ -1,0 +1,132 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Instrument Sans", -apple-system, "SF Pro Text", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      /* the panel's own tokens, unchanged -- app/src/panel.css */
+      --bg: #0c0d10; --surface: rgba(26,28,34,.68); --surface-hi: rgba(255,255,255,.08);
+      --edge: rgba(255,255,255,.1); --edge-hi: rgba(255,255,255,.18);
+      --ink: #f1eee8; --ink-2: #b9b5ad; --muted: #7f7d77;
+      --lamp: #e9b872; --lamp-ink: #2a1c07; --live: #74c69d; --danger: #e08a8a;
+    }
+    .dsp { font-weight: 400; letter-spacing: -.025em; text-wrap: balance; }
+    .cap { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .phone { position: absolute; top: 244px; width: 366px; height: 596px; border-radius: 40px;
+             background: #14161b; border: 1px solid var(--edge-hi);
+             box-shadow: 0 40px 100px -30px rgba(0,0,0,.9); overflow: hidden; padding: 30px 26px; }
+    .row { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px;
+           padding: 12px 14px; border-radius: 16px; background: var(--surface); border: 1px solid var(--edge); }
+    .row.lit { border-color: rgba(233,184,114,.35);
+               background: linear-gradient(rgba(233,184,114,.1), rgba(233,184,114,.1)), var(--surface); }
+    .ic { width: 36px; height: 36px; border-radius: 12px; display: grid; place-items: center;
+          background: var(--surface-hi); color: var(--ink-2); }
+    .ic.on { background: var(--lamp); color: var(--lamp-ink); }
+    .t1 { font-size: 15.5px; font-weight: 500; }
+    .t2 { font-size: 13px; color: var(--muted); }
+    .btn { display: inline-flex; align-items: center; gap: 8px; padding: 12px 20px; border-radius: 999px;
+           background: var(--ink); color: var(--bg); font-weight: 500; font-size: 17px; }
+    .btn.big { padding: 15px 28px; }
+    .btn.ghost { background: var(--surface-hi); color: var(--ink); border: 1px solid var(--edge); }
+    .sw { fill: #ded8cc; stroke: rgba(0,0,0,.22); stroke-width: 2; }
+    .swf { fill: #fbf8f2; stroke: rgba(0,0,0,.12); stroke-width: 1.4; }
+  </style>
+</helmet>
+
+<div style="position: relative; width: 1440px; height: 900px; overflow: hidden; background: #0c0d10; color: var(--ink); font-size: 17px; line-height: 1.4;">
+  <div style="position: absolute; inset: 0; background: radial-gradient(64% 54% at 22% 18%, rgba(72,63,135,.22), transparent 70%), radial-gradient(56% 48% at 86% 88%, rgba(92,63,57,.2), transparent 72%);"></div>
+
+  <div style="position: absolute; top: 52px; left: 56px; right: 56px;">
+    <h1 class="dsp" style="margin: 0; font-size: 42px;">The panel is also a light switch.</h1>
+    <p style="margin: 10px 0 0; font-size: 17px; color: var(--ink-2); max-width: 96ch;">On the wall the old panel is also a slider somebody reaches for: one of these lights has three switches and the panel is one of them. Taking it down removes a switch position &mdash; and orphans a second switch that was talking to it. Say both before anyone picks up a screwdriver, and fix the half that can be fixed.</p>
+  </div>
+
+  <!-- ============ 1 ============ -->
+  <div class="cap" style="position: absolute; top: 208px; left: 96px;">1 &middot; before the screwdriver</div>
+  <div class="phone" style="left: 96px;">
+    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 22px;">
+      <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--lamp);"></span>
+      <span class="t2">Taking the old panel down</span>
+    </div>
+    <div style="display: grid; place-items: center; margin-bottom: 22px;">
+      <svg width="176" height="124" viewBox="0 0 176 124" fill="none">
+        <rect x="8" y="6" width="160" height="112" rx="12" fill="#1b1d23" stroke="rgba(255,255,255,.22)" stroke-width="2"/>
+        <rect x="20" y="18" width="136" height="58" rx="7" fill="#0f1116" stroke="rgba(255,255,255,.1)"/>
+        <rect x="32" y="86" width="44" height="20" rx="10" fill="rgba(255,255,255,.12)"/>
+        <rect x="100" y="86" width="44" height="20" rx="10" fill="var(--lamp)"/>
+        <circle cx="134" cy="96" r="6" fill="#fbf8f2"/>
+      </svg>
+    </div>
+    <h2 class="dsp" style="margin: 0 0 10px; font-size: 25px;">One of your lights is switched from here.</h2>
+    <p style="margin: 0 0 20px; color: var(--ink-2); font-size: 15px;">The slider on the right works the kitchen table light, alongside the two switches on the wall.</p>
+    <div class="row lit">
+      <span class="ic on"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9V15h7v-1.1A6 6 0 0 0 12 3z"/></svg></span>
+      <span><span class="t1">Kitchen table light</span><span class="t2" style="display: block;">3 switches &middot; one of them is this panel</span></span>
+    </div>
+    <p class="t2" style="position: absolute; left: 28px; right: 28px; bottom: 28px; margin: 0;">Take the panel down and that light has two switches. That part cannot be undone in software, and it is better said now than discovered later.</p>
+  </div>
+
+  <!-- ============ 2 ============ -->
+  <div class="cap" style="position: absolute; top: 208px; left: 537px;">2 &middot; the half the house can fix</div>
+  <div class="phone" style="left: 537px;">
+    <div class="cap" style="margin-bottom: 14px;">what would happen on its own</div>
+    <svg width="314" height="92" viewBox="0 0 314 92" fill="none" style="margin-bottom: 16px;">
+      <rect x="2" y="24" width="48" height="52" rx="8" class="sw"/><rect x="10" y="32" width="32" height="24" rx="5" class="swf"/>
+      <rect x="126" y="24" width="62" height="52" rx="9" fill="#1b1d23" stroke="rgba(255,255,255,.2)" stroke-width="1.6"/>
+      <rect x="136" y="56" width="42" height="12" rx="6" fill="rgba(255,255,255,.14)"/>
+      <path d="M56 50h62" stroke="#e08a8a" stroke-width="2.4" stroke-linecap="round" stroke-dasharray="1 6"/>
+      <g stroke="#e08a8a" stroke-width="2.6" stroke-linecap="round"><path d="M146 30l22 34M168 30l-22 34"/></g>
+      <text x="252" y="46" text-anchor="middle" fill="#e08a8a" font-family="Instrument Sans, sans-serif" font-size="13">gone</text>
+      <text x="252" y="64" text-anchor="middle" fill="#7f7d77" font-family="Instrument Sans, sans-serif" font-size="12">so this one dies</text>
+    </svg>
+    <p style="margin: 0 0 22px; color: var(--ink-2); font-size: 14.5px;">One of the wall switches sends its press to the panel. With the panel gone it would be a plate that does nothing &mdash; the light would answer at one switch only.</p>
+    <div style="height: 1px; background: var(--edge); margin: 0 -26px 22px;"></div>
+    <div class="cap" style="margin-bottom: 14px;">what it does instead</div>
+    <svg width="314" height="76" viewBox="0 0 314 76" fill="none" style="margin-bottom: 14px;">
+      <rect x="2" y="12" width="48" height="52" rx="8" class="sw"/><rect x="10" y="20" width="32" height="24" rx="5" class="swf"/>
+      <rect x="252" y="12" width="48" height="52" rx="8" class="sw"/><rect x="260" y="20" width="32" height="24" rx="5" class="swf"/>
+      <path d="M56 38h180" stroke="var(--live)" stroke-width="2.4" stroke-linecap="round"/>
+      <path d="M230 31l8 7-8 7" stroke="var(--live)" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="276" cy="56" r="4" fill="var(--lamp)"/>
+    </svg>
+    <p style="margin: 0; color: var(--ink-2); font-size: 14.5px;">It points that switch at the one the lamp is wired to instead. One thing written, once, before the panel comes off &mdash; and then the two of them talk to each other with nothing in the middle.</p>
+  </div>
+
+  <!-- ============ 3 ============ -->
+  <div class="cap" style="position: absolute; top: 208px; left: 978px;">3 &middot; and the hole it leaves</div>
+  <div class="phone" style="left: 978px;">
+    <div style="display: grid; place-items: center; margin: 2px 0 16px;">
+      <span style="width: 56px; height: 56px; border-radius: 18px; background: var(--live); color: #0b2216; display: grid; place-items: center;">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 13l4 4L19 7"/></svg>
+      </span>
+    </div>
+    <h2 class="dsp" style="margin: 0 0 8px; font-size: 26px; text-align: center;">Ready for the screwdriver.</h2>
+    <p style="margin: 0 0 18px; color: var(--ink-2); font-size: 15px; text-align: center;">Both wall switches keep working the light, with the house out of the path entirely.</p>
+    <div class="row lit" style="margin-bottom: 12px;">
+      <span class="ic on"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9V15h7v-1.1A6 6 0 0 0 12 3z"/></svg></span>
+      <span><span class="t1">Kitchen table light</span><span class="t2" style="display: block;">2 switches &middot; dims &middot; motion</span></span>
+      <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--live);"></span>
+    </div>
+    <div style="padding: 13px 16px 14px; border-radius: 18px; background: var(--surface); border: 1px solid var(--edge);">
+      <div class="t1" style="margin-bottom: 6px;">It is a two-gang box</div>
+      <div class="t2">So two switches go back where the panel was, and every position it held comes back as a real switch. Add them the usual way and the house pairs each one to its light.</div>
+    </div>
+    <div style="position: absolute; left: 26px; right: 26px; bottom: 28px; display: grid; place-items: center; gap: 10px;">
+      <span class="btn big">Done &mdash; take it down</span>
+      <span class="btn ghost" style="font-size: 15px;">Show me what it was switching</span>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

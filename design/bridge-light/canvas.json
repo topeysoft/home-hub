@@ -1,0 +1,116 @@
+{
+ "launch": {
+  "view": "canvas",
+  "page": "light"
+ },
+ "artboards": [
+  {
+   "file": "Today.dc.html",
+   "x": 0,
+   "y": 0,
+   "w": 1440,
+   "h": 900,
+   "title": "Today — green means your wall switches",
+   "page": "light"
+  },
+  {
+   "file": "HubA.dc.html",
+   "x": 1560,
+   "y": 0,
+   "w": 1440,
+   "h": 900,
+   "title": "A — green means it reached the hub",
+   "page": "light"
+  },
+  {
+   "file": "StripB.dc.html",
+   "x": 0,
+   "y": 0,
+   "w": 1440,
+   "h": 900,
+   "title": "B — green means it can hear the strip it is for",
+   "page": "light-rejected"
+  },
+  {
+   "file": "QuietC.dc.html",
+   "x": 1560,
+   "y": 0,
+   "w": 1440,
+   "h": 900,
+   "title": "C — dark, unless something is wrong",
+   "page": "light-rejected"
+  }
+ ],
+ "annotations": [
+  {
+   "id": "why",
+   "x": -620,
+   "y": 0,
+   "w": 500,
+   "text": "WHY THIS EXISTS\n\nThe wall-switch part of the bridge is moving to a repository of its own (5 October 2026), so the bridge anybody else can build carries no wall switches. It still does real work: it reaches light strips the hub cannot hear from where it sits, listens for new ones asking to be set up, and can be a nightlight.\n\nIts light was designed for one question, asked at a socket with the bridge in your hand -- is here good? -- and the answer was about switches (design/puck/Placing.dc.html). Without switches that light has no green: in a perfectly good spot it blinks amber for ever and then breathes red. So the light needs a promise of its own before the firmware is split, because what green means is the one part of the split that is a decision rather than plumbing.\n\nA bridge that carries wall switches keeps today's light exactly. Every board here is only about one that does not.",
+   "page": "light"
+  },
+  {
+   "id": "today",
+   "x": 0,
+   "y": 960,
+   "w": 700,
+   "text": "TODAY\n\nDrawn from the shipped light (lightRefresh in the bridge's firmware): green needs the switch link AND the hub, amber is looking, red is three empty scans. The phone card counts switches. Nothing on it can be true of a bridge with no switches.",
+   "page": "light"
+  },
+  {
+   "id": "a",
+   "x": 1560,
+   "y": 960,
+   "w": 700,
+   "text": "A -- GREEN MEANS IT REACHED THE HUB\n\nThe smallest promise that is still worth a light: on the Wi-Fi, and the hub answers. The bridge can check it alone, so it works the day it arrives and in a house with no strips yet.\n\nWhere it should go for a particular strip moves to that strip's own row, which the hub already draws.\n\nThe risk is the obvious one: green beside the router is green and useless for a strip at the far end of the garden.",
+   "page": "light"
+  },
+  {
+   "id": "b",
+   "x": 0,
+   "y": 960,
+   "w": 700,
+   "text": "B -- GREEN MEANS IT CAN HEAR THE STRIP IT IS FOR\n\nKeeps what green means today -- the thing you are placing it for can be heard -- with strips in place of switches. The hub knows which strips it hears badly, so it tells the bridge which ones are its job; with none, reaching the hub is enough.\n\nThe cost is a new message from the hub to the bridge, and a rule for a house with two bridges and three strips. It is the most work and the most honest light.",
+   "page": "light-rejected"
+  },
+  {
+   "id": "c",
+   "x": 1560,
+   "y": 960,
+   "w": 700,
+   "text": "C -- DARK, UNLESS SOMETHING IS WRONG\n\nNo placing ritual at all for a strip bridge. Placing happens inside the strip's setup, on the screen that already knows whether the strip can be heard, and the bridge only speaks up when it cannot reach the hub.\n\nThis turns down the argument the switch bridge was built on -- that the thing in your hand should answer -- on the grounds that a strip bridge is placed for a strip, after the strip, from the strip's screen. A bridge bought before any strip says nothing at all.",
+   "page": "light-rejected"
+  },
+  {
+   "id": "pick",
+   "x": -620,
+   "y": 1400,
+   "w": 500,
+   "text": "CHOSEN 5 OCTOBER 2026 -- A\n\nOn a bridge with no wall switches, green means it reached the hub: on the Wi-Fi, and the hub answers. Amber is finding the hub; red is no Wi-Fi here, try a socket nearer the router. Where a bridge should go for a particular strip is said on that strip's own row, by the hub.\n\nB and C are on the next page with their cases intact: B for the day green beside the router turns out to be the bridge people leave in the wrong place, C for the day placing moves into the strip's setup anyway.\n\nUntouched by the choice: a bridge that carries wall switches keeps today's light exactly, and the Add screen offers 'A switch on the wall' only when such a bridge is set up -- the existing rule that a door the house cannot walk through is not offered.",
+   "page": "light"
+  }
+ ],
+ "reading": [
+  "why",
+  "Today.dc.html",
+  "today",
+  "HubA.dc.html",
+  "a",
+  "pick",
+  "StripB.dc.html",
+  "b",
+  "QuietC.dc.html",
+  "c"
+ ],
+ "pages": [
+  {
+   "id": "light",
+   "name": "The bridge light"
+  },
+  {
+   "id": "light-rejected",
+   "name": "The bridge light: not chosen"
+  }
+ ]
+}

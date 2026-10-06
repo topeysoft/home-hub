@@ -1,0 +1,83 @@
+{
+  "artboards": [
+    {
+      "file": "Now.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "The row on This hub"
+    },
+    {
+      "file": "Which.dc.html",
+      "x": 1560,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "Which Wi\u2011Fi \u2014 and what moves with it"
+    },
+    {
+      "file": "Moving.dc.html",
+      "x": 3120,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "The move, one bridge at a time"
+    },
+    {
+      "file": "Followed.dc.html",
+      "x": 0,
+      "y": 1080,
+      "w": 1440,
+      "h": 900,
+      "title": "The ending this exists for"
+    },
+    {
+      "file": "Behind.dc.html",
+      "x": 1560,
+      "y": 1080,
+      "w": 1440,
+      "h": 900,
+      "title": "The ending that will also happen"
+    }
+  ],
+  "annotations": [
+    {
+      "id": "why",
+      "text": "WHAT THESE ANSWER\n\nThe hub was designed on a cable, and the Wi\u2011Fi it hands to a bridge puck is a copy somebody typed once and nothing ever re-checks. Change the house password, or move the hub to another router, and the hub keeps confidently writing the old credentials into every new puck \u2014 and every puck already on a shelf goes deaf with no way back but a USB cable and a walk around the house.\n\ndocs/network.md is the design. These are the screens in it, drawn before they are built. The wall is 1440\u00d7900."
+    },
+    {
+      "id": "a",
+      "text": "ONE ROW, NOT A PAGE OF KNOBS\n\nThis hub already keeps the rule: a setting lives next to the thing it changes, and each row is a key, a plain sentence, and the one thing you can do about it. Network is a row like the others.\n\nThe second sentence of the row is the whole argument. A household would never otherwise learn that the hub is handing a Wi\u2011Fi out, or to how many things. And a hub on a cable cannot verify that password, so the row says so rather than stating it as a fact \u2014 a sentence the hub cannot check should be phrased as one it cannot check.\n\nThe dashed panel at the foot is the same row on a hub that is itself on the Wi\u2011Fi. The board is here to be judged on the difference between those two sentences."
+    },
+    {
+      "id": "b",
+      "text": "THE CONSEQUENCE BEFORE THE CHOICE\n\nThe lede says what moves before the list says where to. This is not a setting on one box; it is a change to twelve things, and putting that after the choice would be a small dishonesty.\n\nThe password opens under the network it belongs to \u2014 no second screen, because there is no second decision.\n\nThe green row is the one that makes the button safe to press. Every bridge keeps its old credentials as well as its new ones, so a mistyped password repairs itself in minutes. That is a real property of the firmware (docs/network.md, piece 3), not reassurance, and it is worth a whole row."
+    },
+    {
+      "id": "c",
+      "text": "BY ROOM, NEVER BY CHIP\n\nEleven bridges, named by where they are. A chip id tells a household nothing and this list is the one place they would be forgiven for thinking otherwise.\n\n\u201cYour switches keep working\u201d is the sentence people actually want while they watch a progress bar about their own house. It is true for a reason this product paid for: the wall switches talk to each other directly and the bridge is out of the path. What pauses is the panel's view of them."
+    },
+    {
+      "id": "d",
+      "text": "SAY THE NUMBER\n\nAll eleven. Not \u201cDone\u201d. The number is what teaches a household that this is a thing the house does completely, and therefore a thing that is safe to do again \u2014 which is the entire reason the screen is not skipped when nothing went wrong.\n\nThe two rows under it close the two questions somebody would otherwise carry around: the old Wi\u2011Fi is still on them for now and the hub will tidy that up itself, and nothing here moved the hub off its cable."
+    },
+    {
+      "id": "e",
+      "text": "NINE FIRST\n\nA headline that leads with the failure teaches a household to fear a button that mostly works. The house did its job nine times.\n\nAmber, not red, and the reason is on the board: the lights in those rooms still work. What was lost is the hub's view of them.\n\nThe recovery is one sentence with no apology in it and no support article behind it. Two bridges that never came back become a line on Home tomorrow, carrying this same sentence \u2014 that is health.py's job and it is the last item in the doc's order."
+    }
+  ],
+  "reading": [
+    "why",
+    "a",
+    "Now.dc.html",
+    "b",
+    "Which.dc.html",
+    "c",
+    "Moving.dc.html",
+    "d",
+    "Followed.dc.html",
+    "e",
+    "Behind.dc.html"
+  ]
+}

@@ -1,0 +1,41 @@
+# What the secret scan looks for, in CI and in the pre-commit hook (tools/hooks/pre-commit).
+#
+# This repository is public and every hub clones it whole, so anything committed here has been handed
+# to strangers and to every house at once, and taking it out again does not take it back. On 16
+# September 2026 a house's Brilliant network and application keys went in beside a line saying never
+# to commit them, and stayed for two weeks. gitleaks' own rules cover the tokens and private keys of
+# the services the hub talks to; the rule below is the one kind of secret this project makes itself.
+
+[extend]
+useDefault = true
+
+# A Bluetooth mesh key is 32 hex characters and looks like any other hash, so it is only flagged when
+# it is written beside its name. The hook's house-keys check is the stronger guard for the real keys:
+# it compares against the files they live in, in every spelling.
+[[rules]]
+id = "bluetooth-mesh-key"
+description = "A Bluetooth mesh network, application or device key written beside its name"
+regex = '''(?i)\b(?:net|app|dev|network|application|device)[ _-]?key\b.{0,60}?\b([0-9a-f]{32})\b'''
+secretGroup = 1
+keywords = ["netkey", "appkey", "devkey", "net_key", "app_key", "dev_key", "network key", "application key", "device key"]
+
+  # Values that are meant to be read: the Mesh Profile 1.0.1 sample data (its NetKey and AppKey), and
+  # the device key the provisioner's native test derives from its fixed transcript.
+  [[rules.allowlists]]
+  regexTarget = "secret"
+  regexes = [
+    '''(?i)^7dd7364cd842ad18c17c2b820c84c3d6$''',
+    '''(?i)^63964771734fbd76e3b40519d1d94a48$''',
+    '''(?i)^b0b010bc7ad7208bad26168cfbf659e9$''',
+  ]
+
+# The same published sample values, for every rule: gitleaks' own generic one reads a 32-hex AppKey
+# beside its name as an API key, which is exactly what it would be if it were not the spec's.
+[[allowlists]]
+description = "Bluetooth Mesh Profile 1.0.1 sample data, and test transcripts"
+regexTarget = "secret"
+regexes = [
+  '''(?i)^7dd7364cd842ad18c17c2b820c84c3d6$''',
+  '''(?i)^63964771734fbd76e3b40519d1d94a48$''',
+  '''(?i)^b0b010bc7ad7208bad26168cfbf659e9$''',
+]

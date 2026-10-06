@@ -1,0 +1,437 @@
+# home-hub
+
+A smart home hub built on the principle **own the experience and the intelligence, rent the drivers**.
+Plan of record: https://claude.ai/code/artifact/cc81890a-a928-4c6f-a65d-7844fe67fbcb
+
+## For the person receiving one
+
+1. Plug the hub into power and the router (or its Wi‑Fi). Wait two minutes.
+2. On a phone or tablet on the same Wi‑Fi, open **http://hub.local**.
+3. Answer the questions on the screen: your name, where home is, which rooms, what to add.
+
+That is the whole setup. Devices already on the Wi‑Fi (TVs, speakers, bridges) are noticed on
+their own and offered under *Found nearby*; anything else is added by brand from the same screen.
+Things that live behind an account (Nest, Ring, Tesla) sign in from that screen too. A few, Google's
+Nest first among them, make every home bring its own key; the screen walks through getting one, with
+the exact address to paste and a copy button, and the maker's own steps follow one at a time. The key
+file Google hands out can be dropped or pasted straight onto that screen instead of copying its parts.
+Zigbee, Z‑Wave and Matter devices pair from the same screen: the hub opens its door and says what to press.
+Things that don't know their room wait under *New devices* until you place them; each arrives with a
+suggested name and room and one *Use* button. Names there are whatever the driver called them
+("Brilliant switch 000a", "Wiz RGBW Tunable ABC123"), so every row also says what account brought it
+in and which model it is, and offers to blink it: the house flashes that one thing three times and
+puts it back exactly as it found it, so you can stand in the room and see which row you are naming.
+Go the other way round for anything within reach — press a switch on the wall and its row says so. A box at the top of Home takes plain words: *kitchen lights off*,
+*movie in the den*, *is the front door locked?*. Simple sentences run at once, the way a tap does; anything else
+goes to the assistant, which proposes and waits for your tap. The Done screen and *This hub* show a code a
+phone's camera opens the house from, with the steps to put it on the phone's home screen. Once the house has a
+code, only the phones it has let in can run it: a new phone asks from its own screen, someone at the wall taps
+*Allow* for today, the weekend or for good, and every phone is listed under *This hub* with one *Remove*. Nothing on the
+panel ever mentions Home Assistant, entities, or YAML.
+
+## For the person building one
+
+Any Linux box with systemd is a hub host: a Raspberry Pi 5, an Intel NUC, a mini PC, a VM under
+Proxmox, running Debian, Ubuntu, Raspberry Pi OS or Fedora. One line:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/topeysoft/home-hub/main/install.sh | sudo bash
+```
+
+`install.sh` installs Docker, names the machine `hub` (so it answers at `hub.local`), writes
+`driver-layer/.env`, pulls the brain image (CI publishes it for amd64 and arm64; it is built locally
+only if the pull fails), and starts everything with Docker Compose. Radio sticks can be plugged in
+before or after: `driver-layer/radios.sh` finds them, and a udev rule reruns it whenever one is
+plugged in or pulled. Radios on the network (an Ethernet Zigbee coordinator, a PoE Z-Wave dongle)
+go in `.env` as `ZIGBEE_NET` / `ZWAVE_NET` and the host needs no USB at all. The brain creates its
+own login to the driver layer during the on-screen setup and adds MQTT, Z-Wave and Matter to it by
+itself, so there is no token to copy and no Home Assistant UI to visit.
+
+A flashed image rather than an install runs `driver-layer/host/firstboot.sh` once through
+`home-hub-firstboot.service`: everything Pi-specific (bootloader, PCIe for an NVMe base, copying
+itself from SD to an empty NVMe) happens there, then the install script. That image is built by CI on
+every version tag and attached to the release as `home-hub-<tag>-hub.img.xz`: flash it with Raspberry
+Pi Imager (*Use custom*), insert, power, wait, open `http://hub.local`. See `driver-layer/host/pi-image/`.
+The steps below get a Pi to the same place by hand.
+
+macOS is for developing, not for running the house: Docker Desktop cannot hand USB sticks to
+containers, cannot pass multicast (so no mDNS discovery), and needs someone logged in. See
+*Developing on the Mac* below.
+
+### Getting a Pi 5 to that point
+
+1. In Raspberry Pi Imager pick Raspberry Pi OS Lite (64-bit). In its settings set the hostname to
+   `hub`, your user and SSH key, the timezone, and Wi‑Fi only as a fallback; Ethernet is what a hub wants.
+2. Flash the NVMe SSD directly if you have a USB enclosure, otherwise the SD card. A third-party NVMe
+   base needs `dtparam=pciex1` in `config.txt` on the boot partition; the official M.2 HAT+ does not.
+3. Boot with no SD card inserted to boot from NVMe. If it does not, boot the SD card once, run
+   `sudo rpi-eeprom-update -a`, set NVMe first under Advanced Options → Boot Order in `raspi-config`,
+   and clone the card to the SSD with `rpi-clone`.
+4. `sudo apt update && sudo apt full-upgrade -y && sudo rpi-eeprom-update -a && sudo reboot`, then
+   the one line above.
+
+Sticks go in the USB 2 ports on a short extension cable; USB 3 and the NVMe are noisy neighbors for
+Zigbee in particular. Moving from a Mac that ran the stack: copy `driver-layer/ring-mqtt/` across
+first to skip Ring's sign-in, do not copy `driver-layer/homeassistant/`, and stop the Mac's ring-mqtt
+container before the Pi's first start so the two do not fight over Ring's token.
+
+## Layout
+
+- `tools/dev.sh` — the first command to run in a clone, and the one to run after a break: what this
+  is and what to run, or where you left it, and then the panel on a mock house. Nothing below needs
+  to be installed by hand.
+- `install.sh` — the one-command install for the hub host. `driver-layer/radios.sh` finds the Zigbee and
+  Z-Wave sticks and starts their containers; a udev rule runs it again whenever a stick is plugged in or pulled.
+- `driver-layer/` — Docker Compose for the whole hub: Home Assistant Core (headless), Mosquitto,
+  Zigbee2MQTT and Z‑Wave JS UI (profiles, on only when a stick is found), python-matter-server,
+  the brain, the Matter bridge, and Caddy as the front door (`http://hub.local`, plus `https://` for those who install
+  the root certificate).
+- `brain/` — Python/FastAPI service on :8300: semantic home model, room-state intent engine, event
+  log, websocket stream, first-run setup, device discovery. Talks only to HA's websocket and REST.
+  Serves `app/dist`. `brain/Dockerfile` packages it with the panel built in.
+- `app/` — Vue PWA for the wall kiosk and phone (`npm run build` → served by the brain).
+- `design/` — the artboards: what a screen should look like, drawn at the size of the real display,
+  before it is code. One directory per area, each with a `canvas.json` placing every board and the
+  note that argues it. `tools/dev.sh design` opens the lot in a browser, on the canvas they were
+  drawn on. A UI change starts here — see [`AGENTS.md`](AGENTS.md#1-a-screen-is-drawn-before-it-is-built).
+- Boards and enclosures — the puck, the wall panel and their studies — live in a separate, private
+  repository, [`topeysoft/home-hub-hardware`](https://github.com/topeysoft/home-hub-hardware). Every
+  hub clones this one, and no house needs megabytes of board files. Its README says how to view the
+  wall boards here through `design/wall`, which this repository ignores.
+- `matter-bridge/` — the house as Apple Home, Google Home and Alexa see it: a Matter bridge (matter.js on Node)
+  with one endpoint per shared thing, so this house's lights and plugs become Matter devices in those apps. It
+  decides nothing — `brain/hub/share.py` hands it the list, and the rules about what may leave the house have tests
+  there. Nothing is shared until the panel's switch is thrown (*Share this house*, its own door), and until then it
+  announces nothing at all. `docs/matter.md`, `design/share/`, `matter-bridge/README.md`.
+- `kiosk/` — the wall's home screen: a small Android launcher that boots into the panel, stays awake and
+  full screen, finds the hub over mDNS when `hub.local` will not resolve, and has one way out (the clock's
+  corner, held). It draws no house of its own; the panel comes from the hub. `kiosk/README.md`.
+- The command box: `POST /say` runs `brain/hub/commands.py`, a fixed grammar over the house's own names (rooms and their
+  usual other names, devices, kinds, scenes, sounds) that executes at once and deterministically. What it cannot place
+  goes to the assistant, which only proposes. Every sentence is logged as a `said` event, understood or not, so the
+  grammar grows from what people actually say. The microphone comes later: `docs/voice.md`.
+- New devices: `GET /suggestions` (`brain/hub/suggest.py`) proposes a plain name and a room for each unplaced thing, from
+  the words in its name and its hardware first, then from the assistant for whatever is still unplaced. Nothing moves
+  until *Use*; that goes through the same guarded move and rename routes as doing it by hand. Telling one row from
+  another is two halves that meet in the middle: a press on a wall lights its row (`app/src/pressed.ts`), and
+  `POST /devices/{id}/identify` blinks a light, plug or fan three times and restores it, brightness and all, for
+  everything nobody can reach. What each row knows besides its name — the account, the model — is `app/src/telling.ts`.
+- Phones: once a code is set, every request needs a phone cookie (`brain/hub/phones.py`, `phones.json` in the data
+  directory, hashes only). The screen that sets the first code is paired on the spot; a phone types the code
+  (`POST /phones/code`) or asks (`POST /phones/ask`, polling `GET /phones/claim/{id}`) and a paired screen allows it
+  behind the code (`POST /phones/asks/{id}/allow`, for a day, a weekend or to keep). `GET /phones` lists them, `DELETE`
+  removes one at once. Every phone starts home-only; `remote` waits for the relay. The plan: `docs/away.md`.
+- The driver layer is pinned. Every image in `driver-layer/docker-compose.yml` names the release this code was tested
+  against (Home Assistant 2026.9.1, Zigbee2MQTT 2.14.1, Z-Wave JS UI 11.23.0, Matter server 8.1.2, ring-mqtt 5.9.3).
+  Bumping one is a commit, so it rides the hub's own update and a breaking upstream release never reaches a house unread.
+- Updates: the brain knows which build it is and checks GitHub's main a few times a day. When it has moved on, Home
+  shows *An update is ready*; one tap (behind the settings code) writes `brain-data/update.request`, a systemd path
+  unit on the host runs `install.sh` again, and the panel comes back on the new build. `driver-layer/host/update.sh`.
+  **An update that does not come back is undone by the hub itself.** Before anything moves, where it was — the commit
+  and the image the brain container is actually running — goes into `brain-data/update.prev`; afterwards the brain has
+  to answer on `127.0.0.1:8300/alive` and keep answering, or the old commit and the old image go back and the version
+  that did it is named in `update.json`. Home then stops offering that version on its own; the button under *This hub*
+  still installs it, because a person trying again is a different thing from a hub deciding to. Putting it back needs
+  no network, which matters when the thing that broke was the network.
+  **A hub that can check what it is installing installs it overnight, on its own**, in the small hours, at a minute
+  of its own derived from its id (so ten thousand houses do not move at once) and only once nobody has asked the
+  house for anything for half an hour. One switch under *This hub* turns that off and it stays off; a hub with no
+  release keys waits to be asked, because updating by itself from something nothing checks is the supply-chain
+  problem with the person taken out of it. An automatic install is logged as the hub's doing, not a person's.
+  **What changed is on the wall the next morning**, in a house's own words: `releases/<version>.md` is written by
+  hand, ships inside the image, and is refused by `tools/release-manifest.py` if it is missing or reads like a
+  changelog — no filenames, no containers, no commit subjects, and never Home Assistant. The card opens *This hub*,
+  where the current release and every one before it that the build carries are kept.
+  **A bad release is stopped without cutting another one**: `tools/channel.py hold v0.3.1` signs a small file that
+  hubs check against the same keys, within half an hour and always before they install. The same file lets a release
+  out to a fraction of houses first (`tools/channel.py out v0.3.2 0.1`). It can only ever withhold — there is no way
+  to say *install this* — and missing, stale or unsigned means nothing is held, because the alternative would let
+  anyone who can block a network freeze every hub where it stands. `docs/updates.md`.
+- Health: Home has a quiet *Needs a look* list when something is off: a device offline since Tuesday, storage nearly
+  full, a driver that wants signing in, an update that did not finish. `GET /health`; the words come from the brain.
+  A line that can be acted on carries the way to do it, so none of them sends anyone to Home Assistant: an account whose
+  sign-in ran out gets *Sign in again*, which opens the maker's own short form on the same sheet that adds things
+  (`brain/hub/onboarding.py` tells the two kinds of open flow apart); something that could not start gets *Try again*.
+- Sounds on a speaker: every speaker tile has White, Pink and Brown noise (the brain makes those itself) plus any audio
+  file in the hub's sounds folder, with a sleep timer. Recordings in the repo's `sounds/` folder ship in the image and are
+  copied into every hub's folder when missing (`tools/add-sound.sh` puts a download there in the right shape, and can push
+  it to a hub over ssh at the same time); a household's own files go straight into `driver-layer/brain-data/sounds/` on
+  the hub (`brain/sounds/` when running the brain on a Mac) and are never overwritten. `rain.mp3` shows up as *Rain*; MP3, WAV, OGG, M4A, FLAC and AAC work,
+  and any length works: the brain prepares each file once (ffmpeg is in the image), crossfading its last three seconds into
+  its first and repeating it to ten minutes, so the join is seamless and the speaker's own restart comes round rarely. The
+  prepared copies live in `sounds/prepared/`; the originals are never touched. The speaker fetches the file from the hub's
+  LAN address; the brain restarts it each time it ends, and a rule can put a sound on too (`"then": {"device": "<speaker>", "action": "sound", "data": {"sound": "rain", "minutes": 60}}`).
+- Backup and restore: *This hub* on Home hands you one `.tar.gz` with the brain's settings and event log, the engine's
+  config, the radios' keys, Ring's sign-in and the front door's certificate authority (not the engine's history
+  database or any logs). It carries the house's keys, so it sits behind the settings code. Restoring, here or on a
+  new hub's welcome screen, parks the file for `driver-layer/host/restore.sh`, which stops the house, unpacks, and
+  starts it again with this hub's own address kept.
+- The assistant (routines asked for in plain words, and "why did that happen?") needs a key for the model. Paste it into
+  the panel's Routines sheet, or put `ANTHROPIC_API_KEY=` in `driver-layer/.env`. Without one the house runs exactly the same;
+  only the asking is missing. The assistant writes drafts a person approves and explains from the log; it cannot touch a device.
+- `tools/discover.py` — seeds a device inventory of your own house from a Mac (`docs/inventory.draft.md`, never committed).
+- `docs/phase4-intelligence.md` — Phase 4 design: rules as data, the evaluator, holds, presence, the assistant's contract.
+- `docs/settings.md` — Settings without a settings page: the four nouns under *This hub* (People, Accounts, Devices, This hub),
+  what still forces a visit to Home Assistant's UI, and the order to close each gap so the Advanced door is never a step.
+  Its *Where this stands* section is the dated ground truth for how much of that order has actually been built.
+- `docs/updates.md` — Updates: what is built (the undo above), and the four pieces after it — a signed release
+  manifest and images by digest, the hub updating itself at night, notes written for a house rather than a repository,
+  and a hold to stop a bad release spreading. The rules each piece may not break are at the top.
+- `docs/away.md` — Away from home: why no VPN and no cloud tunnel, the three pieces (pairing, a relay the maker runs, a
+  real certificate per hub), what has landed, and the build and open decisions for the two that have not.
+- `docs/voice.md` — The microphone: the shapes considered and what each waits on.
+- `docs/matter.md` — Sharing the house outward: why Matter and not three integrations, the bridge that reads the
+  brain rather than Home Assistant (so the owner's names and kinds travel), what may and may not be shared, the
+  two decisions locks and alarms force, and what Apple, Google and Alexa actually do with an uncertified bridge.
+- `docs/kinds.md` — Letting somebody correct a device's kind: why a lamp on a smart plug never hears "kitchen lights
+  off", and the two fields that keep the fix from making it untouchable.
+- `docs/apps.md` — Phone, tablet and desktop apps: why the panel already is the app, the four things a native
+  shell would carry, and the one fork (the hub's certificate, or a pinned one in a shell) to settle after the relay.
+- `docs/happened.md` — What happened: why the answer to "should there be a dashboard" is no and what was built
+  instead. A finding is a span, not an event ("on for ten hours" is the news, and a timeline cannot show it), so
+  what is still true leads with a button each and what is over reads quietly under it. Also the event log's
+  retention — it was append-only and unbounded, on eMMC, riding every backup — and the one scoped rule that keeps
+  a prune from resetting the clocks `health.py` and `rules.seed` read. And `who` asked, which is only ever written
+  for a person.
+- `docs/storage.md` — Storage: why the unit sold runs on eMMC and not NVMe (the finding, so it is not re-argued), and
+  the plan for the hub to say months ahead that its storage is wearing out: the host reads the wear once a day, the
+  brain turns it into one *Needs a look* line with *Back up* beside it, and *This hub* gets a Storage row.
+- `docs/shipping.md` — Shipping it: why the unit to sell is a Compute Module 5 and not a Pi 5, the staged hardware path
+  (Pi 5 kit, CM5 in a partner box, a custom carrier only later), radios on the network rather than USB, and the list of
+  what is open on the Wi‑Fi or missing from the appliance layer before a stranger pays, with what can be done today.
+- `docs/service.md` — The relay as a service: why the maker-run relay is the one part of an AGPL project that can be
+  charged for honestly, what is sold (a box, a name, the bytes) and what may never be (any capability in the
+  software), why the entitlement is checked at the relay and never in the hub, and how billing closed the
+  name-squatting question for free.
+- `tools/ha_bootstrap.py` — the old manual bootstrap; the brain's setup screen does this now.
+
+## Starting, and starting again
+
+One command, whether the checkout is an hour old or a month old:
+
+```sh
+tools/dev.sh          # a fresh clone: what this is, what each directory does, what to run.
+                      # a checkout you have worked in: the branch, what is uncommitted, what is
+                      # unpushed, what is stashed, what is still listening. Changes nothing.
+tools/dev.sh up       # installs both halves, then the panel on the mock house — no hub needed
+tools/dev.sh hub      # the same against a real brain, replaced with your code first
+tools/dev.sh check    # what CI runs, minus the browser pass
+tools/dev.sh free     # let go of a port still held from yesterday — all of them, or free 5173
+```
+
+`up` is the one to live in: `npm run dev:mock` with the install step in front of it, so a clone
+that has never been built and a checkout from three weeks ago start the same way. It checks the
+two floors first (**node 22+, python 3.13+**) and names the version it found, because a `python3`
+that is 3.9 — which is what pyenv or conda often puts first on a Mac — builds a venv happily and
+then fails in the tests in ways that read as bugs in the code.
+
+It claims :8399 first, the way `hub` claims :8300 — a mock left running from an hour ago, or one
+started by whoever else is in this checkout, otherwise ends `up` with a node stack that names
+neither. Only a mock of ours is replaced, and it says whose it was; anything else on the port
+is reported, and `PORT=8405 tools/dev.sh up` goes around it.
+
+`hub` goes through `brain/dev.py`, which stops whatever hub is holding :8300 and starts yours: a
+hub left running from before the break serves an older shape of `/home`, and the panel renders it
+without complaint, so it reads as a panel bug.
+
+`free` is the other half of that: the status report names anything still listening — a brain, a
+vite, the artboard viewer — and `free` stops it, so `address already in use` does not send you
+to an `lsof` and a `kill` aimed by hand. A port a container publishes is reported and left
+alone, because that pid is docker's and killing it takes docker's networking rather than the
+container.
+
+## Developing on the Mac (until the Pi arrives)
+
+`driver-layer/docker-compose.mac.yml` runs Home Assistant, Mosquitto and Caddy in Docker with no
+radios and no host networking (Docker Desktop on macOS cannot do mDNS discovery, so devices are
+added by IP or by brand). Run `driver-layer/mqtt-auth.sh` once first: Mosquitto refuses to start
+without its password file, and the brain reads the same `.env` to give the engine the password.
+The brain runs from its venv (`cd brain && .venv/bin/python main.py`) and
+finds HA at `http://localhost:8123`. Panel: `http://localhost:8300/` (or `:8088` through Caddy).
+
+The brain keeps what it learns in `brain/settings.json` (gitignored): the engine login it created,
+the owner's and home's names, the location, whether setup finished. Delete the file to run setup
+again. `driver-layer/.env` can still carry `HA_URL`/`HA_TOKEN` as a developer override.
+
+Preview any panel state from the address bar: `?setup=1&page=rooms` (a setup screen), `?rest=1`
+(the resting clock), `?sheet=add` (the add-a-device sheet), `?at=19:30`, `?wx=rainy`.
+
+### HTTPS
+
+Caddy fronts the brain on plain `http://hub.local` with nothing to install, and on `https://` from
+its own local certificate authority. The QR code, the home-screen steps and joining a phone work over plain http; web
+push and the browser microphone wait on a trusted https origin. On the LAN today that means installing
+`driver-layer/caddy/data/caddy/pki/authorities/local/root.crt` on the tablet or phone once (iOS
+also wants full trust on under Settings → General → About → Certificate Trust Settings), which is fine for the wall
+and not something to ask of a phone. The decided way out is a public name per hub with a real certificate, reached
+through a relay the maker runs when the phone is away and directly when it is home: `docs/away.md`. No VPN app, no
+vendor login.
+
+## Radios and the Advanced door
+
+Nothing here needs a visit. The brain watches the driver layer and adds each part to Home Assistant
+itself when it answers: MQTT, the Z-Wave radio (Z-Wave JS UI's settings, including its network
+keys, are written once by `radios.sh`), and Matter. The panel's *Behind the scenes* list shows each
+part's state; Ring is the one that needs a person, once, to sign in. Plugging a stick in later
+starts its container and connects it the same way.
+
+For the curious: Home Assistant on `:8123` is the Advanced door, linked from the bottom of the location
+and add sheets, never the product. Zigbee2MQTT's and Z‑Wave JS UI's own consoles (`:8080`, `:8091`) and
+the Matter server answer on the hub itself only, not on the Wi‑Fi (`ssh -L 8080:localhost:8080 hub.local`
+reaches one); they have no sign-in of their own, so nothing on the network gets to pair or unpair a device
+past the panel. Messages (Mosquitto, `:1883`) stays on the Wi‑Fi because a bridge on the network needs it,
+and takes a password: `driver-layer/mqtt-auth.sh` makes it once into `.env`, writes the broker's password file
+and Ring's config from it, compose hands it to Zigbee2MQTT, and the brain gives it to the engine. The host itself gets a watchdog and capped logs from
+`driver-layer/host/harden.sh`. What is still open on the Wi‑Fi, and why, is in `docs/shipping.md`.
+
+### Brilliant
+
+Brilliant has no official API. Do not use the HomeKit path (pairings drop, entities stick in
+setup_retry). Use the community `brilliant-mqtt` bridge instead: an MIT-licensed agent that runs on
+each Control panel over the panel's own **Root SSH Login** setting and publishes every wired load,
+BLE-mesh dimmer switch, plug, motion and power reading to Mosquitto. One panel is elected to bridge
+the whole mesh, with failover.
+
+1. On each Control panel: Settings → enable *Root SSH Login*, set a root password.
+2. Install HACS into the HA container: `docker exec -it homeassistant bash -c "wget -O - https://get.hacs.xyz | bash -"`, restart HA, add the HACS integration.
+3. HACS → custom repository `joyfulhouse/brilliant-mqtt` → install → add the integration with each panel's IP and root password.
+4. Add the `mqtt` integration in HA pointing at `mosquitto:1883` if not already done.
+
+## Hardware to order
+
+- Pi 5 8 GB + NVMe HAT + SSD (hub host)
+- Home Assistant Connect ZBT-1 (Zigbee + Thread border router)
+- Zooz ZST39 (Z-Wave 800). Optional while the Nortek HUSBZB-1 on hand covers Z-Wave: it is 500-series, fine for the GE/Jasco switches, no Long Range.
+- ratgdo32 (garage door, Security+ 2.0 only)
+
+## Tests and CI
+
+Every push, on **every branch**, and every pull request runs `.github/workflows/ci.yml` — a long-lived
+branch like `panel-bento` is exactly where a regression has time to settle in unnoticed. It runs: the brain's tests and linter, the
+panel's types, linter and unit tests, the built panel driven in a real browser, the shell that runs
+on the hub host, and the brain's container image built for both kinds of host (built, not pushed —
+so a Dockerfile that no longer works is caught before it reaches the thing `install.sh` pulls).
+
+```sh
+cd brain && .venv/bin/python -m pytest tests -q     # the hub
+cd app && npm test && npm run e2e                   # the screens, then the screens in a browser
+```
+
+`npm run e2e` starts its own mock on :8399, or reuses one already running there. To point it at a
+different panel — another branch's build, or a real hub — set `BASE`, and nothing is started locally:
+
+```sh
+cd .claude/worktrees/panel-bento/app && npm run build && PORT=8401 npm run mock &
+cd app && BASE=http://localhost:8401 npm run e2e
+```
+
+Coverage may go up and may not go down: `.github/coverage-check.py` compares each run against
+`.github/coverage-floor.json` and fails a change that leaves the codebase less covered than it found
+it. There is no target to reach, and the floor is raised by hand in the change that earns it.
+
+Two things are checked that nothing else would notice. `brain/tests/sun-positions.json` holds both
+sun implementations — `brain/hub/sun.py` and `app/src/sun.ts`, the same math written twice — to one
+table, so the panel's dusk and an after-dark routine cannot drift apart. And `brain/tests/test_shipped.py`
+holds `rules.json` and `scenes.json` to what a house that has just been plugged in can actually run:
+a starter rule may only name `home` or `entry`, because any other room is one only somebody's
+particular house has, and the engine would drop it on every other hub with nothing but a log line.
+
+## Releasing
+
+A version tag is what ships. Nothing else does.
+
+```sh
+git tag v0.2.0 && git push --tags
+# ...wait for CI to publish the images, then:
+tools/release.sh v0.2.0
+```
+
+The tag runs the full test suite against the tagged commit and, only if it passes, builds two things: the
+brain's container for amd64 and arm64 (tagged `0.2.0`, `0.2` and `latest`, and signed with cosign), and the
+flash-and-go Pi image, attached to a GitHub release with its checksum. A tag is not a branch, so branch protection
+does not cover one — the test run is what stops a release being cut from a commit that never passed.
+
+**The first one, in order.** `tools/release.sh --check v0.3.0` says which of these is not done yet and
+changes nothing, so it is the thing to run between each step:
+
+1. **Make the GHCR package public.** Until the brain image is readable, no release can be signed at all —
+   `tools/release-manifest.py` names every image by digest and cannot resolve one it cannot see. It is also what
+   stops a hub in a house compiling the brain on its own processor instead of pulling it.
+2. **`tools/release.sh --new-key`, then `tools/release.sh --new-key spare`,** in the same sitting. Commit both public
+   halves; keep the private halves off this machine's only disk and off GitHub. A hub trusts the keys it was
+   installed with and never adds one, so the spare has to exist before the first hub ships or it never can.
+3. **Write `releases/0.3.0.md`** — see `releases/README.md`. A release without notes does not ship.
+4. **Tag and push**, then wait for CI to publish the images.
+5. **`tools/release.sh v0.3.0`**, which signs it and attaches the record.
+6. **Watch one hub take it**: it should verify the release, check out the commit the record names, pull by digest,
+   come back, and show what is new on the wall the next morning. `driver-layer/brain-data/update.json` says how it
+   went and `update.log` says why if it did not.
+
+**`tools/release.sh` is what makes a release installable**, and it is a separate step because it signs with a key
+that is not on GitHub. It asks the registries what the tag's images actually are, checks cosign's word that the brain
+image was built by this repository's workflow from this tag, writes the commit and every image digest into
+`release.json`, signs it, and attaches both to the release. Until it has run, hubs see the release and refuse it —
+which is the right way round, and a reason not to leave a tag sitting unsigned. `tools/release.sh --new-key` makes
+the keypair; the private half belongs somewhere off GitHub and backed up, because a hub that trusts the public half
+will refuse every release the private half did not sign. **Make a spare at the same time**
+(`tools/release.sh --new-key spare`): a hub trusts the keys it was installed with and never adds one, so a second key
+has to exist before the first hub ships or it can never exist at all. `docs/updates.md`.
+
+Pushes to main publish `main` and `sha-<sha>` images and nothing else. **A merge to main does not
+reach anybody's hub.**
+
+Every hub verifies a release before it installs it: `driver-layer/host/verify.sh` checks the maker's signature over
+`release.json`, then the hub checks out **the commit the manifest names** rather than the tag (so a moved tag changes
+nothing) and pulls every image, ours and the rented ones, **by digest**. The keys it checks against are copied into
+`/etc/home-hub/release-keys.d/` on the first install and never added to — the first install trusts the repository, and
+every update after it trusts the key. A release that cannot be checked is not installed and is not reported as a
+failure: nothing moved, and the panel says so without offering a *Try again* that could not help. The `main` channel
+is not verified, deliberately: there are no manifests for commits, a hub following a branch is a hub being worked on,
+and an override that skipped the check for releases would only end up pasted into a house.
+
+Every hub follows one of three channels, written into `driver-layer/.env` by `install.sh`:
+
+- **`release`** — the default, and what every hub ships as. Follows version tags. The panel offers an
+  update when there is a newer release than the one it is on.
+- **`main`** or **`development`** — that branch, commit by commit, for a hub being worked on:
+  `HOME_HUB_CHANNEL=development sudo ./install.sh`. The choice sticks: every update after it,
+  including the ones the panel installs, follows the same branch. Run it again with
+  `HOME_HUB_CHANNEL=release` to put the hub back on releases.
+
+Code and container move together: a hub on `v0.2.0` runs the `0.2.0` image, not whatever is newest.
+The panel's *Install the update* tap parks a request file; the host's `update.sh` runs `install.sh`,
+which moves the checkout to the newest tag on its channel, pulls the images and restarts.
+
+## Rules that do not change
+
+- Works with the internet down.
+- HA is touched only through its APIs; its UI is the Advanced door, never the product.
+- The assistant model writes and explains rules. It never executes one.
+- Setup is a conversation on the screen, never a file to edit.
+- Controlling the house never needs a code. Changing it does, once one is set.
+- Being on the Wi‑Fi gets a phone nothing once there is a code. The owner lets a phone in; only the owner lets it out of the house.
+
+## License
+
+[GNU Affero General Public License v3.0](LICENSE). Copyright 2026 Temitope Adeyeri.
+
+Free software, in the sense that matters: run it, read it, change it, share it, sell it. The one
+condition is that it stays that way — if you distribute this hub, or run a modified version as a
+service other people reach over a network, those people are entitled to your source under the same
+license.
+
+The source is public on purpose, and the license is the promise behind it. A box that claims to work
+with the internet down, and to keep a household's life off somebody else's servers, should be
+readable by the people it asks to trust it — and no household running this should ever be stranded
+by a maker who stops caring. That is the whole reason `docs/` carries a rescue guide for somebody
+else's panels.
+
+Commercial licenses, for anyone who wants to build on this without the AGPL's obligations, are
+available separately — open an issue or get in touch.
+
+## Names
+
+Brilliant, Home Assistant, Ring, Nest, Tesla, WiZ, Apple Home, Google Home, Alexa, Matter, Zigbee and
+Z-Wave are trademarks of their owners. They appear here only to say what the hub works with: this
+project is not affiliated with, sponsored by or endorsed by any of them, and nothing it sells carries
+their names or logos.

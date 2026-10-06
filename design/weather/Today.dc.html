@@ -1,0 +1,96 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@200;300;400;500;600;700&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Plus Jakarta Sans", -apple-system, "SF Pro Text", "Segoe UI", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: #a99cff; } a:hover { color: #cfc7ff; }
+    /* the pane, layer for layer as design/nightfall/Material.dc.html builds it:
+       smoked rather than tinted, because the drawing behind it is the thing
+       being read and the shared glass recipe would turn it violet */
+    .loz { position: relative; }
+    .loz::after {
+      content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+      padding: 1.4px;
+      background: linear-gradient(158deg, rgba(255,255,255,.62), rgba(255,255,255,.08) 34%, rgba(255,255,255,.04) 62%, rgba(255,255,255,.30));
+      -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+      -webkit-mask-composite: xor; mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+      mask-composite: exclude;
+    }
+    .loz::before {
+      content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none;
+      background: linear-gradient(112deg, transparent 26%, rgba(255,255,255,.15) 45%, rgba(255,255,255,.02) 56%, transparent 64%);
+    }
+  </style>
+</helmet>
+
+<div style="position: relative; width: 520px; height: 620px; overflow: hidden; background: #14162a; color: #ffffff; font-size: 17px; line-height: 1.4;">
+
+  <!-- the field: the panel's own dusk, sampled off the running app rather than
+       picked -- #121520 at the top through the warm band at the horizon to the
+       dark ground, with the hollow the weather hangs in -->
+  <div style="position: absolute; inset: 0; background: linear-gradient(180deg, #121520 0%, #191b29 24%, #1a1b29 46%, #211e26 66%, #281e22 80%, #15161a 88%, #0f1012 100%);"></div>
+  <div style="position: absolute; left: -90px; top: -40px; width: 620px; height: 520px; border-radius: 50%; background: radial-gradient(closest-side, rgba(58,54,96,.42), transparent 72%);"></div>
+  <div style="position: absolute; inset: 0; opacity: .5; pointer-events: none; background-image: url(&quot;data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 0 0 0 .035 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E&quot;);"></div>
+
+  <svg width="360" height="257" viewBox="0 0 210 150" style="position: absolute; left: 30px; top: 40px;">
+    <defs>
+      <radialGradient id="lobet" cx="32%" cy="24%" r="78%">
+        <stop offset="0" stop-color="#e4e8f1"/>
+        <stop offset="58%" stop-color="#b3bbc9"/>
+        <stop offset="100%" stop-color="#848d9e"/>
+      </radialGradient>
+      <linearGradient id="undert" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#0b0a28" stop-opacity="0"/>
+        <stop offset="100%" stop-color="#15123a" stop-opacity=".38"/>
+      </linearGradient>
+      <clipPath id="cloudClipt">
+        <g>
+          <ellipse cx="72" cy="86" rx="56" ry="40"/><ellipse cx="118" cy="70" rx="48" ry="44"/>
+          <ellipse cx="150" cy="94" rx="42" ry="30"/><rect x="60" y="92" width="104" height="34" rx="17"/>
+        </g>
+      </clipPath>
+    </defs>
+    <circle cx="150" cy="44" r="27" fill="#dfe4ee" opacity=".5"/>
+    <circle cx="138" cy="38" r="27" fill="#141238" opacity=".5"/>
+    <g opacity=".92">
+      <ellipse cx="112" cy="127" rx="58" ry="9" fill="#0a0926" opacity=".22"/>
+      <g fill="url(#lobet)">
+        <ellipse cx="72" cy="86" rx="56" ry="40"/><ellipse cx="118" cy="70" rx="48" ry="44"/>
+        <ellipse cx="150" cy="94" rx="42" ry="30"/><rect x="60" y="92" width="104" height="34" rx="17"/>
+      </g>
+      <g clip-path="url(#cloudClipt)">
+        <rect x="0" y="96" width="210" height="44" fill="url(#undert)"/>
+        <ellipse cx="108" cy="44" rx="58" ry="22" fill="#ffffff" opacity=".62"/>
+        <ellipse cx="78" cy="66" rx="38" ry="16" fill="#ffffff" opacity=".34"/>
+        <ellipse cx="150" cy="80" rx="30" ry="13" fill="#ffffff" opacity=".2"/>
+      </g>
+    </g>
+  </svg>
+
+  <div class="loz" style="position: absolute; left: 244px; top: 186px; width: 226px; height: 372px; border-radius: 112px; padding: 44px 30px 38px; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; text-align: center; overflow: hidden; background: linear-gradient(148deg, rgba(216,218,234,.19), rgba(156,158,184,.10)); backdrop-filter: blur(30px) saturate(.62) brightness(.94); -webkit-backdrop-filter: blur(30px) saturate(.62) brightness(.94); box-shadow: inset 0 -46px 56px -48px rgba(18,16,42,.9), 0 28px 64px -26px rgba(8,6,32,.55);">
+    <div style="position: relative; display: flex; flex-direction: column; align-items: center;">
+      <div style="display: flex; align-items: flex-start; font-size: 94px; font-weight: 200; line-height: .92; letter-spacing: -.045em;">
+        <span>78</span><span style="font-size: 32px; font-weight: 300; line-height: 1; margin-top: 6px;">&deg;</span>
+      </div>
+      <div style="margin-top: 18px; font-size: 23px; font-weight: 600; line-height: 1.16; letter-spacing: -.018em;">Partly cloudy</div>
+      <div style="margin-top: 10px; font-size: 15px; font-weight: 400; color: rgba(255,255,255,.66);">Sunset 7:17 PM</div>
+      <div style="margin-top: 3px; font-size: 15px; font-weight: 400; color: rgba(255,255,255,.42);">Humidity 48%</div>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>

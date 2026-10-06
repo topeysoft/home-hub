@@ -1,0 +1,158 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Instrument Sans", -apple-system, "SF Pro Text", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      --bg: #0c0d10; --surface: rgba(26,28,34,.68); --surface-hi: rgba(255,255,255,.08);
+      --edge: rgba(255,255,255,.1); --edge-hi: rgba(255,255,255,.18);
+      --ink: #f1eee8; --ink-2: #b9b5ad; --muted: #7f7d77;
+      --lamp-rgb: 233,184,114; --lamp: rgb(var(--lamp-rgb)); --lamp-ink: #2a1c07;
+      --live-rgb: 116,198,157; --live: rgb(var(--live-rgb));
+      --danger-rgb: 224,138,138; --danger: rgb(var(--danger-rgb));
+      --r-lg: 22px; --r-md: 16px;
+    }
+    .dsp { font-weight: 400; letter-spacing: -.025em; text-wrap: balance; }
+    .cap { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .sheet { width: 560px; border-radius: 26px; background: rgba(22,24,30,.92);
+             border: 1px solid var(--edge-hi); box-shadow: 0 40px 100px -30px rgba(0,0,0,.9); overflow: hidden; }
+    .sheet h2 { margin: 0; font-size: 34px; line-height: 1.05; font-weight: 400; letter-spacing: -.025em; }
+    .lede { margin: 0 0 18px; color: var(--ink-2); font-size: 15px; }
+    .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 14px 26px;
+           border-radius: 999px; background: var(--ink); color: var(--bg); font-weight: 500; font-size: 17px; }
+    .btn.ghost { background: var(--surface-hi); color: var(--ink); border: 1px solid var(--edge); }
+    .t1 { font-size: 15.5px; font-weight: 500; }
+    .t2 { font-size: 13px; color: var(--muted); }
+    .box { border-radius: var(--r-lg); border: 1px solid var(--edge); background: rgba(255,255,255,.03); padding: 20px 22px; }
+    .box.for { border-color: rgba(var(--live-rgb),.3); background: linear-gradient(rgba(var(--live-rgb),.07), rgba(var(--live-rgb),.07)), rgba(255,255,255,.02); }
+    .box.against { border-color: rgba(var(--danger-rgb),.3); background: rgba(var(--danger-rgb),.05); }
+    .box p { margin: 10px 0 0; font-size: 14.5px; line-height: 1.6; color: var(--ink-2); }
+    .box p strong { font-weight: 500; color: var(--ink); }
+    .strip { height: 22px; border-radius: 4px;
+             background: repeating-linear-gradient(90deg, rgb(255,96,0) 0 4px, transparent 4px 7px);
+             filter: drop-shadow(0 0 9px rgba(255,140,40,.7)); }
+    .stage { position: relative; padding: 34px 24px 28px; border-radius: 20px;
+             background: rgba(255,255,255,.03); border: 1px solid var(--edge); overflow: hidden; }
+    .glow { position: absolute; left: 0; right: 0; top: -40px; height: 160px;
+            background: radial-gradient(42% 54% at 50% 50%, rgba(255,140,40,.26), transparent 72%); }
+    .mono { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12.5px; letter-spacing: -.01em; }
+    .node { border-radius: var(--r-md); border: 1px solid var(--edge); background: var(--surface);
+            padding: 16px 18px; }
+    .node .t { font-size: 16px; font-weight: 500; }
+    .node .s { display: block; margin-top: 3px; font-size: 12.5px; color: var(--muted); line-height: 1.5; }
+    .wire { display: flex; align-items: center; gap: 8px; color: var(--muted); }
+    .plan { position: relative; border-radius: var(--r-lg); border: 1px solid var(--edge);
+            background: rgba(255,255,255,.022); overflow: hidden; }
+    .rm { position: absolute; border: 1px solid var(--edge); border-radius: 10px; background: rgba(255,255,255,.02); }
+    .rm > span { position: absolute; left: 12px; top: 9px; font-size: 11.5px; letter-spacing: .1em;
+                 text-transform: uppercase; color: var(--muted); }
+    .dbm { font-variant-numeric: tabular-nums; font-weight: 500; }
+  </style>
+</helmet>
+
+<style>
+  .arrow { display: flex; flex-direction: column; align-items: center; gap: 7px; color: var(--muted); }
+  .arrow .lbl { font-size: 11.5px; letter-spacing: .1em; text-transform: uppercase; }
+  .tube { position: relative; height: 56px; border-radius: 999px; overflow: hidden;
+          border: 1px solid rgba(var(--lamp-rgb),.34);
+          background: linear-gradient(90deg, rgba(var(--lamp-rgb),.22), rgba(var(--lamp-rgb),.09) 30%, rgba(var(--lamp-rgb),.09) 70%, rgba(var(--lamp-rgb),.22)); }
+  .tube .cipher { position: absolute; inset: 0; display: flex; align-items: center; gap: 26px;
+                  padding: 0 26px; color: rgba(var(--lamp-rgb),.34); overflow: hidden; white-space: nowrap; }
+  .tube .seal { position: absolute; left: 50%; top: 50%; transform: translate(-50%,-50%);
+                display: inline-flex; align-items: center; gap: 10px; padding: 8px 18px; border-radius: 999px;
+                background: rgba(14,15,19,.92); border: 1px solid rgba(var(--lamp-rgb),.4); }
+  .cut { position: absolute; top: -10px; bottom: -10px; width: 1px; background: rgba(255,255,255,.14); }
+</style>
+<div style="position: relative; width: 1440px; height: 900px; overflow: hidden; background: var(--bg); color: var(--ink); font-size: 17px; line-height: 1.4;">
+  <div style="position: absolute; inset: 0; background: linear-gradient(rgb(29,33,46) 0%, rgb(41,42,63) 44%, rgb(92,63,57) 84%, rgb(62,44,42) 100%);"></div>
+  <div style="position: absolute; left: -222px; top: -135px; width: 1855px; height: 1156px; background: radial-gradient(58% 54% at 30% 64%, rgba(72,63,135,.4), transparent 68%), radial-gradient(62% 52% at 54% 110%, rgba(55,51,100,.44), transparent 72%);"></div>
+  <div style="position: absolute; inset: 0; background: rgba(6,7,9,.58);"></div>
+
+  <div class="cap" style="position: absolute; left: 60px; top: 44px;">A &mdash; the puck runs the errand</div>
+
+  <h3 class="dsp" style="position: absolute; left: 60px; top: 80px; width: 940px; margin: 0; font-size: 32px; font-weight: 400;">The hub does not need to hear the strip. It needs something in that room to do as it is told.</h3>
+  <p style="position: absolute; left: 60px; top: 180px; width: 1320px; margin: 0; color: var(--ink-2); font-size: 15.5px; line-height: 1.6;">A bridge puck is already in a socket in the middle of the house, already has a Bluetooth radio, and is already holding an MQTT session to the hub. So the hub stops trying to reach the strip and hands the puck an errand instead &mdash; and the conversation it hands over is <em>sealed</em>: the door the strip opens is opened by the hub and closed by the strip, and the puck is the corridor between them.</p>
+
+  <!-- ===================== the mechanism ===================== -->
+  <div style="position: absolute; left: 60px; top: 268px; width: 1320px; height: 272px;">
+    <div style="position: absolute; left: 0; top: 0; width: 1320px; display: flex; align-items: stretch; gap: 0;">
+      <div class="node" style="width: 336px;">
+        <span class="t">The hub</span>
+        <span class="s">In the garage, where the cable is. Opens the SRP6a session, holds the household&rsquo;s Wi&#8209;Fi, decides what a strip is told. Its own radio is never used for this and need not exist.</span>
+      </div>
+      <div class="arrow" style="width: 112px; justify-content: center;">
+        <span class="lbl">MQTT</span>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        <span class="mono" style="font-size: 11px;">strip/errand</span>
+      </div>
+      <div class="node" style="width: 336px; border-color: rgba(var(--live-rgb),.34); background: linear-gradient(rgba(var(--live-rgb),.07), rgba(var(--live-rgb),.07)), var(--surface);">
+        <span class="t">The bridge puck</span>
+        <span class="s">In a hallway socket, because that is where it has to be to reach the wall switches. It scans, connects, writes what it was given and reports what came back. It is a courier and knows nothing.</span>
+      </div>
+      <div class="arrow" style="width: 112px; justify-content: center;">
+        <span class="lbl">BLE &middot; GATT</span>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        <span class="mono" style="font-size: 11px;">&minus;53 dBm</span>
+      </div>
+      <div class="node" style="width: 424px;">
+        <span class="t">The strip</span>
+        <span class="s">Behind the television. <strong style="color: var(--ink); font-weight: 500;">The gate does not move:</strong> <span class="mono">prov-config</span> is refused until somebody presses the button on the controller, and a courier cannot press it.</span>
+        <div class="strip" style="height: 12px; margin-top: 14px;"></div>
+      </div>
+    </div>
+
+    <div class="tube" style="position: absolute; left: 0; top: 172px; width: 1320px;">
+      <div class="cipher mono">a9 3f 7c 02 e1 55 b8 04 &middot; 6d 1a ff 90 2c 47 &middot; 33 b2 0e 78 d4 5f a1 &middot; 19 c6 82 3b &middot; ee 04 71 9a 2d &middot; 5c b7 60 f3 &middot; 08 4e a5 12 &middot; d9 37 6b c0 &middot; 21 8f 4a e6 &middot; 7b 15 cd 32</div>
+      <div class="cut" style="left: 336px;"></div>
+      <div class="cut" style="left: 896px;"></div>
+      <span class="seal">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--lamp)" stroke-width="2" stroke-linecap="round"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>
+        <span style="font-size: 13.5px; color: var(--lamp);">One SRP6a session &mdash; opened at the hub, closed at the strip</span>
+      </span>
+    </div>
+    <div class="t2" style="position: absolute; left: 0; top: 244px; width: 1320px; text-align: center;">The puck carries the bytes and cannot read one of them. <strong style="color: var(--ink-2); font-weight: 500;">A proxy that cannot decrypt adds no trust surface</strong> &mdash; it can drop an errand, and that is the whole of what it can do.</div>
+  </div>
+
+  <!-- ===================== bottom row ===================== -->
+  <div style="position: absolute; left: 60px; top: 566px; width: 372px;">
+    <div style="width: 560px; transform: scale(.62); transform-origin: 0 0;">
+      <div class="sheet">
+        <div style="display: flex; align-items: flex-start; gap: 14px; padding: 24px 22px 6px 28px;">
+          <h2 class="dsp" style="flex: 1;">Press the button on it.</h2><div style="width: 38px; height: 38px; border-radius: 999px; background: var(--surface-hi); border: 1px solid var(--edge); display: grid; place-items: center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink-2)" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></div>
+        </div>
+        <div style="padding: 4px 28px 26px;">
+          <p class="lede">The button is on the controller, at the end it plugs in at. A short press, and it is yours &mdash; there is nothing to read, count or type.</p>
+          <div class="stage" style="margin-bottom: 18px;"><div class="glow"></div>
+            <div style="position: relative;" class="strip"></div>
+            <div class="t2" style="position: relative; text-align: center; margin-top: 14px;">It is lit, steady, so you can see which one you have</div></div>
+          <p class="t2" style="margin: 0 0 16px; text-align: center; font-size: 13.5px; color: var(--ink-2);">Waiting for the press&hellip;</p>
+          <div style="display: flex; gap: 10px;"><span class="btn ghost" style="flex: 1;">It has no button I can reach</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="t2" style="position: absolute; left: 0; top: 256px; width: 372px; line-height: 1.6;"><strong style="color: var(--ink); font-weight: 500;">Nothing on the wall changes.</strong> Not a word, not a beat &mdash; and no screen ever says &ldquo;puck&rdquo;.</div>
+  </div>
+
+  <div class="box for" style="position: absolute; left: 480px; top: 566px; width: 430px;">
+    <span class="cap" style="color: rgba(var(--live-rgb),.85);">For</span>
+    <p><strong>It is the only answer that costs the household nothing.</strong> No chooser, no second app, no tap, no new object &mdash; a house with our bridge in it already has the hardware. It <strong>frees the hub&rsquo;s own radio entirely</strong>, which matters on a mini PC that has none, and it scales the obvious way: more of our things in the house, more ears.</p>
+  </div>
+
+  <div class="box against" style="position: absolute; left: 950px; top: 566px; width: 430px;">
+    <span class="cap" style="color: rgba(var(--danger-rgb),.85);">Against</span>
+    <p><strong>It needs a puck, and the first thing a house adopts may be the strip.</strong> Then there is no ear and this answer is not available &mdash; which is the board on the far right. <strong>The radio risk is settled</strong>, and not the way this box used to fear it: a puck held the second link for 61&nbsp;s with the mesh up and a switch still obeying (item&nbsp;38). What is left is a price. <strong>The mesh runs at a fifth of its rate while an errand lasts, and a scan stops it dead</strong> &mdash; so an errand must end, and the hub must send an address rather than a search.</p>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

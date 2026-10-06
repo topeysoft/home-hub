@@ -1,0 +1,117 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Instrument Sans", -apple-system, "SF Pro Text", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      /* the panel's own tokens, unchanged -- app/src/panel.css */
+      --bg: #0c0d10; --surface: rgba(26,28,34,.68); --surface-hi: rgba(255,255,255,.08);
+      --edge: rgba(255,255,255,.1); --edge-hi: rgba(255,255,255,.18);
+      --ink: #f1eee8; --ink-2: #b9b5ad; --muted: #7f7d77;
+      --lamp: #e9b872; --lamp-ink: #2a1c07; --live: #74c69d; --danger: #e08a8a;
+    }
+    .dsp { font-weight: 400; letter-spacing: -.025em; text-wrap: balance; }
+    .cap { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .row { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px;
+           padding: 12px 14px; border-radius: 16px; background: var(--surface); border: 1px solid var(--edge); }
+    .row.lit { border-color: rgba(233,184,114,.35);
+               background: linear-gradient(rgba(233,184,114,.1), rgba(233,184,114,.1)), var(--surface); }
+    .ic { width: 36px; height: 36px; border-radius: 12px; display: grid; place-items: center;
+          background: var(--surface-hi); color: var(--ink-2); }
+    .ic.on { background: var(--lamp); color: var(--lamp-ink); }
+    .t1 { font-size: 15.5px; font-weight: 500; }
+    .t2 { font-size: 13px; color: var(--muted); }
+    .btn { display: inline-flex; align-items: center; gap: 8px; padding: 13px 24px; border-radius: 999px;
+           background: var(--ink); color: var(--bg); font-weight: 500; font-size: 16px; }
+    .btn.ghost { background: var(--surface-hi); color: var(--ink); border: 1px solid var(--edge);
+                 padding: 12px 20px; font-size: 15px; }
+    .btn.sm { padding: 9px 17px; font-size: 14px; }
+    .sheet { border-radius: 26px; background: rgba(22,24,30,.94); border: 1px solid var(--edge-hi);
+             box-shadow: 0 40px 100px -30px rgba(0,0,0,.9); overflow: hidden; }
+    .bar { height: 6px; border-radius: 999px; background: rgba(255,255,255,.1); overflow: hidden; }
+    .bar i { display: block; height: 100%; border-radius: 999px; background: var(--lamp); }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--lamp); }
+    .note { padding: 13px 16px 14px; border-radius: 18px; background: var(--surface); border: 1px solid var(--edge); }
+    .chip { display: inline-flex; padding: 8px 14px; border-radius: 999px; border: 1px solid var(--edge);
+            background: var(--surface-hi); font-size: 14px; }
+    .bad { color: var(--danger); }
+    .sw { fill: #ded8cc; stroke: rgba(0,0,0,.22); stroke-width: 2; }
+    .swf { fill: #fbf8f2; stroke: rgba(0,0,0,.12); stroke-width: 1.4; }
+  </style>
+</helmet>
+
+<div style="position: relative; width: 1440px; height: 900px; overflow: hidden; background: #0c0d10; color: var(--ink); font-size: 17px; line-height: 1.4;">
+  <div style="position: absolute; inset: 0; background: linear-gradient(rgb(29,33,46) 0%, rgb(41,42,63) 44%, rgb(50,45,60) 100%);"></div>
+  <div style="position: absolute; left: -222px; top: -135px; width: 1855px; height: 1156px; background: radial-gradient(58% 54% at 30% 64%, rgba(72,63,135,.36), transparent 68%), radial-gradient(62% 52% at 54% 110%, rgba(55,51,100,.4), transparent 72%);"></div>
+
+  <div style="position: absolute; top: 0; left: 0; right: 0; height: 92px; border-bottom: 1px solid var(--edge); background: rgba(12,13,16,.28);">
+    <div style="position: absolute; left: 56px; top: 26px; display: flex; align-items: center; gap: 14px;">
+      <span style="width: 38px; height: 38px; border-radius: 999px; background: var(--surface-hi); border: 1px solid var(--edge); display: grid; place-items: center;"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--ink-2)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg></span>
+      <span class="dsp" style="font-size: 30px;">Add to the house</span>
+    </div>
+  </div>
+
+  <div style="position: absolute; top: 132px; left: 56px; width: 828px;">
+    <h1 class="dsp" style="margin: 0 0 18px; font-size: 40px;">What are you adding?</h1>
+    <!-- one field, and everything is an answer to it -->
+    <div style="height: 64px; padding: 0 20px; border-radius: 20px; background: rgba(255,255,255,.1); border: 1px solid var(--edge-hi); display: flex; align-items: center; gap: 12px; font-size: 18px; color: var(--muted); box-shadow: 0 10px 40px -20px rgba(0,0,0,.8);">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
+      A switch, a plug, Hue, Sonos&hellip;
+      <span style="margin-left: auto; width: 2px; height: 26px; background: var(--lamp); opacity: .8;"></span>
+    </div>
+  </div>
+
+  <div style="position: absolute; top: 278px; left: 56px; width: 828px;">
+    <div class="cap" style="margin-bottom: 11px;">Already waiting</div>
+    <div class="row lit" style="padding: 15px 16px; margin-bottom: 22px;">
+      <span class="ic on"><svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/></svg></span>
+      <span><span class="t1" style="font-size: 16px;">Something was plugged in nearby</span><span class="t2" style="display: block; font-size: 13.5px;">It is blinking amber. Nothing of yours is on it yet.</span></span>
+      <span class="btn sm">Have a look</span>
+    </div>
+
+    <div class="cap" style="margin-bottom: 11px;">Or one of these</div>
+    <div style="display: grid; gap: 9px;">
+      <div class="row" style="padding: 17px 16px;"><span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><rect x="5" y="3" width="14" height="18" rx="3"/><circle cx="12" cy="9" r="2.4"/></svg></span><span><span class="t1">A switch on the wall</span><span class="t2" style="display: block;">A switch or dimmer, new or already up</span></span><span></span></div>
+      <div class="row" style="padding: 17px 16px;"><span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M9 3v5M15 3v5M6 8h12v3.5a6 6 0 0 1-12 0z"/><path d="M12 17.5V21"/></svg></span><span><span class="t1">A plug, bulb or sensor</span><span class="t2" style="display: block;">Something out of a box, in your hand</span></span><span></span></div>
+      <div class="row" style="padding: 17px 16px;"><span class="ic"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"><path d="M4 10.5 12 4l8 6.5"/><path d="M6 10v9h12v-9"/><circle cx="12" cy="14" r="2"/></svg></span><span><span class="t1">A part of the house</span><span class="t2" style="display: block;">Another panel, or a bridge for your switches</span></span><span></span></div>
+    </div>
+  </div>
+
+  <div style="position: absolute; bottom: 46px; left: 56px; width: 828px;">
+    <div style="display: flex; align-items: center; gap: 10px; padding: 14px 16px; border-radius: 16px; border: 1px dashed var(--edge); color: var(--ink-2); font-size: 14.5px;">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 8v4l3 2"/></svg>
+      <span>Radios, the bridge and anything not working are under <b style="color: var(--ink); font-weight: 500;">Behind the scenes</b>, on the hub&rsquo;s own page.</span>
+    </div>
+  </div>
+
+  <!-- what typing does -->
+  <div style="position: absolute; top: 132px; left: 928px; width: 412px;">
+    <div class="cap" style="margin-bottom: 12px; color: var(--lamp);">variant B &mdash; one field</div>
+    <div class="sheet" style="padding: 16px 16px; margin-bottom: 18px;">
+      <div class="t2" style="margin-bottom: 10px;">typing &ldquo;hu&rdquo;</div>
+      <div style="display: grid; gap: 7px;">
+        <div class="row lit" style="padding: 10px 12px;"><span></span><span><span class="t1" style="font-size: 14.5px;">Philips Hue</span><span class="t2" style="display: block; font-size: 12.5px;">Works without the internet</span></span><span></span></div>
+        <div class="row" style="padding: 10px 12px;"><span></span><span><span class="t1" style="font-size: 14.5px;">Humidity sensor</span><span class="t2" style="display: block; font-size: 12.5px;">Press its button &middot; no account</span></span><span></span></div>
+        <div class="row" style="padding: 10px 12px;"><span></span><span><span class="t1" style="font-size: 14.5px;">Hunter fan</span><span class="t2" style="display: block; font-size: 12.5px;">Needs its account</span></span><span></span></div>
+      </div>
+    </div>
+    <div style="border-left: 2px solid rgba(233,184,114,.4); padding-left: 18px; display: grid; gap: 16px;">
+      <div><div class="t1" style="margin-bottom: 5px;">One question, everything answers it</div><div class="t2">Brands and kinds of thing are the same list, so nobody has to work out which sort of answer they are giving. It scales to a catalogue of two thousand without growing a fifth door.</div></div>
+      <div><div class="t1" style="margin-bottom: 5px;">But the wall has no keyboard in its hand</div><div class="t2">A field first means a keyboard first, on a screen screwed to a wall, for the one job people do while already holding something. The rows underneath exist so it is never compulsory &mdash; which is close to admitting the field should not have been first.</div></div>
+      <div><div class="t1" style="margin-bottom: 5px;">And it invites a miss</div><div class="t2">Typing &ldquo;switch&rdquo; expects an answer. Whatever comes back is a smaller, stranger list than the four doors, because most switches have no brand anybody remembers.</div></div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

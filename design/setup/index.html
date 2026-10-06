@@ -1,0 +1,46 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>First run — the boards</title>
+<!-- The h1 and the first paragraph here are what the artboards index shows on this
+     collection's card. tools/artboards.mjs reads them; nothing else on this page is used. -->
+<style>
+  :root { color-scheme: dark; }
+  body { margin: 0; background: #08090c; color: #f1eee8; font: 16px/1.55 "Instrument Sans", -apple-system, system-ui, sans-serif; }
+  header { padding: 56px 40px 8px; max-width: 78ch; }
+  h1 { font-size: 40px; font-weight: 400; letter-spacing: -.025em; margin: 0 0 12px; }
+  header p { color: #b9b5ad; margin: 0 0 10px; }
+  header code { color: #e9b872; }
+  main { display: flex; flex-direction: column; align-items: center; gap: 40px; padding: 40px 20px 120px; }
+  figure { margin: 0; width: min(1440px, 100%); }
+  iframe { border: 0; display: block; border-radius: 14px; transform-origin: 0 0; box-shadow: 0 30px 80px -30px rgba(0,0,0,.9); }
+  figcaption { margin-top: 14px; font-size: 13px; letter-spacing: .1em; text-transform: uppercase; color: #7f7d77; }
+  figcaption a { color: #e9b872; }
+</style>
+<header>
+  <h1>First run</h1>
+  <p>The seven screens a person meets before they have a house &mdash; and the two that had their only button
+     below the fold on the wall this product ships on. Drawn after the fact, from measurements taken in the
+     browser, which is the wrong order and is why the collection exists.</p>
+  <p>Every board is 1440&times;900. The wall frames inside them are drawn at a real 1280&times;800 and then shrunk,
+     so every measurement on a board is the measurement the panel actually has. Run the screens themselves with
+     <code>FRESH=1 PORT=8407 npm run dev:mock</code> in <code>app/</code>, then <code>?setup=1&amp;page=code</code>.</p>
+</header>
+<main>
+  <figure><iframe src="Today.dc.html" width="1440" height="900" loading="lazy" scrolling="no"></iframe><figcaption>Today &mdash; the receipts &middot; <a href="Today.dc.html" target="_blank">open on its own</a></figcaption></figure>
+  <figure><iframe src="Spine.dc.html" width="1440" height="900" loading="lazy" scrolling="no"></iframe><figcaption>The shape &mdash; seven screens, five questions &middot; <a href="Spine.dc.html" target="_blank">open on its own</a></figcaption></figure>
+  <figure><iframe src="Frame.dc.html" width="1440" height="900" loading="lazy" scrolling="no"></iframe><figcaption>The frame every question wears &middot; <a href="Frame.dc.html" target="_blank">open on its own</a></figcaption></figure>
+  <figure><iframe src="Dock.dc.html" width="1440" height="900" loading="lazy" scrolling="no"></iframe><figcaption>The way on is never off the screen &middot; <a href="Dock.dc.html" target="_blank">open on its own</a></figcaption></figure>
+  <figure><iframe src="Words.dc.html" width="1440" height="900" loading="lazy" scrolling="no"></iframe><figcaption>Three controls that meant the wrong thing &middot; <a href="Words.dc.html" target="_blank">open on its own</a></figcaption></figure>
+</main>
+<script>
+  function fit() {
+    for (const f of document.querySelectorAll('iframe')) {
+      const k = Math.min(1, f.parentElement.clientWidth / 1440)
+      f.style.transform = 'scale(' + k + ')'
+      f.style.height = (900 * k) + 'px'
+      f.style.width = '1440px'
+      f.parentElement.style.height = (900 * k + 40) + 'px'
+    }
+  }
+  addEventListener('resize', fit); fit()
+</script>

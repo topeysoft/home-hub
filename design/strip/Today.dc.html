@@ -1,0 +1,163 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Instrument Sans", -apple-system, "SF Pro Text", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      /* the panel's own tokens, unchanged -- app/src/panel.css */
+      --bg: #0c0d10; --surface: rgba(26,28,34,.68); --surface-hi: rgba(255,255,255,.08);
+      --edge: rgba(255,255,255,.1); --edge-hi: rgba(255,255,255,.18);
+      --ink: #f1eee8; --ink-2: #b9b5ad; --muted: #7f7d77;
+      --lamp-rgb: 233,184,114; --lamp: rgb(var(--lamp-rgb)); --lamp-ink: #2a1c07;
+      --live-rgb: 116,198,157; --live: rgb(var(--live-rgb));
+      --danger-rgb: 224,138,138; --danger: rgb(var(--danger-rgb));
+    }
+    .dsp { font-weight: 400; letter-spacing: -.025em; text-wrap: balance; }
+    .cap { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .sheet { width: 560px; border-radius: 26px; background: rgba(22,24,30,.92);
+             border: 1px solid var(--edge-hi); box-shadow: 0 40px 100px -30px rgba(0,0,0,.9); overflow: hidden; }
+    .sheet h2 { margin: 0; font-size: 34px; line-height: 1.05; font-weight: 400; letter-spacing: -.025em; }
+    .lede { margin: 0 0 16px; color: var(--ink-2); font-size: 15px; }
+    .btn { display: inline-flex; align-items: center; gap: 8px; padding: 12px 20px; border-radius: 999px;
+           background: var(--ink); color: var(--bg); font-weight: 500; font-size: 17px; }
+    .btn.ghost { background: var(--surface-hi); color: var(--ink); border: 1px solid var(--edge); }
+    .row { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 12px;
+           padding: 11px 14px; border-radius: 16px; background: var(--surface); border: 1px solid var(--edge); }
+    .t1 { font-size: 15.5px; font-weight: 500; }
+    .t2 { font-size: 13px; color: var(--muted); }
+    .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--lamp); }
+    .tag { position: absolute; font-size: 12px; letter-spacing: .12em; text-transform: uppercase;
+           color: var(--muted); }
+  </style>
+</helmet>
+
+<div style="position: relative; width: 1440px; height: 900px; overflow: hidden; background: var(--bg); color: var(--ink); font-size: 17px; line-height: 1.4;">
+
+  <!-- the field: the evening sky the panel is already sitting in -->
+  <div style="position: absolute; inset: 0; background: linear-gradient(rgb(29,33,46) 0%, rgb(41,42,63) 44%, rgb(92,63,57) 84%, rgb(62,44,42) 100%);"></div>
+  <div style="position: absolute; left: -222px; top: -135px; width: 1855px; height: 1156px; background: radial-gradient(58% 54% at 30% 64%, rgba(72,63,135,.4), transparent 68%), radial-gradient(62% 52% at 54% 110%, rgba(55,51,100,.44), transparent 72%);"></div>
+  <div style="position: absolute; inset: 0; background: rgba(6,7,9,.62);"></div>
+
+  <div style="position: absolute; left: 140px; top: 34px; right: 140px; display: flex; align-items: baseline; gap: 14px;">
+    <span class="cap">Today &mdash; the arrival, as it ships</span>
+    <span class="t2" style="flex: 1;">app/src/BridgeSheet.vue, states <code style="color:var(--ink-2)">knocking</code> and <code style="color:var(--ink-2)">placing</code>. Built for a bridge puck. A strip has no place here at all yet.</span>
+  </div>
+
+  <!-- ======================= beat one: it knocks ======================= -->
+  <div class="tag" style="left: 140px; top: 96px;">Beat one</div>
+  <div class="sheet" style="position: absolute; left: 140px; top: 120px;">
+    <div style="display: flex; align-items: flex-start; gap: 14px; padding: 24px 22px 6px 28px;">
+      <h2 class="dsp" style="flex: 1;">A bridge is here.</h2>
+      <div style="width: 38px; height: 38px; border-radius: 999px; background: var(--surface-hi); border: 1px solid var(--edge); display: grid; place-items: center;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink-2)" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </div>
+    </div>
+    <div style="padding: 4px 28px 26px;">
+      <p class="lede">Something was plugged in nearby a moment ago. A bridge brings in the wall switches that have no Wi&#8209;Fi of their own &mdash; the ones already in your walls.</p>
+
+      <!-- the identity check: the object is blinking, and that is the whole of it -->
+      <div style="position: relative; height: 196px; border-radius: 20px; background: rgba(255,255,255,.03); border: 1px solid var(--edge); display: grid; place-items: center; margin-bottom: 16px; overflow: hidden;">
+        <div style="position: absolute; left: 50%; top: 96px; width: 300px; height: 300px; transform: translate(-50%,-50%); background: radial-gradient(closest-side, rgba(var(--lamp-rgb),.30), transparent 70%);"></div>
+        <svg width="112" height="133" viewBox="0 0 160 190" fill="none" style="position: relative;">
+          <defs>
+            <linearGradient id="tMetal" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#6d7079"/><stop offset="45%" stop-color="#b6bac4"/><stop offset="1" stop-color="#6d7079"/></linearGradient>
+            <linearGradient id="tMatte" x1="0" y1="0" x2=".25" y2="1"><stop offset="0" stop-color="#454954"/><stop offset="1" stop-color="#23262d"/></linearGradient>
+            <radialGradient id="tPool" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#f6dcae" stop-opacity=".9"/><stop offset="55%" stop-color="#e9b872" stop-opacity=".3"/><stop offset="1" stop-color="#e9b872" stop-opacity="0"/></radialGradient>
+          </defs>
+          <rect x="57" y="4" width="10" height="36" rx="2.5" fill="url(#tMetal)"/>
+          <rect x="93" y="4" width="10" height="36" rx="2.5" fill="url(#tMetal)"/>
+          <rect x="22" y="36" width="116" height="124" rx="31" fill="url(#tMatte)"/>
+          <rect x="22.8" y="36.8" width="114.4" height="122.4" rx="30.2" stroke="rgba(255,255,255,.16)" stroke-width="1.5"/>
+          <circle cx="80" cy="98" r="42" fill="url(#tPool)"/>
+          <circle cx="80" cy="98" r="8" fill="#f8e6c4"/>
+        </svg>
+        <div style="position: absolute; bottom: 14px; left: 0; right: 0; text-align: center;">
+          <span class="t2" style="display: inline-flex; align-items: center; gap: 8px;"><span class="dot"></span>It is blinking amber right now</span>
+        </div>
+      </div>
+
+      <div class="row" style="margin-bottom: 16px;">
+        <span style="width: 34px; height: 34px; border-radius: 12px; display: grid; place-items: center; background: var(--surface-hi);">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ink-2)" stroke-width="1.7" stroke-linecap="round"><path d="M12 3v7M8 10h8v4a4 4 0 0 1-8 0z"/><path d="M12 18v3"/></svg>
+        </span>
+        <span><span class="t1">Nothing has been let in yet</span><span class="t2" style="display: block;">Until you say yes it is only knocking. Nothing of yours is on it.</span></span>
+      </div>
+
+      <div style="display: flex; gap: 10px;">
+        <span class="btn">Yes, that&rsquo;s mine</span>
+        <span class="btn ghost">Not mine</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ======================= the last beat: place it ======================= -->
+  <div class="tag" style="left: 740px; top: 96px;">The last beat</div>
+  <div class="sheet" style="position: absolute; left: 740px; top: 120px;">
+    <div style="display: flex; align-items: flex-start; gap: 14px; padding: 24px 22px 6px 28px;">
+      <h2 class="dsp" style="flex: 1;">Now find it a home.</h2>
+      <div style="width: 38px; height: 38px; border-radius: 999px; background: var(--surface-hi); border: 1px solid var(--edge); display: grid; place-items: center;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink-2)" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </div>
+    </div>
+    <div style="padding: 4px 28px 26px;">
+      <p class="lede">Unplug it and take it with you. Find a socket near your switches &mdash; the light on it will tell you when you are close enough.</p>
+
+      <div style="display: grid; gap: 8px; margin-bottom: 16px;">
+        <div class="row">
+          <span style="width: 26px; height: 26px; border-radius: 999px; background: rgb(var(--lamp-rgb)); box-shadow: 0 0 22px rgba(var(--lamp-rgb),.55);"></span>
+          <span><span class="t1">Blinking amber</span><span class="t2" style="display: block;">Looking for your switches</span></span>
+        </div>
+        <div class="row" style="border-color: rgba(var(--live-rgb),.34); background: linear-gradient(rgba(var(--live-rgb),.08), rgba(var(--live-rgb),.08)), var(--surface);">
+          <span style="width: 26px; height: 26px; border-radius: 999px; background: rgb(var(--live-rgb)); box-shadow: 0 0 22px rgba(var(--live-rgb),.55);"></span>
+          <span><span class="t1">Steady green</span><span class="t2" style="display: block;">It can hear them. Leave it there.</span></span>
+        </div>
+        <div class="row">
+          <span style="width: 26px; height: 26px; border-radius: 999px; background: rgb(var(--danger-rgb)); opacity: .62;"></span>
+          <span><span class="t1">Breathing red</span><span class="t2" style="display: block;">Too far. Try a socket nearer a switch.</span></span>
+        </div>
+      </div>
+
+      <div class="row" style="margin-bottom: 16px;">
+        <span class="dot" style="background: var(--live);"></span>
+        <span><span class="t1">Hears 4 switches</span><span class="t2" style="display: block;">Living room, hallway, and two it has not placed yet</span></span>
+      </div>
+
+      <div style="display: flex; gap: 10px;">
+        <span class="btn">Leave it here</span>
+      </div>
+    </div>
+  </div>
+
+  <div style="position: absolute; left: 140px; right: 140px; bottom: 44px; display: grid; grid-template-columns: 1fr 1fr; gap: 24px;">
+    <div style="border-radius: 20px; border: 1px solid var(--edge); background: rgba(255,255,255,.025); padding: 18px 22px;">
+      <span class="cap">What a strip inherits, unchanged</span>
+      <p style="margin: 10px 0 0; font-size: 14.5px; line-height: 1.55; color: var(--ink-2);">
+        The sheet and its veil. The rule that an arrival comes to you rather than waiting somewhere to be found.
+        &ldquo;Yes, that&rsquo;s mine&rdquo;, &ldquo;Not mine&rdquo;, and the row that promises nothing has been let in &mdash; all three settled
+        in design/adding/Words.dc.html, and all three right for a strip with no word changed.
+      </p>
+    </div>
+    <div style="border-radius: 20px; border: 1px solid var(--edge); background: rgba(255,255,255,.025); padding: 18px 22px;">
+      <span class="cap">What does not survive</span>
+      <p style="margin: 10px 0 0; font-size: 14.5px; line-height: 1.55; color: var(--ink-2);">
+        The whole right-hand sheet. Amber, green and breathing red answer <em>is here good?</em>, and that question
+        exists only because a bridge has to end up somewhere a radio can hear. A strip is stuck down where it is
+        stuck down, and is never asked.
+      </p>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>

@@ -1,0 +1,100 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"></head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: "Instrument Sans", -apple-system, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    .door { display:grid; grid-template-columns:auto 1fr; align-items:center; gap:12px; padding:11px 12px 11px 10px; border-radius:14px; color:#b9b5ad; }
+    .door.on { background:rgba(255,255,255,.08); color:#f1eee8; }
+    .di { width:36px; height:36px; border-radius:12px; display:grid; place-items:center; background:rgba(255,255,255,.08); color:#b9b5ad; }
+    .door.on .di { background:#f1eee8; color:#0c0d10; }
+    .door.att .di { background:#e9b872; color:#2a1c07; }
+    .dn { font-size:15.5px; font-weight:500; }
+    .dh { font-size:12.5px; color:#7f7d77; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .door.att .dh { color:#e9b872; }
+    .lab { font-size:11.5px; font-weight:500; letter-spacing:.14em; text-transform:uppercase; color:#7f7d77; margin:0 0 12px; }
+    .note { padding:12px 14px; border:1px solid rgba(255,255,255,.1); border-radius:16px; background:rgba(26,28,34,.68); display:grid; grid-template-columns:auto 1fr auto; gap:12px; align-items:start; font-size:15px; color:#f1eee8; }
+    .ni { width:28px; height:28px; border-radius:9px; display:grid; place-items:center; background:rgba(255,255,255,.08); color:#b9b5ad; margin-top:1px; }
+    .nw { font-size:12.5px; color:#7f7d77; }
+    .btn { display:inline-flex; align-items:center; padding:8px 14px; border-radius:999px; background:#f1eee8; color:#0c0d10; font-weight:500; font-size:14px; white-space:nowrap; }
+    .btn.g { background:rgba(255,255,255,.08); color:#f1eee8; border:1px solid rgba(255,255,255,.1); }
+  </style>
+</helmet>
+<div style="position:relative; width:1440px; height:900px; overflow:hidden; background:#0c0d10; color:#f1eee8;">
+
+  <!-- the sky, then the veil: the house recedes behind This house -->
+  <div style="position:absolute; inset:0; background:linear-gradient(rgb(16,20,34) 0%, rgb(21,25,40) 48%, rgb(25,27,33) 100%);"></div>
+  <div style="position:absolute; inset:0; background:radial-gradient(60% 40% at 24% 10%, rgba(120,150,210,.16), transparent 70%);"></div>
+  <div style="position:absolute; inset:0; background:rgba(6,7,9,.42);"></div>
+
+  <!-- THE PANEL -->
+  <div style="position:absolute; left:0; right:0; top:99px; bottom:0; border-radius:34px 34px 0 0; border:1px solid rgba(255,255,255,.18); border-bottom:0; overflow:hidden;
+              background:linear-gradient(180deg, rgba(26,28,34,.86), rgba(16,17,21,.96)); display:grid; grid-template-columns:320px 1fr;">
+
+    <!-- the doors -->
+    <aside style="display:flex; flex-direction:column; padding:30px 18px 22px 30px; border-right:1px solid rgba(255,255,255,.1); background:rgba(12,13,16,.22);">
+      <div style="margin:0 0 14px 12px; font-size:15px; color:#b9b5ad; letter-spacing:.01em;">This house</div>
+      <nav style="display:flex; flex-direction:column; gap:2px; margin:0 -8px; padding:0 8px;">
+        <div class="door"><span class="di"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-6.4 7-11a7 7 0 1 0-14 0c0 4.6 7 11 7 11z"/><circle cx="12" cy="10" r="2.6"/></svg></span><span><span class="dn">Where home is</span><br><span class="dh">Lagos</span></span></div>
+        <div class="door"><span class="di"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.6v2.4M12 19v2.4M2.6 12h2.4M19 12h2.4M5.4 5.4l1.7 1.7M16.9 16.9l1.7 1.7M18.6 5.4l-1.7 1.7M7.1 16.9l-1.7 1.7"/></svg></span><span><span class="dn">How it looks</span><br><span class="dh">Nightfall</span></span></div>
+        <div class="door"><span class="di"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/></svg></span><span><span class="dn">Routines</span><br><span class="dh">6 routines, 1 off</span></span></div>
+        <div class="door"><span class="di"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8.5" r="3.2"/><path d="M3.5 19a5.5 5.5 0 0 1 11 0"/><path d="M16 5.6a3.2 3.2 0 0 1 0 5.8M17.5 14.3A5.5 5.5 0 0 1 20.5 19"/></svg></span><span><span class="dn">People and phones</span><br><span class="dh">4 people, 2 home · 5 phones</span></span></div>
+        <div class="door"><span class="di"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10.5" width="14" height="9.5" rx="2.4"/><path d="M8.2 10.5V7.6a3.8 3.8 0 0 1 7.6 0v2.9"/></svg></span><span><span class="dn">Accounts</span><br><span class="dh">7 accounts, all signed in</span></span></div>
+        <div class="door"><span class="di"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5.5v13M5.5 12h13"/></svg></span><span><span class="dn">Add to the house</span><br><span class="dh">Lights, plugs, cameras, locks</span></span></div>
+        <div class="door"><span class="di"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="17.5" cy="6.5" r="2.6"/><circle cx="6.5" cy="12" r="2.6"/><circle cx="17.5" cy="17.5" r="2.6"/><path d="M8.9 10.7l6.2-3M8.9 13.3l6.2 3"/></svg></span><span><span class="dn">Share this house</span><br><span class="dh">Apple Home, Google Home, Alexa</span></span></div>
+        <div class="door"><span class="di"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11.2L12 4.5l8 6.7"/><path d="M6.2 12.6V19h11.6v-6.4"/></svg></span><span><span class="dn">The hub</span><br><span class="dh">0.8.2</span></span></div>
+        <div class="door"><span class="di"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10.5" width="14" height="9.5" rx="2.4"/><path d="M8.2 10.5V7.6a3.8 3.8 0 0 1 7.6 0v2.9"/></svg></span><span><span class="dn">The code</span><br><span class="dh">Changing the house needs it</span></span></div>
+        <div class="door on att"><span class="di"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/></svg></span><span><span class="dn">Needs a look</span><br><span class="dh">The Hall radio has stopped answering</span></span></div>
+      </nav>
+      <div style="margin:auto 0 0 12px; padding-top:14px; font-size:13px; color:#74c69d;">Connected</div>
+    </aside>
+
+    <!-- the page -->
+    <section style="display:flex; flex-direction:column; min-width:0;">
+      <header style="display:flex; align-items:center; gap:16px; padding:26px 30px 16px 48px; border-bottom:1px solid rgba(255,255,255,.1);">
+        <h2 style="margin:0; flex:1; font-size:40px; line-height:1.04; font-weight:400; letter-spacing:-.025em;">Needs a look</h2>
+        <span style="width:44px; height:44px; border-radius:50%; display:grid; place-items:center; background:rgba(255,255,255,.14); color:#fff;"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span>
+      </header>
+      <div style="padding:22px 48px 48px; max-width:808px;">
+        <p style="margin:0 0 20px; font-size:16px; color:#b9b5ad;">The house is running. These are the parts of it that have stopped answering. Each one says what it needs and what you can do about it from here.</p>
+        <div style="display:flex; flex-direction:column; gap:6px;">
+          <div class="note">
+            <span class="ni"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4.5 12a7.5 7.5 0 0 1 12.8-5.3L20 9.3"/><path d="M20 4.8v4.5h-4.5"/><path d="M19.5 12a7.5 7.5 0 0 1-12.8 5.3L4 14.7"/><path d="M4 19.2v-4.5h4.5"/></svg></span>
+            <span>The Hall radio has stopped answering.<br><span class="nw">6 things went quiet with it: Front door, Hall dimmer, Landing light, and 3 more</span></span>
+            <span style="display:flex; gap:8px;"><span class="btn">Try again</span></span>
+          </div>
+          <div class="note">
+            <span class="ni"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11.2L12 4.5l8 6.7"/><path d="M6.2 12.6V19h11.6v-6.4"/></svg></span>
+            <span>The hub's storage is nearly full: 1.4 GB left.<br><span class="nw">This hub</span></span>
+            <span style="display:flex; gap:8px;"><span class="btn">Back up</span></span>
+          </div>
+        </div>
+
+        <!-- THE GAP -->
+        <div style="margin-top:44px; padding:22px 24px; border-radius:18px; border:1px dashed rgba(224,138,138,.5); background:rgba(224,138,138,.06);">
+          <div style="font-size:12px; font-weight:600; letter-spacing:.12em; text-transform:uppercase; color:#e08a8a;">What is not here</div>
+          <div style="margin-top:12px; font-size:17px; line-height:1.55; color:#f1eee8; max-width:640px;">
+            You were out from 9:04am. The porch light has been on for ten hours and the back door was
+            unlocked from 11pm to 6:40am. Nothing on this page says so, and nothing anywhere else does
+            either — <em style="color:#b9b5ad; font-style:normal;">Needs a look</em> is for things that
+            have stopped answering, and a light that is working perfectly has not stopped answering.
+          </div>
+          <div style="margin-top:16px; font-size:14.5px; line-height:1.6; color:#7f7d77; max-width:640px;">
+            The only history the panel draws is four lines of <em style="font-style:normal; color:#b9b5ad;">Recently</em>
+            on Home, newest first, which on a busy evening reaches back about eleven minutes. To find
+            the porch light you open the Porch. To find the back door you open the Back door. There is
+            no door in this list for what the house did while nobody was watching, and none for who
+            changed what.
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

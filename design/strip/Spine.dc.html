@@ -1,0 +1,177 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Instrument Sans", -apple-system, "SF Pro Text", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      --bg: #0c0d10; --surface: rgba(26,28,34,.68); --surface-hi: rgba(255,255,255,.08);
+      --edge: rgba(255,255,255,.1); --edge-hi: rgba(255,255,255,.18);
+      --ink: #f1eee8; --ink-2: #b9b5ad; --muted: #7f7d77;
+      --lamp-rgb: 233,184,114; --lamp: rgb(var(--lamp-rgb)); --lamp-ink: #2a1c07;
+      --live-rgb: 116,198,157; --live: rgb(var(--live-rgb));
+    }
+    .dsp { font-weight: 400; letter-spacing: -.025em; text-wrap: balance; }
+    .cap { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .beat { width: 196px; border-radius: 22px; background: var(--surface); border: 1px solid var(--edge);
+            padding: 18px; display: flex; flex-direction: column; gap: 10px; }
+    .beat.new { border-color: rgba(var(--lamp-rgb),.42);
+                background: linear-gradient(rgba(var(--lamp-rgb),.09), rgba(var(--lamp-rgb),.09)), var(--surface); }
+    .beat h3 { margin: 0; font-size: 19px; font-weight: 400; letter-spacing: -.02em; }
+    .t2 { font-size: 13px; color: var(--muted); line-height: 1.45; }
+    .pill { align-self: flex-start; font-size: 11px; letter-spacing: .1em; text-transform: uppercase;
+            padding: 4px 9px; border-radius: 999px; background: var(--surface-hi); color: var(--muted); }
+    .pill.new { background: rgba(var(--lamp-rgb),.18); color: var(--lamp); }
+    .arrow { width: 26px; display: grid; place-items: center; color: rgba(255,255,255,.22); }
+    .strike { color: var(--muted); text-decoration: line-through; text-decoration-color: rgba(255,255,255,.3); }
+  </style>
+</helmet>
+
+<div style="position: relative; width: 1440px; height: 900px; overflow: hidden; background: var(--bg); color: var(--ink); font-size: 17px; line-height: 1.4;">
+
+  <div style="position: absolute; inset: 0; background: linear-gradient(rgb(29,33,46) 0%, rgb(41,42,63) 44%, rgb(92,63,57) 84%, rgb(62,44,42) 100%);"></div>
+  <div style="position: absolute; inset: 0; background: rgba(6,7,9,.72);"></div>
+
+  <div style="position: absolute; left: 60px; top: 46px; right: 60px;">
+    <span class="cap">The spine &mdash; six beats, and two of them are new</span>
+    <h1 class="dsp" style="margin: 10px 0 0; font-size: 42px; font-weight: 400;">A strip wears the sheet the house already has.</h1>
+    <p style="margin: 12px 0 0; color: var(--ink-2); font-size: 16px; max-width: 900px;">
+      Same shell, same words &mdash; <em>That&rsquo;s the one</em> is the identity check here exactly as it is under Add.
+      What a strip needs that a bridge does not is two questions in the middle, and they are the only things on this
+      canvas that have to be argued.
+    </p>
+  </div>
+
+  <!-- ============================ the five beats ============================ -->
+  <div style="position: absolute; left: 60px; top: 268px; display: flex; align-items: stretch; gap: 0;">
+
+    <div class="beat">
+      <span class="pill">Inherited</span>
+      <h3>It knocks</h3>
+      <div style="height: 54px; border-radius: 14px; background: rgba(255,255,255,.04); border: 1px solid var(--edge); display: grid; place-items: center;">
+        <div style="display: flex; gap: 4px;">
+          <span style="width: 7px; height: 20px; border-radius: 3px; background: rgba(var(--lamp-rgb),.9); box-shadow: 0 0 14px rgba(var(--lamp-rgb),.7);"></span>
+          <span style="width: 7px; height: 20px; border-radius: 3px; background: rgba(var(--lamp-rgb),.35);"></span>
+          <span style="width: 7px; height: 20px; border-radius: 3px; background: rgba(var(--lamp-rgb),.9); box-shadow: 0 0 14px rgba(var(--lamp-rgb),.7);"></span>
+          <span style="width: 7px; height: 20px; border-radius: 3px; background: rgba(var(--lamp-rgb),.35);"></span>
+        </div>
+      </div>
+      <div class="t2">Plugged in anywhere. It says hello over Bluetooth and the wall notices, the way it notices anything else.</div>
+    </div>
+
+    <div class="arrow"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+
+    <div class="beat">
+      <span class="pill">Better here</span>
+      <h3>That&rsquo;s the one</h3>
+      <div style="height: 54px; border-radius: 14px; background: rgba(255,255,255,.04); border: 1px solid var(--edge); display: grid; place-items: center; overflow: hidden; position: relative;">
+        <div style="position: absolute; inset: 0; background: radial-gradient(60% 120% at 50% 50%, rgba(var(--lamp-rgb),.28), transparent 70%);"></div>
+        <div style="display: flex; gap: 3px; position: relative;">
+          <span style="width: 6px; height: 16px; border-radius: 3px; background: var(--lamp); box-shadow: 0 0 12px rgba(var(--lamp-rgb),.9);"></span>
+          <span style="width: 6px; height: 16px; border-radius: 3px; background: var(--lamp); box-shadow: 0 0 12px rgba(var(--lamp-rgb),.9);"></span>
+          <span style="width: 6px; height: 16px; border-radius: 3px; background: var(--lamp); box-shadow: 0 0 12px rgba(var(--lamp-rgb),.9);"></span>
+          <span style="width: 6px; height: 16px; border-radius: 3px; background: var(--lamp); box-shadow: 0 0 12px rgba(var(--lamp-rgb),.9);"></span>
+          <span style="width: 6px; height: 16px; border-radius: 3px; background: var(--lamp); box-shadow: 0 0 12px rgba(var(--lamp-rgb),.9);"></span>
+          <span style="width: 6px; height: 16px; border-radius: 3px; background: var(--lamp); box-shadow: 0 0 12px rgba(var(--lamp-rgb),.9);"></span>
+        </div>
+      </div>
+      <div class="t2">The puck had one LED to prove itself with. A strip is two meters of light. Nobody has ever needed a serial number less.</div>
+    </div>
+
+    <div class="arrow"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+
+    <div class="beat new">
+      <span class="pill new">New &mdash; undetectable</span>
+      <h3>Is it red?</h3>
+      <div style="height: 54px; border-radius: 14px; background: rgba(255,255,255,.04); border: 1px solid rgba(var(--lamp-rgb),.3); display: grid; place-items: center; position: relative; overflow: hidden;">
+        <div style="position: absolute; inset: 0; background: radial-gradient(60% 120% at 50% 50%, rgba(226,72,62,.3), transparent 70%);"></div>
+        <div style="display: flex; gap: 3px; position: relative;">
+          <span style="width: 6px; height: 16px; border-radius: 3px; background: #e2483e; box-shadow: 0 0 10px rgba(226,72,62,.9);"></span>
+          <span style="width: 6px; height: 16px; border-radius: 3px; background: #e2483e; box-shadow: 0 0 10px rgba(226,72,62,.9);"></span>
+          <span style="width: 6px; height: 16px; border-radius: 3px; background: #e2483e; box-shadow: 0 0 10px rgba(226,72,62,.9);"></span>
+          <span style="width: 6px; height: 16px; border-radius: 3px; background: #e2483e; box-shadow: 0 0 10px rgba(226,72,62,.9);"></span>
+          <span style="width: 6px; height: 16px; border-radius: 3px; background: #e2483e; box-shadow: 0 0 10px rgba(226,72,62,.9);"></span>
+        </div>
+      </div>
+      <div class="t2">Strips disagree on which color goes down the wire first and nothing can be read back, so it is shown. One tap for nearly everybody.</div>
+    </div>
+
+    <div class="arrow"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+
+    <div class="beat new">
+      <span class="pill new">New &mdash; decided</span>
+      <h3>How long is it?</h3>
+      <div style="height: 54px; border-radius: 14px; background: rgba(255,255,255,.04); border: 1px solid rgba(var(--lamp-rgb),.3); display: grid; place-items: center; position: relative; overflow: hidden;">
+        <div style="display: flex; gap: 3px; align-items: center;">
+          <span style="width: 6px; height: 16px; border-radius: 3px; background: var(--lamp); box-shadow: 0 0 12px rgba(var(--lamp-rgb),.9);"></span>
+          <span style="width: 6px; height: 16px; border-radius: 3px; background: rgba(var(--lamp-rgb),.75);"></span>
+          <span style="width: 6px; height: 16px; border-radius: 3px; background: rgba(var(--lamp-rgb),.4);"></span>
+          <span style="width: 6px; height: 16px; border-radius: 3px; background: rgba(255,255,255,.1);"></span>
+          <span style="width: 6px; height: 16px; border-radius: 3px; background: rgba(255,255,255,.1);"></span>
+          <span style="width: 6px; height: 16px; border-radius: 3px; background: rgba(255,255,255,.1);"></span>
+        </div>
+      </div>
+      <div class="t2">The only thing on this board with no precedent in the house. Three whole answers sit beside this one, including one that never asks.</div>
+    </div>
+
+    <div class="arrow"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+
+    <div class="beat">
+      <span class="pill">Inherited</span>
+      <h3>Which room?</h3>
+      <div style="height: 54px; border-radius: 14px; background: rgba(255,255,255,.04); border: 1px solid var(--edge); display: flex; align-items: center; gap: 6px; padding: 0 12px;">
+        <span style="font-size: 12px; padding: 5px 10px; border-radius: 999px; background: var(--lamp); color: var(--lamp-ink); font-weight: 500; white-space: nowrap;">Kitchen</span>
+        <span style="font-size: 12px; padding: 5px 10px; border-radius: 999px; background: var(--surface-hi); color: var(--ink-2);">Bedroom</span>
+      </div>
+      <div class="t2">Room chips, as every other new device gets them. Nothing here is invented.</div>
+    </div>
+
+    <div class="arrow"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg></div>
+
+    <div class="beat">
+      <span class="pill">Inherited</span>
+      <h3>It&rsquo;s in</h3>
+      <div style="height: 54px; border-radius: 14px; background: rgba(255,255,255,.04); border: 1px solid rgba(var(--live-rgb),.3); display: grid; place-items: center;">
+        <span style="width: 22px; height: 22px; border-radius: 999px; background: rgba(var(--live-rgb),.9); display: grid; place-items: center;">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#0c0d10" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+        </span>
+      </div>
+      <div class="t2">And from here it is an ordinary light: the tile, the colors, the schedules, &ldquo;everything off&rdquo;. All of it already works.</div>
+    </div>
+  </div>
+
+  <!-- ============================ what falls away ============================ -->
+  <div style="position: absolute; left: 60px; top: 632px; right: 60px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+    <div style="border-radius: 20px; border: 1px solid var(--edge); background: rgba(255,255,255,.025); padding: 20px 22px;">
+      <span class="cap">Two beats a bridge has that a strip does not</span>
+      <p style="margin: 12px 0 0; font-size: 15px; line-height: 1.55;">
+        <span class="strike">Handing it the keys to your switches</span> &mdash; there is no mesh. A strip is its own light and
+        carries nothing for anybody else.<br><br>
+        <span class="strike">The walk to find it a socket</span> &mdash; a strip is stuck down where it is stuck down. Amber, green
+        and breathing red were answers to <em>is here good?</em>, and a strip is never asked that. Which is why its light can
+        stay whatever the household set it to when the Wi&#8209;Fi drops, where the puck&rsquo;s must not.
+      </p>
+    </div>
+    <div style="border-radius: 20px; border: 1px solid var(--edge); background: rgba(255,255,255,.025); padding: 20px 22px;">
+      <span class="cap">And one that changes shape</span>
+      <p style="margin: 12px 0 0; font-size: 15px; line-height: 1.55;">
+        <strong style="font-weight: 500;">Giving it its software</strong> is already done &mdash; it left the factory flashed, which is the
+        whole reason it can knock at all. So the middle beat is one line, not three: <em>putting it on your Wi&#8209;Fi</em>,
+        over Bluetooth, while you stand there.
+      </p>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+</body>
+</html>

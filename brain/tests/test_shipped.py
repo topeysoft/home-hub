@@ -1,0 +1,138 @@
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
+"""The files the product ships, checked as product rather than as code.
+
+rules.json and scenes.json are copied into a new hub's data volume on first run and are what a family
+gets before they have changed anything. A rule that cannot run is not an error anyone will see — the
+engine drops it and logs a line nobody reads — so the only place it can be caught is here.
+
+Run from brain/: .venv/bin/python -m unittest -v
+"""
+import json, unittest
+
+from hub import intents, rules
+from hub.intents import SERVICE, RoomState
+
+SHIPPED = json.loads(rules.SEED.read_text())
+# The rooms a rule may name without the house having one: "home" is the whole house and "entry" is
+# whichever rooms the family picked on the panel. Anything else has to exist in that particular house.
+ANY_HOUSE = {"home", rules.ENTRY}
+
+
+class ShippedRulesTests(unittest.TestCase):
+    def test_the_file_is_readable_and_has_rules_in_it(self):
+        self.assertIsInstance(SHIPPED.get("rules"), list)
+        self.assertTrue(SHIPPED["rules"])
+
+    def test_every_rule_is_well_formed_enough_to_run_somewhere(self):
+        # Validated against a house that happens to have every room the file names, so what this catches
+        # is a malformed rule rather than a missing room. The room question is the test below.
+        named = {r.get("room") for r in SHIPPED["rules"] if isinstance(r, dict)} - ANY_HOUSE
+        good, errors = rules.validate(SHIPPED, named)
+        self.assertEqual(errors, [])
+        self.assertEqual(len(good), len(SHIPPED["rules"]))
+
+    def test_no_two_rules_share_an_id(self):
+        ids = [r["id"] for r in SHIPPED["rules"]]
+        self.assertEqual(sorted(ids), sorted(set(ids)))
+
+    def test_every_rule_a_new_house_starts_with_can_run_in_that_house(self):
+        """A rule naming a room only one house has is dropped on every other hub, silently.
+
+        The rules shipped in the box have to work for a family that has just plugged theirs in, which
+        means they may only name "home" or "entry" — the rooms every house has by definition.
+        """
+        elsewhere = {r["id"]: r["room"] for r in SHIPPED["rules"] if r.get("room") not in ANY_HOUSE}
+        self.assertEqual(elsewhere, {}, f"these would not run in anyone else's house: {elsewhere}")
+
+    def test_every_rule_says_what_it_is_for_in_words_a_person_could_read(self):
+        for r in SHIPPED["rules"]:
+            with self.subTest(rule=r["id"]):
+                self.assertTrue((r.get("name") or "").strip(), "a rule with no name is a blank row on the panel")
+
+    def test_a_rule_that_ships_switched_off_would_be_a_puzzle_so_none_do(self):
+        for r in SHIPPED["rules"]:
+            with self.subTest(rule=r["id"]):
+                self.assertTrue(r.get("enabled", True))
+
+
+class ShippedScenesTests(unittest.TestCase):
+    SCENES = json.loads(intents.SEED.read_text())
+
+    def test_there_is_a_scene_for_every_state_a_room_can_be_in(self):
+        named = {k for k in self.SCENES if not k.startswith("_")}
+        self.assertEqual(named, {s.value for s in RoomState})
+
+    def test_every_action_in_it_is_one_the_house_can_carry_out(self):
+        for state, actions in self.SCENES.items():
+            if state.startswith("_"): continue
+            for cap, action, _data in actions:
+                with self.subTest(state=state, cap=cap, action=action):
+                    self.assertIn((cap, action), SERVICE)
+
+    def test_how_long_a_hand_set_room_holds_is_given_for_every_state(self):
+        self.assertEqual(set(self.SCENES["_hold"]), {s.value for s in RoomState})
+
+
+if __name__ == "__main__":
+    unittest.main()
+
+
+class FrontDoorFiles(unittest.TestCase):
+    """Every file the Caddyfile imports is mounted where Caddy looks for it.
+
+    The compose files mounted the Caddyfile alone, and when it began importing caddy/away/ the import
+    was not found and Caddy would not start -- hub.local went dark on a real hub on 2 October 2026,
+    with the brain healthy behind it. Nothing else checks this: the tests run Caddy against a folder
+    mounted by hand.
+    """
+    def test_what_the_caddyfile_imports_is_mounted_in_every_compose_file(self):
+        import re
+        from pathlib import Path
+        layer = Path(__file__).resolve().parents[2] / "driver-layer"
+        imports = re.findall(r"^\s*import\s+(\S+)", (layer / "caddy" / "Caddyfile").read_text(), re.M)
+        self.assertTrue(imports)
+        for compose in ("docker-compose.yml", "docker-compose.mac.yml"):
+            text = (layer / compose).read_text()
+            for imp in imports:
+                folder = imp.split("/")[0]
+                self.assertTrue(f"./caddy/{folder}:/etc/caddy/{folder}" in text, f"{compose} does not mount caddy/{folder}, which the Caddyfile imports")
+                self.assertTrue((layer / "caddy" / folder).is_dir())
+
+
+class SharedSecrets(unittest.TestCase):
+    """A secret one container presents and another checks is handed to both by the compose file.
+
+    HUB_SHARE_TOKEN was given to the Matter bridge and never to the brain, so the brain refused every
+    request the bridge made and nothing a household shared ever reached Apple Home, Google Home or
+    Alexa. test_share.py sets the variable itself, which is why it stayed green for weeks.
+    """
+    def service(self, name: str) -> str:
+        import re
+        from pathlib import Path
+        text = (Path(__file__).resolve().parents[2] / "driver-layer" / "docker-compose.yml").read_text()
+        m = re.search(rf"^  {name}:\n(.*?)(?=^  [a-z][\w-]*:\n|\Z)", text, re.M | re.S)
+        self.assertIsNotNone(m, name)
+        return m.group(1)
+
+    def test_the_share_token_reaches_the_brain_and_the_bridge(self):
+        for name in ("brain", "matter-bridge"):
+            self.assertTrue("- HUB_SHARE_TOKEN=${HUB_SHARE_TOKEN:-}" in self.service(name), f"{name} is not given HUB_SHARE_TOKEN")
+
+    # Read by the brain but never meant for a hub's .env: the Mac's driver layer on a bridge network, the
+    # developer's reloader, and the repository a fork's updates come from. Anything else the brain reads has
+    # to be handed to it, or setting it in .env does nothing -- which is how HUB_AWAY_OFFER and
+    # HUB_SHARE_TOKEN both went missing.
+    NOT_FOR_A_HUB = {"HUB_DRIVER_HOST", "HUB_PROBE_HOST", "HUB_RELOAD", "HUB_REPO"}
+
+    def test_every_setting_the_brain_reads_is_handed_to_it(self):
+        import re
+        from pathlib import Path
+        brain = Path(__file__).resolve().parents[1]
+        reads = set()
+        for f in [*brain.glob("hub/*.py"), brain / "main.py"]:
+            reads |= set(re.findall(r'os\.environ(?:\.get)?[\[(]"(HUB_[A-Z_]+)"', f.read_text()))
+        given = set(re.findall(r"^\s+- (HUB_[A-Z_]+)=", self.service("brain"), re.M))
+        baked = set(re.findall(r"(HUB_[A-Z_]+)=", (brain / "Dockerfile").read_text()))
+        missing = reads - given - baked - self.NOT_FOR_A_HUB
+        self.assertEqual(missing, set(), f"the brain reads these but docker-compose.yml never hands them to it: {sorted(missing)}")

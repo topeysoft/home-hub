@@ -1,0 +1,212 @@
+{
+  "pages": [
+    {
+      "id": "page-1",
+      "name": "First run, in plain words"
+    },
+    {
+      "id": "page-2",
+      "name": "Not chosen"
+    }
+  ],
+  "artboards": [
+    {
+      "file": "Today-welcome.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "Today — welcome",
+      "page": "page-1"
+    },
+    {
+      "file": "Today-code.dc.html",
+      "x": 1560,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "Today — code",
+      "page": "page-1"
+    },
+    {
+      "file": "Today-devices.dc.html",
+      "x": 3120,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "Today — devices",
+      "page": "page-1"
+    },
+    {
+      "file": "Today-done.dc.html",
+      "x": 4680,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "Today — done",
+      "page": "page-1"
+    },
+    {
+      "file": "PlainA-welcome.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "A — same sentences, plain words — welcome",
+      "page": "page-2"
+    },
+    {
+      "file": "PlainA-code.dc.html",
+      "x": 1560,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "A — same sentences, plain words — code",
+      "page": "page-2"
+    },
+    {
+      "file": "PlainA-devices.dc.html",
+      "x": 3120,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "A — same sentences, plain words — devices",
+      "page": "page-2"
+    },
+    {
+      "file": "PlainA-done.dc.html",
+      "x": 4680,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "A — same sentences, plain words — done",
+      "page": "page-2"
+    },
+    {
+      "file": "ShortB-welcome.dc.html",
+      "x": 0,
+      "y": 1100,
+      "w": 1440,
+      "h": 900,
+      "title": "B — say less — welcome",
+      "page": "page-1"
+    },
+    {
+      "file": "ShortB-code.dc.html",
+      "x": 1560,
+      "y": 1100,
+      "w": 1440,
+      "h": 900,
+      "title": "B — say less — code",
+      "page": "page-1"
+    },
+    {
+      "file": "ShortB-devices.dc.html",
+      "x": 3120,
+      "y": 1100,
+      "w": 1440,
+      "h": 900,
+      "title": "B — say less — devices",
+      "page": "page-1"
+    },
+    {
+      "file": "ShortB-done.dc.html",
+      "x": 4680,
+      "y": 1100,
+      "w": 1440,
+      "h": 900,
+      "title": "B — say less — done",
+      "page": "page-1"
+    },
+    {
+      "file": "WhyC-welcome.dc.html",
+      "x": 0,
+      "y": 1100,
+      "w": 1440,
+      "h": 900,
+      "title": "C — say what you get — welcome",
+      "page": "page-2"
+    },
+    {
+      "file": "WhyC-code.dc.html",
+      "x": 1560,
+      "y": 1100,
+      "w": 1440,
+      "h": 900,
+      "title": "C — say what you get — code",
+      "page": "page-2"
+    },
+    {
+      "file": "WhyC-devices.dc.html",
+      "x": 3120,
+      "y": 1100,
+      "w": 1440,
+      "h": 900,
+      "title": "C — say what you get — devices",
+      "page": "page-2"
+    },
+    {
+      "file": "WhyC-done.dc.html",
+      "x": 4680,
+      "y": 1100,
+      "w": 1440,
+      "h": 900,
+      "title": "C — say what you get — done",
+      "page": "page-2"
+    }
+  ],
+  "annotations": [
+    {
+      "id": "why",
+      "x": -620,
+      "y": 0,
+      "w": 500,
+      "text": "WHY THIS EXISTS\n\nThe second area of the wording pass (docs/wording.md). First run is the one place everybody reads every word, once, with nothing to compare it to -- so it is the one place a confusing word cannot be learned around.\n\nWHAT THE BOARDS ARE ABOUT: WORDS ONLY. Layout is the shipped first run's (design/setup/, measured off the running panel at 1440x900). Four screens of the nine carry nearly all of the words: Welcome, the passcode, What's in the house (scrolled to its foot, where Behind the scenes is), and the last screen.\n\nWhat's in the house embeds the Add flow (Adding.vue). Its own words -- Listening for anything new, Already waiting, Have a look -- belong to the Add area of the pass and are left alone here.\n\nTHE QUESTION: HOW MUCH SHOULD FIRST RUN SAY? Three whole answers, one per row. Each fixes the same wrong facts (the note under Today); they differ in length and in what they explain.\n\nTHE WORDS PEOPLE AND PHONES SETTLED ARE NOT REOPENED (docs/wording.md): wall screen, Someone with the passcode, Home only / Anywhere, web address.\n\nCHOSEN: B, 2 October 2026.",
+      "page": "page-1"
+    },
+    {
+      "id": "today",
+      "x": 6240,
+      "y": 0,
+      "w": 620,
+      "text": "TODAY\n\nWord for word from app/src/Setup.vue and the brain's driver rows (brain/hub/provision.py). Each number is a word that stops somebody who was not here -- and three of them are not a matter of taste, they are wrong.\n\n1  \"This screen will run the house: lights, screens...\" -- run is ours; screens, as a thing the house controls, is a riddle.\n2  \"from the wall\" -- the wall screen (settled in People).\n3  \"taking a copy away with you\" -- it means making a backup.\n4  \"Once more\" -- a password field asks you to type it again.\n5  The passcode is now also what adds and changes phones (People), and the step does not say so.\n6  \"Behind the scenes\" -- a heading that says: do not read this. Then it is in the middle of first run.\n7  \"Running\", \"Stick on USB\" -- what the machine is doing, not what it means for you.\n8  \"Zigbee radio\", \"Z-Wave radio\", \"Matter\" -- standards. Printed on boxes, but meaningless to most of the people this is for.\n9  \"rests to a clock\" -- our word, rest, for the resting screen.\n10 WRONG. \"the box at the top of Home\" -- there is no page called Home. The first tab is named for the time of day, and the box says Tell the house...\n11 WRONG. \"Found nearby on the Home screen\" -- gone since design/knock/: a new thing is a line at the top of the screen and a dot on +.\n12 WRONG. \"Open Home\" -- the same page that does not exist by that name.\n\nNOT DRAWN, SAME AREA:\n13 Welcome, when the engine was set up by hand: \"The engine behind this hub was set up separately. You will sign in to it next.\" -- engine is ours.\n14 Sign in: \"Home Assistant is already running here. Use the name and password that were set for it and this panel will take it from there.\" and \"Open Home Assistant to reset the password.\" -- AGENTS.md section 5 forbids the name on screen.\n15 \"Call this home\" -- the field for the house's name. Reads as an instruction.\n16 \"Building your home...\" -- the house is not being built; it is being set up.\n17 Restoring: \"The hub restarts and this screen comes back as your house.\" -- comes back as?\n18 Where is home: \"Asking the internet where this hub is...\" -- fine, if odd. Kept.",
+      "page": "page-1"
+    },
+    {
+      "id": "shared",
+      "x": -620,
+      "y": 2200,
+      "w": 500,
+      "text": "WHAT ALL THREE FIX -- NOT A CHOICE\n\n10, 11, 12, the wrong facts:\n- The box is named by what it says: \"Tell the house...\" at the top of the screen.\n- A new thing: \"Plug in something new and a line at the top of the screen says so.\"\n- The last button: \"Start using the house\".\n\nThe words already settled, applied: wall screen (2), adding phones in the passcode's reasons (5), making a backup (3), Type it again (4), the phone card's foot says \"The phone needs to be on your home Wi-Fi\" rather than \"Same Wi-Fi as the hub\".\n\nNot drawn, same in all three:\n13 \"This hub was set up before. You'll sign in with the name and password chosen then.\"\n14 Sign in: \"This hub was already set up, with a name and password of its own. Use those, and the house takes it from there.\" Stuck: \"Forgotten it? Reset it from Advanced.\" -- the Advanced door, never the product's name.\n15 \"A name for the house\", placeholder unchanged.\n16 \"Setting up the house...\"\n17 \"Restoring your backup. The hub restarts, and this screen comes back with your house on it.\"\n(Rooms, Where is home and the wall's resting words are already plain.)",
+      "page": "page-1"
+    },
+    {
+      "id": "a",
+      "x": 6240,
+      "y": 0,
+      "w": 560,
+      "text": "A -- SAME SENTENCES, PLAIN WORDS\n\nKeep every sentence and the job it does; replace only the words that stop somebody. Behind the scenes stays where it is, with what each row MEANS rather than what it is doing: Plugged in, Not plugged in, Working, Needs you to sign in. The standards keep their names.\n\nFOR: the smallest change, and it is the shape that has already shipped and been looked at. Nothing goes missing: someone who does know what Zigbee is still finds it.\n\nAGAINST: it is still a long first run. The passcode is three sentences and a note; the last screen is a heading, a sentence, a card of steps and three tips. And Behind the scenes still asks a newcomer to read five rows of machinery in the middle of setting up their house.",
+      "page": "page-2"
+    },
+    {
+      "id": "b",
+      "x": 6240,
+      "y": 1100,
+      "w": 560,
+      "text": "B -- SAY LESS\n\nOne sentence a lede, and nothing the screen already shows. Behind the scenes leaves first run: it is still on This hub, where it has always also been, and first run shows a row only when something there NEEDS the person -- \"Ring needs you to sign in\", with the button. The last screen keeps one tip, as something to try.\n\nFOR: first run is the moment with the least patience, and every sentence cut is one that cannot confuse. The machinery is not hidden from anybody who wants it -- it is one page away, under This hub -- and a sign-in that needs doing is never cut.\n\nAGAINST: the passcode loses its reasons-list in favor of two examples, and \"Using the house doesn't need it\" carries the whole argument. Someone who wanted to see the radios come up as they plugged a stick in during setup now has to go to This hub to watch. And one tip teaches one thing.\n\nBUILT, 2 October: the row that needs you sits ABOVE Continue, not below it. Below, on a wall too short for the step, it fell under the docked action row's ground -- which is also where Behind the scenes used to be half-hidden. Something to do before going on belongs before the way on.",
+      "page": "page-1"
+    },
+    {
+      "id": "c",
+      "x": 6240,
+      "y": 1100,
+      "w": 560,
+      "text": "C -- SAY WHAT YOU GET\n\nSecond person, and every lede leads with what the answer does for you. The passcode is \"Keep the house yours.\" Behind the scenes is renamed for what it is -- How the house reaches your devices -- and each row says what kind of device it is for, with the standard as a quiet aside: \"Radio for bulbs and sensors, Zigbee\". The tips each end on why it helps.\n\nFOR: it explains the machinery instead of hiding or translating it, so someone who reads it learns the house, and someone who does not can skip it. It is the warmest of the three.\n\nAGAINST: the longest of the three, and the radio rows make claims (\"for locks and switches\") that are true of most devices on that radio but not all of them. Warm wording dates fastest: every sentence here has to stay true as the product changes.",
+      "page": "page-2"
+    }
+  ],
+  "launch": {
+    "view": "canvas",
+    "page": "page-1"
+  }
+}

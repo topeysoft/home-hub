@@ -1,0 +1,2 @@
+{"env": "esp32s3-ship", "chip": "esp32s3", "fw": "0.7.0", "offset": 0, "flash_mode": "dio", "flash_freq": "80m", "flash_size": "16MB",
+ "sha256": "119f05c8c184db8264dc1558a0aa8bf6f1bc1cad4d78282c1846130a2c35729d", "built": "2026-10-05T19:22:21Z", "commit": "452ccb3"}

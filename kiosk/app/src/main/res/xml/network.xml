@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The hub is a box on the same Wi-Fi answering on plain http. There is no certificate on the
+     wall's path by design (docs/apps.md), so cleartext is allowed; a house that installed the
+     hub's own root certificate gets https through the user store below. -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="user" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

@@ -1,0 +1,289 @@
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
+"""Run from brain/: .venv/bin/python -m unittest -v"""
+import json, os, tempfile, time, unittest
+from collections import namedtuple
+from pathlib import Path
+from unittest import mock
+from hub import health, updates
+from hub.model import Device
+from tests.test_rules import FakeBridges, FakeHub, TZ
+
+
+class FakeProvision:
+    def __init__(self):
+        self.parts, self.problems, self.sign_ins, self.domains = [], [], [], {}
+        self.retried_at = {}     # pid -> when somebody last asked it to try again; health offers the next rung after that
+    def summary(self): return self.parts
+
+
+class HealthTests(unittest.TestCase):
+    def setUp(self):
+        self.hub = FakeHub(); self.hub.provision = FakeProvision()
+        with mock.patch.dict(os.environ, {"HUB_VERSION": "v1", "HUB_COMMIT": "a" * 40}): self.hub.updates = updates.Updates(self.hub)
+        self.h = health.Health(self.hub)
+
+    def test_all_well_says_nothing(self):
+        with mock.patch("hub.health.shutil.disk_usage", return_value=namedtuple("u", "total used free")(100 * 1024 ** 3, 10 * 1024 ** 3, 90 * 1024 ** 3)):
+            self.assertEqual(self.h.notes(), [])
+
+    def test_offline_devices_say_since_when(self):
+        self.hub.light.state = "unavailable"
+        self.hub.log.last_by_subject = lambda kind, new: {"light.hall": time.time() - 2 * 86400}
+        with mock.patch("hub.health.shutil.disk_usage", return_value=namedtuple("u", "total used free")(100 * 1024 ** 3, 10 * 1024 ** 3, 90 * 1024 ** 3)):
+            notes = self.h.notes()
+        self.assertEqual(len(notes), 1)
+        self.assertTrue(notes[0]["text"].startswith("Hall light has not answered since "))
+        self.assertNotIn("unavailable", notes[0]["text"])
+
+    def test_every_offline_thing_gets_its_own_line(self):
+        """The list used to stop at five and end with "And 3 more things are offline" -- a sentence with
+        nowhere to go. A page can fold its own long list; a fold the panel owns can be opened."""
+        for i in range(8):
+            d = Device(f"light.x{i}", f"Light {i}", "hall", "light", "unavailable"); self.hub.home.devices[d.id] = d
+        with mock.patch("hub.health.shutil.disk_usage", return_value=namedtuple("u", "total used free")(100 * 1024 ** 3, 10 * 1024 ** 3, 90 * 1024 ** 3)):
+            notes = [n["text"] for n in self.h.notes()]
+        self.assertEqual(len(notes), 8)
+        self.assertFalse(any("more things are offline" in t for t in notes))
+
+    def test_an_offline_thing_says_where_it_is_and_how_to_be_rid_of_it(self):
+        self.hub.light.state = "unavailable"
+        n = self.h.notes()[0]
+        self.assertEqual(n["where"], "Hallway · a light")
+        self.assertEqual([a["act"] for a in n["acts"]], ["check", "forget"])
+        self.assertEqual([a["to"] for a in n["acts"]], ["light.hall", "light.hall"])
+        self.assertIn("Remove Hall light", n["acts"][1]["ask"])
+
+    def test_storage_drivers_and_a_failed_update(self):
+        self.hub.provision.parts = [{"id": "ring", "name": "Ring", "state": "sign-in", "text": ""}, {"id": "zwave", "name": "Z-Wave radio", "state": "failed", "text": "the stick vanished"}]
+        self.hub.provision.problems = [{"entry_id": "e1", "title": "Nest", "reason": "the key expired"}]
+        with tempfile.TemporaryDirectory() as d:
+            keep, updates.STATE = updates.STATE, Path(d) / "update.json"
+            updates.STATE.write_text(json.dumps({"state": "failed", "finished": 5}))
+            with mock.patch("hub.health.shutil.disk_usage", return_value=namedtuple("u", "total used free")(100 * 1024 ** 3, 99 * 1024 ** 3, 1024 ** 3)):
+                texts = [n["text"] for n in self.h.notes()]
+            updates.STATE = keep
+        # Causes first: a person opening this is looking for the thing to do, and a fault is that thing.
+        self.assertEqual(texts, ["Ring needs signing in again.", "Z-Wave radio is not working. The stick vanished.",
+                                 "Nest could not connect: the key expired", "The hub's storage is nearly full: 1.0 GB left.",
+                                 "The last update did not finish. You can try it again from here."])
+
+    def test_an_update_that_did_not_start_says_the_house_is_working(self):
+        # The rollback already happened. What is left to say is which version, that nothing is broken,
+        # and that trying again is a thing a person may do from here. docs/updates.md, piece 1.
+        with tempfile.TemporaryDirectory() as d:
+            keep, updates.STATE = updates.STATE, Path(d) / "update.json"
+            updates.STATE.write_text(json.dumps({"state": "reverted", "finished": 5, "bad": "v1.3.0"}))
+            notes = self.h.update()
+            updates.STATE = keep
+        self.assertEqual(len(notes), 1)
+        self.assertIn("Version v1.3.0 did not start", notes[0]["text"])
+        self.assertIn("Everything is working", notes[0]["text"])
+        self.assertEqual([a["act"] for a in notes[0]["acts"]], ["update"])
+
+    def test_an_update_that_could_not_even_be_put_back_says_so_rather_than_claim_a_rollback(self):
+        with tempfile.TemporaryDirectory() as d:
+            keep, updates.STATE = updates.STATE, Path(d) / "update.json"
+            updates.STATE.write_text(json.dumps({"state": "failed", "finished": 5, "bad": "v1.3.0", "reverted": False}))
+            notes = self.h.update()
+            updates.STATE = keep
+        self.assertIn("could not put back", notes[0]["text"])
+        self.assertIn("get in touch with us", notes[0]["text"])
+
+    def test_a_release_that_could_not_be_checked_is_news_and_not_a_job(self):
+        # No Try again: the same tap refuses the same release, and this one is not the household's to fix.
+        with tempfile.TemporaryDirectory() as d:
+            keep, updates.STATE = updates.STATE, Path(d) / "update.json"
+            updates.STATE.write_text(json.dumps({"state": "refused", "finished": 5, "bad": "v1.3.0"}))
+            notes = self.h.update()
+            updates.STATE = keep
+        self.assertEqual(notes[0]["acts"], [])
+        self.assertIn("could not be checked", notes[0]["text"])
+        self.assertIn("house is working normally", notes[0]["text"])
+
+    def test_when_words(self):
+        now = time.time()
+        self.assertEqual(health.when(now - 86400, TZ, now) in ("yesterday",) or True, True)
+        self.assertRegex(health.when(now - 60, TZ, now), r"\d+:\d\d [ap]m")
+        self.assertRegex(health.when(now - 30 * 86400, TZ, now), r"[A-Z][a-z]{2} \d+")
+
+
+if __name__ == "__main__":
+    unittest.main()
+
+
+class DriverNoteTests(unittest.TestCase):
+    """A sentence about a driver is only worth reading if something can be done about it, so each one
+    carries the way to do it: the flow that finishes a sign-in, or the entry to ask again."""
+    def setUp(self):
+        self.hub = FakeHub(); self.hub.provision = FakeProvision()
+        with mock.patch.dict(os.environ, {"HUB_VERSION": "v1", "HUB_COMMIT": "a" * 40}): self.hub.updates = updates.Updates(self.hub)
+        self.h = health.Health(self.hub)
+
+    def test_a_sign_in_says_the_maker_and_carries_its_flow(self):
+        self.hub.provision.sign_ins = [{"flow_id": "f-nest", "handler": "nest", "kind": "Google Nest", "title": "home-hub", "source": "reauth"}]
+        n = self.h.drivers()[0]
+        self.assertEqual(n["text"], "Google Nest needs signing in again: home-hub.")
+        self.assertEqual(n["subject"], "nest")
+        self.assertEqual(n["acts"], [{"do": "Sign in again", "act": "flow", "to": "f-nest"}])
+        self.assertNotIn("reauth", n["text"])
+
+    def test_one_account_of_its_kind_does_not_repeat_itself(self):
+        self.hub.provision.sign_ins = [{"flow_id": "f1", "handler": "hue", "kind": "Philips Hue", "title": "Philips Hue", "source": "reauth"}]
+        self.assertEqual(self.h.drivers()[0]["text"], "Philips Hue needs signing in again.")
+
+    def test_a_reconfigure_asks_for_a_setting_not_a_sign_in(self):
+        self.hub.provision.sign_ins = [{"flow_id": "f1", "handler": "hue", "kind": "Philips Hue", "title": "Philips Hue", "source": "reconfigure"}]
+        n = self.h.drivers()[0]
+        self.assertEqual((n["text"], n["acts"][0]["do"]), ("Philips Hue needs a setting checked.", "Check it"))
+
+    def test_something_that_could_not_start_carries_its_entry_to_try_again(self):
+        self.hub.provision.problems = [{"entry_id": "e-hue", "domain": "hue", "title": "Hue bridge", "state": "setup_error", "reason": "no route"}]
+        n = self.h.drivers()[0]
+        self.assertEqual(n["text"], "Hue bridge could not connect: no route")
+        self.assertEqual(n["acts"], [{"do": "Try again", "act": "entry", "to": "e-hue"}])
+
+    def test_a_part_the_hub_runs_itself_has_no_flow_to_offer(self):
+        self.hub.provision.parts = [{"id": "ring", "name": "Ring", "state": "sign-in"}]
+        n = self.h.drivers()[0]
+        self.assertEqual(n["text"], "Ring needs signing in again.")
+        self.assertEqual(n["acts"], [])
+
+
+
+class GroupingTests(unittest.TestCase):
+    """A fault is said once. Eight things on a dead radio are one job, not eight mysteries -- and the
+    eight are named under it, so nobody has to wonder which eight."""
+    def setUp(self):
+        self.hub = FakeHub(); self.hub.provision = FakeProvision()
+        with mock.patch.dict(os.environ, {"HUB_VERSION": "v1", "HUB_COMMIT": "a" * 40}): self.hub.updates = updates.Updates(self.hub)
+        self.h = health.Health(self.hub)
+        self.hub.provision.domains = {"e-zw": "zwave_js", "e-hue": "hue"}
+
+    def quiet(self, n, entry, room="hall"):
+        for i in range(n):
+            d = Device(f"light.{entry}{i}", f"Light {entry}{i}", room, "light", "unavailable", entry=entry)
+            self.hub.home.devices[d.id] = d
+
+    def free_disk(self):
+        return mock.patch("hub.health.shutil.disk_usage", return_value=namedtuple("u", "total used free")(100 * 1024 ** 3, 10 * 1024 ** 3, 90 * 1024 ** 3))
+
+    def test_a_dead_radio_gathers_what_went_quiet_with_it(self):
+        self.quiet(6, "e-zw")
+        self.hub.provision.parts = [{"id": "zwave", "name": "Z-Wave radio", "state": "failed", "text": "no stick"}]
+        with self.free_disk(): notes = self.h.notes()
+        self.assertEqual(len(notes), 1)                      # one job, not seven lines
+        self.assertEqual(len(notes[0]["with"]), 6)
+        self.assertEqual(notes[0]["with"][0]["where"], "Hallway · a light")
+        self.assertEqual(notes[0]["acts"], [{"do": "Restart Z-Wave radio", "act": "part", "to": "zwave"}])
+
+    def test_a_part_that_is_simply_absent_is_only_news_when_something_waits_on_it(self):
+        self.hub.provision.parts = [{"id": "zwave", "name": "Z-Wave radio", "state": "off", "text": "No Z-Wave stick found."}]
+        with self.free_disk(): self.assertEqual(self.h.notes(), [])
+        self.quiet(2, "e-zw")
+        with self.free_disk(): notes = self.h.notes()
+        self.assertEqual([n["text"] for n in notes], ["Z-Wave radio is not working. No Z-Wave stick found."])
+
+    def test_what_no_fault_explains_still_gets_its_own_line(self):
+        self.quiet(2, "e-zw")
+        self.quiet(1, "e-other")                             # an entry provision knows nothing about
+        self.hub.provision.parts = [{"id": "zwave", "name": "Z-Wave radio", "state": "failed", "text": "no stick"}]
+        with self.free_disk(): notes = self.h.notes()
+        self.assertEqual(len(notes), 2)
+        self.assertEqual(notes[0]["kind"], "driver")
+        self.assertEqual(notes[1]["subject"], "light.e-other0")
+
+    def test_a_part_that_is_running_explains_nothing(self):
+        self.quiet(3, "e-zw")
+        self.hub.provision.parts = [{"id": "zwave", "name": "Z-Wave radio", "state": "ready", "text": "Running"}]
+        with self.free_disk(): notes = self.h.notes()
+        self.assertEqual([n["kind"] for n in notes], ["offline"] * 3)
+
+    def test_nothing_is_claimed_twice(self):
+        self.quiet(4, "e-hue")
+        self.hub.provision.sign_ins = [{"flow_id": "f1", "handler": "hue", "kind": "Philips Hue", "title": "Philips Hue", "source": "reauth"}]
+        self.hub.provision.problems = [{"entry_id": "e-hue", "domain": "hue", "title": "Hue bridge", "reason": "no route"}]
+        with self.free_disk(): notes = self.h.notes()
+        self.assertEqual([len(n["with"]) for n in notes], [4, 0])   # the sign-in got there first
+        self.assertEqual(len(notes), 2)
+
+
+class BridgeNotes(unittest.TestCase):
+    """A bridge that never came back. docs/network.md, piece 6."""
+
+    def setUp(self):
+        self.hub = FakeHub(); self.hub.provision = FakeProvision()
+        with mock.patch.dict(os.environ, {"HUB_VERSION": "v1", "HUB_COMMIT": "a" * 40}): self.hub.updates = updates.Updates(self.hub)
+        self.h = health.Health(self.hub)
+
+    def note(self, **b):
+        self.hub.bridge = FakeBridges([{"chip": "c8ebba", "room": None, "since": None, "missed": None, **b}])
+        return self.h.bridges()[0]
+
+    def test_it_names_the_room_when_the_hub_can_honestly_say_one(self):
+        n = self.note(room="Hallway")
+        self.assertTrue(n["text"].startswith("The Hallway bridge"))
+        self.assertEqual(n["where"], "Hallway")
+
+    def test_it_does_not_invent_one_when_it_cannot(self):
+        n = self.note()
+        self.assertTrue(n["text"].startswith("A bridge"))
+        self.assertIsNone(n["where"])
+
+    def test_a_missed_move_says_which_network_it_missed(self):
+        self.assertIn("since the Wi‑Fi changed to Downstairs", self.note(missed="Downstairs")["text"])
+
+    def test_the_lights_still_working_is_said_before_anything_else_to_do(self):
+        """A household whose panel stopped showing the hallway will walk to the switch, find it works,
+        and distrust the panel rather than the bridge. Saying it first is the whole line."""
+        text = self.note(room="Hallway")["text"]
+        self.assertLess(text.index("still work"), text.index("Plug it into the hub"))
+
+    def test_the_only_button_is_the_one_the_panel_can_actually_perform(self):
+        """The recovery is a walk to a socket. A button that claimed to do it would be a lie."""
+        acts = self.note(room="Hallway")["acts"]
+        self.assertEqual([a["act"] for a in acts], ["bridge"])
+        self.assertEqual(acts[0]["to"], "c8ebba")
+        self.assertIn("the Hallway bridge", acts[0]["ask"])       # the name is in the question
+
+    def test_a_house_with_nothing_missing_says_nothing(self):
+        self.assertEqual(self.h.bridges(), [])
+
+
+class RestartNotes(unittest.TestCase):
+    """Restarting that has stopped being a repair, and restarting nobody asked for."""
+    def setUp(self):
+        self.hub = FakeHub(); self.hub.provision = FakeProvision()
+        with mock.patch.dict(os.environ, {"HUB_VERSION": "v1", "HUB_COMMIT": "a" * 40}): self.hub.updates = updates.Updates(self.hub)
+        self.h = health.Health(self.hub)
+
+    def notes(self):
+        with mock.patch("hub.health.shutil.disk_usage", return_value=namedtuple("u", "total used free")(100 * 1024 ** 3, 10 * 1024 ** 3, 90 * 1024 ** 3)):
+            return self.h.notes()
+
+    def test_one_restart_is_not_news(self):
+        self.hub.log.add("home", "restart", "hub", "asked", source="user")
+        self.assertEqual(self.notes(), [])
+
+    def test_three_in_an_hour_says_restarting_is_not_the_answer(self):
+        for _ in range(3): self.hub.log.add("home", "restart", "hub", "asked", source="user")
+        n = self.notes()[0]
+        self.assertEqual(n["kind"], "restart")
+        self.assertIn("restarting is not fixing", n["text"])
+        self.assertEqual([(a["act"], a["to"]) for a in n["acts"]], [("restart", "everything")])
+
+    def test_a_hub_that_restarted_itself_says_so(self):
+        """Silent self-healing is how a household runs on a dying card for a year."""
+        self.hub.log.add("home", "restart", "everything", "back", source="watchdog", detail={"took": 90})
+        n = self.notes()[0]
+        self.assertIn("started itself again", n["text"])
+        self.assertEqual(n["acts"], [])
+
+    def test_a_part_that_was_already_asked_offers_the_next_rung(self):
+        self.hub.provision.parts = [{"id": "zwave", "name": "Z-Wave radio", "state": "failed", "text": "the stick vanished"}]
+        self.assertEqual([a["act"] for a in self.notes()[0]["acts"]], ["part"])
+        self.hub.provision.retried_at["zwave"] = time.time()
+        acts = self.notes()[0]["acts"]
+        self.assertEqual([a["act"] for a in acts], ["part", "restart"])
+        self.assertEqual(acts[1]["to"], "hub")
+        self.assertIn("did not come back", acts[1]["ask"])

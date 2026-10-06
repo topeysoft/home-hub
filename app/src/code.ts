@@ -1,0 +1,67 @@
+// SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+// SPDX-License-Identifier: AGPL-3.0-or-later
+import { reactive } from 'vue'
+import { apiUrl, withToken } from './door'
+
+/* The code on the settings. Kept for this tab only; asked for the first time something needs it. */
+/* What a failure says (design/words-band/, A). A reason the hub wrote for a person -- a capital, a full
+   stop -- is kept; anything else (a developer's "unknown room", the server's "Internal Server Error", the
+   browser's "Failed to fetch") becomes a plain sentence, and is marked so a caller that names what failed
+   can say "Couldn't rename it. Try again in a moment." rather than repeat that it did not work. */
+export const NOT_ANSWERING = 'The hub isn’t answering right now.'
+export const TRY_AGAIN = 'That didn’t work. Try again in a moment.'
+export const CANCELED = 'That needs the passcode.'
+export function plainError(detail: unknown): Error {
+  const s = typeof detail === 'string' ? detail.trim() : ''
+  if (/^[A-Z][\s\S]*[.!?…]$/.test(s)) return new Error(s)
+  return Object.assign(new Error(TRY_AGAIN), { plain: true })
+}
+/** "Couldn't rename it" and an error, as one toast: the hub's own reason when it gave one. */
+export const failed = (what: string, e: any) => e?.plain || !e?.message ? `${what}. Try again in a moment.` : `${what}. ${e.message}`
+
+export const lock = reactive({
+  prompt: null as null | { resolve: (ok: boolean) => void; wrong: boolean; note: string },
+  unpaired: new URLSearchParams(location.search).get('join') === '1',   // the house has a code and this is not one of its phones: the join screen is up (?join=1 previews it)
+  /* Reached from outside the house, and the house did not open: the sentence it said, to show instead of
+     itself. The words are the brain's, as every sentence the house says is (?away=1 previews the screen). */
+  away: new URLSearchParams(location.search).get('away') === '1' ? 'This phone works on your home Wi‑Fi. Someone with the passcode can set it to Anywhere, in People.' : null as string | null,
+})
+const KEY = 'hub-code'
+function saved(): string { try { return sessionStorage.getItem(KEY) ?? '' } catch { return '' } }
+export function remember(code: string) { try { code ? sessionStorage.setItem(KEY, code) : sessionStorage.removeItem(KEY) } catch {} }
+
+export function askCode(wrong = false, note = ''): Promise<boolean> {
+  return new Promise(resolve => { lock.prompt = { resolve, wrong, note } })
+}
+
+/** fetch with the code attached, and one chance to type it when the house asks. */
+export async function request(url: string, init: RequestInit = {}): Promise<Response> {
+  const go = () => {
+    const code = saved()
+    const headers = withToken(new Headers(init.headers ?? {}))
+    if (code) headers.set('X-Hub-Code', code)
+    return fetch(apiUrl(url), { ...init, headers }).catch(() => { throw Object.assign(new Error(NOT_ANSWERING), { plain: true }) })   // the hub's name at home when it answers, else this page's own (door.ts)
+  }
+  let r = await go(), wrong = false
+  for (let tries = 0; r.status === 401 && tries < 4; tries++) {
+    let detail = ''
+    try { detail = (await r.clone().json()).detail } catch {}
+    if (detail === 'phone') { lock.unpaired = true; throw new Error('This phone is not in the house yet.') }
+    if (detail !== 'code') break
+    if (!(await askCode(wrong))) throw Object.assign(new Error(CANCELED), { canceled: true })
+    wrong = true
+    r = await go()
+  }
+  /* From away the house answers 403 rather than asking for anything: a phone it has not let out cannot
+     be talked into it from here, so there is nothing to prompt for and the screen says so instead. */
+  if (r.status === 403) {
+    let body: any = null
+    try { body = await r.clone().json() } catch {}
+    if (body && ['remote', 'away', 'at-home'].includes(body.detail)) {
+      const said: string = body.message ?? 'This house isn’t open to this phone.'
+      lock.away = said
+      throw new Error(said)
+    }
+  }
+  return r
+}
