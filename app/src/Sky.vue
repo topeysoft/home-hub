@@ -268,7 +268,9 @@ function land(el: number, sx: number, month: number, wx: Wx, hor: RGB, held: boo
     }
     if (n === 1) {
       /* the treeline sits on the middle ridge, a shade darker than the ground it grows from */
-      const tc = mix(mix(base.map(v => v * .55) as RGB, hazeCol, fade * .6), [24, 40, 30], day * .3 * (1 - wx.snow))
+      const tc = held
+        ? mix(base.map(v => v * .84) as RGB, hazeCol, fade * .5)   // on a held sky a tree is a darker shade of the hill, not a silhouette
+        : mix(mix(base.map(v => v * .55) as RGB, hazeCol, fade * .6), [24, 40, 30], day * .3 * (1 - wx.snow))
       ctx!.fillStyle = rgb(mix(tc, [226, 232, 240], wx.snow * .3))
       for (const t of trees) {
         const x = t.x * W, y = ridgeY(x, horizon + off * H, amp, k, ph) + H * .003, h = t.h * H * Math.min(1, W / H / 1.3), w = h * t.w
