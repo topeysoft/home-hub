@@ -158,11 +158,11 @@ async function sense(id: string | null) {
          :aria-valuemin="LOW" :aria-valuemax="HIGH" :aria-valuenow="showing ?? current"
          @pointerdown="grab" @pointermove="turn" @pointerup="letGo" @pointercancel="letGo" @keydown="key">
       <svg viewBox="0 0 330 330" class="rig-ring" aria-hidden="true">
-        <circle cx="165" cy="165" :r="R" fill="none" stroke="rgba(255,255,255,.10)" stroke-width="17" stroke-linecap="round"
+        <circle cx="165" cy="165" :r="R" fill="none" stroke="rgba(var(--wash-rgb), .10)" stroke-width="17" stroke-linecap="round"
                 :stroke-dasharray="`${SWEEP * C} ${C}`" transform="rotate(135 165 165)" />
         <circle v-if="arc && !off" cx="165" cy="165" :r="R" fill="none" :stroke="arc.warm ? 'var(--lamp)' : '#7ab0e8'" stroke-width="17" stroke-linecap="round"
                 :stroke-dasharray="`${arc.len} ${C}`" :stroke-dashoffset="-arc.from" transform="rotate(135 165 165)" />
-        <circle v-if="handle != null && !off" cx="165" cy="165" :r="R" fill="none" stroke="#f1eee8" stroke-width="25" stroke-linecap="round"
+        <circle v-if="handle != null && !off" cx="165" cy="165" :r="R" fill="none" stroke="var(--ink)" stroke-width="25" stroke-linecap="round"
                 :stroke-dasharray="`6 ${C}`" :stroke-dashoffset="-handle" transform="rotate(135 165 165)" />
       </svg>
       <div class="rig-dial-face">
@@ -268,6 +268,9 @@ async function sense(id: string | null) {
   background: rgba(122, 176, 232, 0.22);
   color: #d6e8fb;
 }
+:root[data-shade='light'] .rig-mode.on {
+  color: color-mix(in srgb, rgb(122, 176, 232) 35%, var(--ink));
+}
 .rig-row {
   /* one surface with the choice inside it, the way the board drew the fan and the sensor: a loose
      label above loose chips read as a settings list rather than as part of the dial */
@@ -278,7 +281,7 @@ async function sense(id: string | null) {
   padding: 10px 16px;
   border-radius: 20px;
   border: 1px solid var(--edge);
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(var(--wash-rgb), 0.05);
 }
 .rig-row-head {
   display: flex;

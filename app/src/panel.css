@@ -111,8 +111,78 @@
   --ink-lit: #f1eee8;
   --wash-rgb: 30, 27, 36;
 }
-:root[data-shade='light'] .sky-veil {
+:root[data-shade='light'] .sky-veil,
+:root[data-shade='light'] .look-mini-veil {
   display: none;
+}
+/* What was dark air on a dark page. A bar or a column laid over the sky is frost in light; the dim
+   behind a sheet is the sky's own shadow, not black, which on a pale page reads as dirt. */
+:root[data-shade='light'] .rail {
+  background: rgba(255, 255, 255, 0.5);
+}
+:root[data-shade='light'] .house-doors {
+  background: rgba(255, 255, 255, 0.4);
+}
+:root[data-shade='light'] .sheet-back {
+  background: oklch(0.4 0.04 265 / 0.28);
+}
+:root[data-shade='light'] .house-veil {
+  background: oklch(0.4 0.04 265 / 0.22);
+}
+/* the resting clock is dark type on a light sky: a dark halo behind it only smudges it */
+:root[data-shade='light'] .idle {
+  text-shadow: 0 1px 30px rgba(255, 255, 255, 0.55);
+}
+/* What stays dark in either shade -- a camera's picture, a printer's glass over its camera, a
+   card wearing its own shot or artwork, the question that hands out a key -- keeps the dark page's ink,
+   so the words on it are written exactly as they are after dark. :where() leaves the specificity
+   at :root's, so a surface that sets its own ink (the ask pane) still wins. */
+:root[data-shade='light']
+  :where(
+    .tile.camera,
+    .viewer,
+    .rig-still,
+    .finder,
+    .print-card,
+    .room-cell.shot,
+    .shell:not([data-face='glass']) .bento .tile.media,
+    .room-share-card,
+    .ask-pane .opened-panel
+  ) {
+  --bg: #0c0d10;
+  --bg-2: #111318;
+  --ink: var(--ink-lit);
+  --ink-2: #b9b5ad;
+  --muted: #7f7d77;
+  --card-ink: var(--ink-lit);
+  --card-ink-2: #b9b5ad;
+  --lamp-text: var(--lamp);
+  --live-text: var(--live);
+  --danger-text: var(--danger);
+  --surface-hi: rgba(255, 255, 255, 0.08);
+  --surface-press: rgba(255, 255, 255, 0.13);
+  --edge: rgba(255, 255, 255, 0.1);
+  --edge-hi: rgba(255, 255, 255, 0.18);
+  --wash-rgb: 255, 255, 255;
+  color: var(--ink);
+}
+@media (min-width: 861px) {
+  /* a room's playing card at full size is its artwork under a dark veil */
+  :root[data-shade='light'] :where(.tiles > .tile.media[data-size='full']) {
+    --ink: var(--ink-lit);
+    --ink-2: #b9b5ad;
+    --muted: #7f7d77;
+    --surface-hi: rgba(255, 255, 255, 0.08);
+    --surface-press: rgba(255, 255, 255, 0.13);
+    --wash-rgb: 255, 255, 255;
+    color: var(--ink);
+  }
+}
+/* the pale pink these were written in is ink for a dark page */
+:root[data-shade='light'] .phones .button.warn,
+:root[data-shade='light'] .things .button.warn,
+:root[data-shade='light'] .opened-kind-one.danger {
+  color: var(--danger-text);
 }
 
 /* ---------- base ---------- */
@@ -327,7 +397,7 @@ input:focus-visible {
      is the half of it that never reached the cards. */
   --card-ink: var(--ink);
   --card-ink-2: var(--ink-2);
-  --card-lamp-ink: var(--lamp);
+  --card-lamp-ink: var(--lamp-text);
 }
 [data-face='glass'] .look-mini-card.lit,
 [data-face='glass'] .tile.light {
@@ -1121,7 +1191,7 @@ input:focus-visible {
   column-gap: 13px;
   padding: 13px 15px;
   border-radius: 17px;
-  background: rgba(255, 255, 255, 0.055);
+  background: rgba(var(--wash-rgb), 0.055);
   border-color: transparent;
 }
 /* No badge under the icon in the card. A filled square beside four rows reads as
@@ -1146,7 +1216,7 @@ input:focus-visible {
 /* the scene the room is in is said in the icon, not in a second card color:
    four tinted rows and one plain one is a card with a hole in it */
 .scenes-stacked .scene.active {
-  background: rgba(255, 255, 255, 0.055);
+  background: rgba(var(--wash-rgb), 0.055);
   border-color: transparent;
 }
 .scenes-stacked .scene.active .scene-icon,
@@ -1366,7 +1436,7 @@ input:focus-visible {
      amber stops meaning anything -- the boards set every one of these lines in the
      card's quiet ink and let the paint say which lamp is doing the work. */
   .tiles > .tile.light.on[data-size] > .tile-body > .tile-state {
-    color: var(--card-ink-2, rgba(255, 255, 255, 0.78));
+    color: var(--card-ink-2, rgba(var(--wash-rgb), 0.78));
   }
 
   /* a thermostat at a third is the number and what the house is doing with it.
@@ -2033,14 +2103,14 @@ input:focus-visible {
   display: block;
   height: 4px;
   border-radius: 2px;
-  background: var(--card-track, rgba(255, 255, 255, 0.16));
+  background: var(--card-track, rgba(var(--wash-rgb), 0.16));
   margin-top: 9px;
 }
 .tile-bar i {
   display: block;
   height: 4px;
   border-radius: 2px;
-  background: var(--card-ink-2, rgba(255, 255, 255, 0.6));
+  background: var(--card-ink-2, rgba(var(--wash-rgb), 0.6));
 }
 
 /* camera */
@@ -2665,11 +2735,19 @@ input:focus-visible {
   border-radius: 50%;
   display: grid;
   place-items: center;
-  background: rgba(255, 255, 255, 0.14);
-  color: #fff;
+  background: rgba(var(--wash-rgb), 0.14);
+  color: var(--ink);
   backdrop-filter: blur(10px);
 }
 .round:active {
+  background: rgba(var(--wash-rgb), 0.26);
+}
+/* the viewer's buttons sit on the camera's own picture, which is dark in either shade */
+.viewer-actions .round {
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+}
+.viewer-actions .round:active {
   background: rgba(255, 255, 255, 0.26);
 }
 
@@ -2830,7 +2908,7 @@ input:focus-visible {
   color: var(--ink);
 }
 .idle-fact + .idle-fact {
-  border-left: 1px solid rgba(255, 255, 255, 0.22);
+  border-left: 1px solid rgba(var(--wash-rgb), 0.22);
 }
 .idle-fact.live {
   color: var(--lamp-text);
@@ -3450,7 +3528,7 @@ input:focus-visible {
   width: min(100%, 640px);
   padding: 18px 20px 20px;
   border-radius: var(--r-lg);
-  background: rgba(255, 255, 255, 0.035);
+  background: rgba(var(--wash-rgb), 0.035);
   border: 1px solid var(--edge-hi);
 }
 .address-row {
@@ -3473,7 +3551,7 @@ input:focus-visible {
   height: 50px;
   padding: 0 14px;
   border-radius: 0 14px 14px 0;
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(var(--wash-rgb), 0.03);
   border: 1px solid var(--edge);
   color: var(--ink-2);
   font-size: 17px;
@@ -5121,7 +5199,7 @@ select.input {
   align-items: center;
   gap: 16px;
   padding: 14px 18px;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-top: 1px solid rgba(var(--wash-rgb), 0.06);
 }
 .sig-row:first-child {
   border-top: 0;
@@ -5151,7 +5229,7 @@ select.input {
   height: 12px;
   border-radius: 3px;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(var(--wash-rgb), 0.1);
   filter: drop-shadow(0 0 6px var(--c));
   mask-image: repeating-linear-gradient(90deg, #000 0 4px, transparent 4px 7px);
 }
@@ -5260,8 +5338,8 @@ select.input {
   border-radius: var(--r-md);
   text-align: left;
   color: var(--ink);
-  background: rgba(255, 255, 255, 0.035);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07);
+  background: rgba(var(--wash-rgb), 0.035);
+  box-shadow: inset 0 0 0 1px rgba(var(--wash-rgb), 0.07);
   transition: background 0.18s var(--ease);
 }
 .sig-way:active {
@@ -5317,7 +5395,7 @@ select.input {
   gap: 12px;
   align-items: start;
   padding: 11px 0;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-top: 1px solid rgba(var(--wash-rgb), 0.06);
 }
 .sig-steps > li:first-child {
   border-top: 0;
@@ -5344,7 +5422,7 @@ select.input {
   color: var(--muted);
 }
 .sig-steps > li.st-wait .sig-mark {
-  box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.2);
+  box-shadow: inset 0 0 0 1.5px rgba(var(--wash-rgb), 0.2);
 }
 .sig-steps > li.st-wait .sig-step {
   color: var(--muted);
@@ -5941,7 +6019,7 @@ select.input {
   gap: 14px;
   padding: 11px 10px;
   border-radius: var(--r-sm);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid rgba(var(--wash-rgb), 0.05);
 }
 .things-rows li:last-child {
   border-bottom: 0;
@@ -6804,6 +6882,13 @@ select.input {
   backdrop-filter: blur(30px) saturate(1.25);
   transform: translateY(100%);
   transition: transform 0.28s var(--ease);
+}
+/* That foot is near-black, which is a pane on a dark page and a pane fading to soot on a light one,
+   with the history at the bottom of it written in dark ink. In light a pane is the milk glass tone.ts
+   draws for it. :where() keeps this under the ask pane, which is dark on purpose, and the flat face. */
+:root[data-shade='light'] :where(.opened-panel),
+:root[data-shade='light'] :where(.house-panel)::before {
+  background: var(--pane, rgba(var(--surface-rgb), 0.9));
 }
 .opened.shown .opened-panel {
   transform: translateY(0);
@@ -7846,7 +7931,7 @@ select.input {
   font-weight: 600;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.86);
+  color: rgba(var(--wash-rgb), 0.86);
   max-width: calc(100% - 32px);
   overflow: hidden;
   white-space: nowrap;
@@ -7889,13 +7974,13 @@ select.input {
   height: 3px;
   margin-bottom: 18px;
   border-radius: 3px;
-  background: rgba(255, 255, 255, 0.24);
+  background: rgba(var(--wash-rgb), 0.24);
 }
 [data-face='glass'] .wall-stage .bento .tile.media .media-bar i {
   position: relative;
   height: 3px;
   border-radius: 3px;
-  background: rgba(255, 255, 255, 0.95);
+  background: rgba(var(--wash-rgb), 0.95);
 }
 [data-face='glass'] .wall-stage .bento .tile.media .media-bar i::after {
   content: '';
@@ -7913,7 +7998,7 @@ select.input {
   width: 44px;
   height: 44px;
   background: none;
-  color: rgba(255, 255, 255, 0.88);
+  color: rgba(var(--wash-rgb), 0.88);
 }
 [data-face='glass'] .wall-stage .bento .tile.media .ctl.primary {
   width: 56px;
@@ -7940,7 +8025,7 @@ select.input {
   margin-top: 16px;
   padding: 0;
   gap: 12px;
-  color: rgba(255, 255, 255, 0.62);
+  color: rgba(var(--wash-rgb), 0.62);
 }
 [data-face='glass'] .wall-stage .bento .tile.media .vol .vol-ic {
   display: none;
@@ -7956,8 +8041,8 @@ select.input {
   height: 22px;
   background: linear-gradient(
       90deg,
-      rgba(255, 255, 255, 0.9) var(--v),
-      rgba(255, 255, 255, 0.2) var(--v)
+      rgba(var(--wash-rgb), 0.9) var(--v),
+      rgba(var(--wash-rgb), 0.2) var(--v)
     )
     center / 100% 4px no-repeat;
   border-radius: 4px;
@@ -8346,7 +8431,7 @@ select.input {
   color: var(--muted);
 }
 .tab.active {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(var(--wash-rgb), 0.1);
   color: var(--ink);
   font-weight: 500;
 }
@@ -8598,7 +8683,7 @@ select.input {
      not a filter: a filter here would form a backdrop root and take the box's
      own frost away at the instant it opened, which is the trap this file has
      already walked into twice -- on the rail and on the room behind a pane. */
-  background-color: rgba(255, 255, 255, 0.028);
+  background-color: rgba(var(--wash-rgb), 0.028);
 }
 /* the words follow the width rather than being stretched by it */
 [data-face='glass'] .bottombar .say-box input,
@@ -8743,7 +8828,7 @@ select.input {
   opacity: 0.7;
 }
 .person.add {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(var(--wash-rgb), 0.1);
   color: var(--ink-2);
 } /* the last circle, as drawn: one more person */
 .person.add:active {
@@ -9622,7 +9707,7 @@ select.input {
   height: 28px;
   padding: 0 11px;
   border-radius: 999px;
-  background: var(--card-hi, rgba(255, 255, 255, 0.07));
+  background: var(--card-hi, rgba(var(--wash-rgb), 0.07));
   font-size: 13px;
   color: var(--card-ink-2, var(--ink-2));
   font-variant-numeric: tabular-nums;
@@ -9672,7 +9757,7 @@ select.input {
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background: var(--card-hi, rgba(255, 255, 255, 0.06));
+  background: var(--card-hi, rgba(var(--wash-rgb), 0.06));
   color: var(--card-ink-2, var(--ink-2));
 }
 .room-cell[data-size='row'] > .room-cell-chip {
@@ -9767,7 +9852,7 @@ select.input {
   margin-top: 5px;
   height: 4px;
   border-radius: 2px;
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(var(--wash-rgb), 0.2);
   overflow: hidden;
 }
 .room-cell[data-size='half'] > .room-cell-foot > .room-cell-bar {
@@ -9779,6 +9864,14 @@ select.input {
   border-radius: 2px;
   background: rgba(255, 236, 200, 0.9);
 }
+/* lamplight drawn in cream reads on a dark card and vanishes on a pale one */
+:root[data-shade='light'] .room-cell.lit:not(.shot) .room-cell-mark,
+:root[data-shade='light'] .room-cell:not(.shot) .room-cell-lamp svg {
+  color: var(--lamp-text);
+}
+:root[data-shade='light'] .room-cell:not(.shot) .room-cell-bar i {
+  background: var(--lamp);
+}
 
 /* ---------- the one thing a card can do without going into the room ---------- */
 .room-cell-knob,
@@ -9788,7 +9881,7 @@ select.input {
   border: 0;
   cursor: pointer;
   color: var(--card-ink, var(--ink));
-  background: var(--card-press, rgba(255, 255, 255, 0.12));
+  background: var(--card-press, rgba(var(--wash-rgb), 0.12));
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -9822,7 +9915,7 @@ select.input {
   font-weight: 500;
 }
 .room-cell-pill.ghost {
-  background: var(--card-hi, rgba(255, 255, 255, 0.08));
+  background: var(--card-hi, rgba(var(--wash-rgb), 0.08));
 }
 .room-cell-knob:active,
 .room-cell-play:active,
@@ -10030,7 +10123,7 @@ select.input {
   margin-top: 28px;
   border-radius: 32px;
   border: 1px solid var(--edge);
-  background: rgba(255, 255, 255, 0.035);
+  background: rgba(var(--wash-rgb), 0.035);
   padding: 26px;
   display: flex;
   min-height: 340px;
@@ -10128,7 +10221,7 @@ select.input {
   color: var(--ink-2);
 }
 .room-share.open {
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(var(--wash-rgb), 0.06);
 }
 .room-share-dot {
   width: 6px;
@@ -10247,7 +10340,7 @@ select.input {
 .wx-hour-bar {
   width: 3px;
   border-radius: 2px;
-  background: rgba(255, 255, 255, 0.34);
+  background: rgba(var(--wash-rgb), 0.34);
 }
 .wx-hour-bar.wet {
   background: rgb(122, 176, 232);
@@ -10255,6 +10348,11 @@ select.input {
 .wx-hour.wet .wx-hour-t,
 .wx-day-s {
   color: rgb(122, 176, 232);
+}
+/* the rain's pale blue is ink for a dark page */
+:root[data-shade='light'] .wx-hour.wet .wx-hour-t,
+:root[data-shade='light'] .wx-day-s {
+  color: color-mix(in srgb, rgb(122, 176, 232) 35%, var(--ink));
 }
 .wx-hour-k {
   font-size: 11.5px;
@@ -10306,7 +10404,7 @@ select.input {
   position: relative;
   height: 5px;
   border-radius: 3px;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(var(--wash-rgb), 0.1);
 }
 .wx-day-bar i {
   position: absolute;
@@ -10446,7 +10544,7 @@ select.input {
   gap: 13px;
   border-radius: var(--r-lg);
   border: 1px solid var(--edge);
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(var(--wash-rgb), 0.05);
   color: var(--ink);
   font: inherit;
   font-size: 17px;
@@ -10463,7 +10561,7 @@ select.input {
 }
 .rig-btn:hover,
 .rig-big:hover {
-  background: rgba(255, 255, 255, 0.09);
+  background: rgba(var(--wash-rgb), 0.09);
 }
 .rig-btn:disabled,
 .rig-big:disabled {
@@ -10517,7 +10615,7 @@ select.input {
   flex: 1 1 auto;
   min-height: 200px;
   border-radius: 84px;
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(var(--wash-rgb), 0.06);
   border: 1px solid var(--edge);
   overflow: hidden;
   touch-action: none;
@@ -10559,7 +10657,7 @@ select.input {
   right: 0;
   display: grid;
   place-items: center;
-  color: rgba(255, 255, 255, 0.3);
+  color: rgba(var(--wash-rgb), 0.3);
   pointer-events: none;
 }
 .rig-end.top {
@@ -10630,7 +10728,7 @@ select.input {
 .rig-auto.on {
   background: var(--ink);
   border-color: transparent;
-  color: #1d1a22;
+  color: var(--bg);
 }
 .rig-auto-sub {
   font-size: 13.5px;
@@ -10638,7 +10736,7 @@ select.input {
   color: var(--ink-2);
 }
 .rig-auto.on .rig-auto-sub {
-  color: rgba(29, 26, 34, 0.66);
+  color: color-mix(in srgb, var(--bg) 66%, transparent);
 }
 .rig-auto-tick {
   margin-left: auto;
@@ -10735,7 +10833,7 @@ select.input {
   border-radius: 50%;
   box-shadow:
     0 0 0 3px var(--pane-ring, rgba(12, 13, 24, 0.8)),
-    0 0 0 5px rgba(255, 255, 255, 0.85);
+    0 0 0 5px rgba(var(--wash-rgb), 0.85);
 }
 .rig-tune-text {
   display: flex;
@@ -10817,7 +10915,7 @@ select.input {
   aspect-ratio: 1;
   border-radius: 20px;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(var(--wash-rgb), 0.05);
   display: grid;
   place-items: center;
 }
@@ -10829,7 +10927,7 @@ select.input {
 .rig-bar {
   height: 6px;
   border-radius: 3px;
-  background: rgba(255, 255, 255, 0.16);
+  background: rgba(var(--wash-rgb), 0.16);
   overflow: hidden;
 }
 .rig-bar i {
@@ -10856,7 +10954,7 @@ select.input {
   flex: 1 1 0;
   height: 44px;
   border-radius: var(--r-lg);
-  background: rgba(255, 255, 255, 0.07);
+  background: rgba(var(--wash-rgb), 0.07);
   border: 1px solid var(--edge);
   touch-action: none;
   cursor: pointer;
@@ -10867,7 +10965,7 @@ select.input {
   top: 0;
   bottom: 0;
   border-radius: var(--r-lg);
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(var(--wash-rgb), 0.2);
 }
 .rig-slider-knob {
   position: absolute;
@@ -11041,7 +11139,7 @@ select.input {
   max-height: 330px;
   border-radius: 10px 10px 4px 4px;
   border: 1px solid var(--edge-hi);
-  background: linear-gradient(100deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.05) 62%);
+  background: linear-gradient(100deg, rgba(var(--wash-rgb), 0.12), rgba(var(--wash-rgb), 0.05) 62%);
   box-shadow: inset -18px 0 28px -26px rgba(0, 0, 0, 0.8);
 }
 .rig-door-panel {
@@ -11049,8 +11147,8 @@ select.input {
   left: 20px;
   right: 44px;
   border-radius: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(var(--wash-rgb), 0.16);
+  background: rgba(var(--wash-rgb), 0.03);
 }
 .rig-door-panel.top {
   top: 20px;
@@ -11067,7 +11165,7 @@ select.input {
   width: 17px;
   height: 17px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.45);
+  background: rgba(var(--wash-rgb), 0.45);
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
 }
 .rig-jamb {
@@ -11077,8 +11175,8 @@ select.input {
   bottom: 0;
   width: 12px;
   border-radius: 4px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(255, 255, 255, 0.09);
+  border: 1px solid rgba(var(--wash-rgb), 0.14);
+  background: rgba(var(--wash-rgb), 0.09);
 }
 .rig-bolt {
   position: absolute;
@@ -11104,7 +11202,7 @@ select.input {
   height: 104px;
   margin-top: 14px;
   border-radius: 52px;
-  background: rgba(255, 255, 255, 0.07);
+  background: rgba(var(--wash-rgb), 0.07);
   border: 1px solid var(--edge);
   overflow: hidden;
   touch-action: none;
@@ -11260,7 +11358,7 @@ select.input {
   flex: 1 1 0;
   border-radius: var(--r-lg);
   border: 1px solid var(--edge);
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(var(--wash-rgb), 0.04);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -11279,7 +11377,7 @@ select.input {
 .rig-speed-bar {
   width: 8px;
   border-radius: 4px;
-  background: rgba(255, 255, 255, 0.22);
+  background: rgba(var(--wash-rgb), 0.22);
 }
 .rig-speed.on .rig-speed-bar {
   background: var(--lamp);
@@ -11301,7 +11399,7 @@ select.input {
   height: 66px;
   border-radius: 20px;
   border: 1px solid var(--edge);
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(var(--wash-rgb), 0.04);
   color: var(--ink-2);
   font: inherit;
   font-size: 15.5px;
@@ -11310,7 +11408,7 @@ select.input {
   transition: background 0.15s var(--ease);
 }
 .rig-when:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(var(--wash-rgb), 0.08);
 }
 .rig-when:disabled {
   opacity: 0.45;
@@ -11348,7 +11446,7 @@ select.input {
   position: relative;
   height: 74px;
   border-radius: var(--r-md);
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(var(--wash-rgb), 0.05);
   border: 1px solid var(--edge);
   overflow: hidden;
 }
@@ -11905,7 +12003,7 @@ button.reading[data-held] {
   height: 252px;
   margin-bottom: 18px;
   border-radius: 20px;
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(var(--wash-rgb), 0.03);
   border: 1px solid var(--edge);
   overflow: hidden;
 }
@@ -12036,7 +12134,7 @@ button.reading[data-held] {
 .bridge-bar {
   height: 6px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(var(--wash-rgb), 0.1);
   overflow: hidden;
   margin-bottom: 20px;
 }
@@ -12101,7 +12199,7 @@ button.reading[data-held] {
   gap: 2px;
   padding: 16px 10px 14px;
   border-radius: 18px;
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(var(--wash-rgb), 0.03);
   border: 1px solid var(--edge);
   text-align: center;
 }
@@ -12281,7 +12379,7 @@ button.reading[data-held] {
   align-items: center;
   padding: 20px;
   border-radius: 20px;
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(var(--wash-rgb), 0.03);
   border: 1px solid var(--edge);
   margin-bottom: 18px;
 }
@@ -12530,7 +12628,7 @@ button.reading[data-held] {
   padding: 0 16px;
   border-radius: 14px;
   border: 1px solid var(--edge);
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(var(--wash-rgb), 0.04);
 }
 .held-supply.now {
   border-color: rgba(var(--lamp-rgb), 0.5);
@@ -12560,7 +12658,7 @@ button.reading[data-held] {
   padding: 0 22px;
   border-radius: 24px;
   border: 1px solid var(--edge);
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(var(--wash-rgb), 0.05);
 }
 .held-step-icon {
   display: grid;
@@ -12569,7 +12667,7 @@ button.reading[data-held] {
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(var(--wash-rgb), 0.08);
   color: var(--lamp-text);
 }
 .held-step b {
@@ -12629,7 +12727,7 @@ button.reading[data-held] {
   border: 0;
   font: inherit;
   color: var(--ink);
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(var(--wash-rgb), 0.08);
 }
 .say-look-word.on {
   background: rgba(var(--lamp-rgb), 0.16);
@@ -12759,7 +12857,7 @@ button.reading[data-held] {
   min-height: calc(43% + 2px);
   padding: 16px 18px;
   border-radius: 24px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(var(--wash-rgb), 0.14);
   background: linear-gradient(rgba(52, 56, 66, 0.86), rgba(28, 30, 36, 0.92));
   display: flex;
   flex-direction: column;
@@ -12777,7 +12875,7 @@ button.reading[data-held] {
   width: 44px;
   height: 44px;
   border-radius: var(--r-sm);
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(var(--wash-rgb), 0.06);
   border: 1px solid var(--edge);
   color: var(--ink-2);
   overflow: hidden;
@@ -12841,7 +12939,7 @@ button.reading[data-held] {
   margin-top: 14px;
   border-radius: 3px;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.16);
+  background: rgba(var(--wash-rgb), 0.16);
 }
 .print-bar i {
   position: absolute;
@@ -12889,7 +12987,7 @@ button.reading[data-held] {
   font: inherit;
   font-size: 13.5px;
   color: var(--ink);
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(var(--wash-rgb), 0.08);
   cursor: pointer;
 }
 .print-answer.primary {
@@ -13071,7 +13169,7 @@ button.reading[data-held] {
   padding: 12px 16px;
   border-radius: var(--r-md);
   border: 1px solid var(--edge);
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(var(--wash-rgb), 0.04);
 }
 .print-temp small {
   font-size: 12.5px;
@@ -13106,7 +13204,7 @@ button.reading[data-held] {
   font: inherit;
   font-size: 16px;
   color: var(--ink);
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(var(--wash-rgb), 0.08);
   cursor: pointer;
 }
 .print-act.cancel {
@@ -13175,7 +13273,7 @@ button.reading[data-held] {
   padding: 12px 22px 12px 12px;
   border-radius: 20px;
   border: 1px solid var(--edge);
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(var(--wash-rgb), 0.05);
 }
 .print-job .print-thumb {
   width: 52px;
@@ -13307,16 +13405,16 @@ button.reading[data-held] {
   padding: 14px;
   border-radius: 20px;
   border: 1px solid var(--edge);
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(var(--wash-rgb), 0.05);
 }
 .printer-row.allowed {
   border-color: rgba(var(--live-rgb), 0.4);
-  background: linear-gradient(rgba(var(--live-rgb), 0.08), rgba(var(--live-rgb), 0.08)), rgba(255, 255, 255, 0.03);
+  background: linear-gradient(rgba(var(--live-rgb), 0.08), rgba(var(--live-rgb), 0.08)), rgba(var(--wash-rgb), 0.03);
 }
 .printer-row.waiting {
   padding: 22px 22px 22px;
   border-color: rgba(var(--lamp-rgb), 0.5);
-  background: linear-gradient(rgba(var(--lamp-rgb), 0.07), rgba(var(--lamp-rgb), 0.07)), rgba(255, 255, 255, 0.04);
+  background: linear-gradient(rgba(var(--lamp-rgb), 0.07), rgba(var(--lamp-rgb), 0.07)), rgba(var(--wash-rgb), 0.04);
   box-shadow: 0 0 46px -14px rgba(var(--lamp-rgb), 0.35);
 }
 .printer-icon {
@@ -13330,7 +13428,7 @@ button.reading[data-held] {
   color: var(--lamp-ink);
 }
 .printer-icon.plain {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(var(--wash-rgb), 0.08);
   color: var(--ink-2);
 }
 .printer-row.allowed .printer-icon {
@@ -13384,7 +13482,7 @@ button.reading[data-held] {
 }
 .printer-ring circle {
   fill: none;
-  stroke: rgba(255, 255, 255, 0.14);
+  stroke: rgba(var(--wash-rgb), 0.14);
   stroke-width: 2.5;
 }
 .printer-ring circle.left {
