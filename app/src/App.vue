@@ -35,6 +35,7 @@ import WeatherArt from './WeatherArt.vue'
 import { glassVars, isTone, toneVars, type ToneName } from './tone'
 import { isFace, isLayout, isNav, type FaceName, type LayoutName, type NavName } from './layout'
 import { feelFrom, placeOf, TOUCHED_AT, READ_AT } from './look'
+import { picked, shade, shadeOf } from './shade'
 import RailView from './views/RailView.vue'
 import WallView from './views/WallView.vue'
 import RoomsView from './views/RoomsView.vue'
@@ -94,8 +95,21 @@ const width = ref(window.innerWidth)
 const measure = () => (width.value = window.innerWidth)
 const place = computed(() => placeOf(width.value))
 
+/* Light or dark, the one part of the look that is this screen's own (shade.ts). It lands on <html>
+   rather than the shell so a sheet or a toast drawn outside the shell takes it too, and it tells the
+   browser, so a scrollbar or a form control is drawn to match. */
+const darkOS = window.matchMedia('(prefers-color-scheme: dark)')
+const prefersDark = ref(darkOS.matches)
+const onScheme = () => (prefersDark.value = darkOS.matches)
+const shadeNow = computed(() => shadeOf(picked.value, width.value >= TOUCHED_AT, prefersDark.value, params.get('shade')))
+watch(shadeNow, s => {
+  shade.value = s
+  document.documentElement.dataset.shade = s
+  document.documentElement.style.colorScheme = s
+}, { immediate: true })
+
 const toneName = computed<ToneName>(() => isTone(toneParam) ? toneParam : (isTone(store.ambient.look?.tone) ? store.ambient.look!.tone as ToneName : feel.value.tone))
-const tone = computed(() => toneVars(store.sky.elevation, store.sky.condition, toneName.value))
+const tone = computed(() => toneVars(store.sky.elevation, store.sky.condition, toneName.value, shadeNow.value))
 const layout = computed<LayoutName>(() => isLayout(layoutParam) ? layoutParam : (isLayout(store.ambient.look?.layout) ? store.ambient.look!.layout as LayoutName : place.value.layout))
 
 /* where the way around the house lives -- the side list, or tabs across the
@@ -110,7 +124,7 @@ const face = computed<FaceName>(() => isFace(faceParam) ? faceParam : (isFace(st
    and Pastel did nothing at all on this face. A face that is not on costs
    nothing, because there is nothing to bind. */
 const glass = computed(() => face.value === 'glass'
-  ? glassVars(store.sky.elevation, store.sky.condition, toneName.value) : {})
+  ? glassVars(store.sky.elevation, store.sky.condition, toneName.value, shadeNow.value) : {})
 /* Whether this screen can paint a pane at all. Asked once: it cannot change
    while the panel is open, and a host that cannot blur gets the face flattened
    rather than taken away -- panel.css says what that means. ?flat=1 previews
@@ -206,6 +220,7 @@ onMounted(() => {
   window.addEventListener('keydown', touched, { capture: true })
   document.addEventListener('visibilitychange', looked)
   atTouch.addEventListener('change', measure)
+  darkOS.addEventListener('change', onScheme)
   atRead.addEventListener('change', measure)
 })
 onUnmounted(() => {
@@ -214,6 +229,7 @@ onUnmounted(() => {
   window.removeEventListener('keydown', touched, { capture: true })
   document.removeEventListener('visibilitychange', looked)
   atTouch.removeEventListener('change', measure)
+  darkOS.removeEventListener('change', onScheme)
   atRead.removeEventListener('change', measure)
 })
 </script>

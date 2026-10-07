@@ -28,6 +28,15 @@
   --live: rgb(var(--live-rgb));
   --danger-rgb: 224, 138, 138;
   --danger: rgb(var(--danger-rgb));
+  /* the same three as TEXT. On a dark page they are the colors themselves; a light page needs them
+     deeper to be read, while a chip filled with the color is fine as it is (see the light block) */
+  --lamp-text: var(--lamp);
+  --live-text: var(--live);
+  --danger-text: var(--danger);
+  /* what a hairline, a track, a hover or a quiet fill is drawn in ON THE PAGE: white over the dark
+     sky, ink over the light one. Not for anything drawn on a picture -- a camera frame, artwork, a
+     dial -- which is dark in either shade and keeps its white. */
+  --wash-rgb: 255, 255, 255;
 
   /* the glass's own body, and the channels behind it: a card that wants to sit heavier or lighter
      than the standard sheet mixes its own strength rather than inventing a second gray */
@@ -72,6 +81,38 @@
 }
 .shell[data-ambient='night'] {
   --glow: rgba(110, 130, 190, 0.11);
+}
+
+/* ---------- light (design/appearance/, B, decided 7 October) ----------
+   Light or dark is each screen's own pick (shade.ts), and lands on <html>. Everything else follows
+   from the tokens: the sky is held up into the light by sky.ts, the cards and panes by tone.ts, and
+   what is left is the ink and the surfaces, here. The ink is dark and never flips back. The signal
+   colors keep their fills -- an amber chip with dark ink on it reads on white as well as on black --
+   and give their TEXT a deeper shade, because the pastels were chosen to be ink on a dark field and
+   wash out on a light one. */
+:root[data-shade='light'] {
+  --bg: #e7eaf3;
+  --bg-2: #f1f2f7;
+  --live-rgb: 52, 150, 104;
+  --danger-rgb: 206, 96, 92;
+  --lamp-text: #8a5a14;
+  --live-text: #2a7a52;
+  --danger-text: #a8423c;
+  --surface-rgb: 255, 255, 255;
+  --surface: rgba(var(--surface-rgb), 0.66);
+  --surface-hi: rgba(30, 27, 36, 0.06);
+  --surface-press: rgba(30, 27, 36, 0.11);
+  --edge: rgba(30, 27, 36, 0.1);
+  --edge-hi: rgba(30, 27, 36, 0.18);
+  --ink: #1e1b24;
+  --ink-2: #57546a;
+  --muted: #74707e;
+  /* a drawn object is dark at every hour in either shade, so what sits on it stays light */
+  --ink-lit: #f1eee8;
+  --wash-rgb: 30, 27, 36;
+}
+:root[data-shade='light'] .sky-veil {
+  display: none;
 }
 
 /* ---------- base ---------- */
@@ -471,7 +512,7 @@ input:focus-visible {
   color: var(--ink-2);
 }
 .rail-weather svg {
-  color: var(--lamp);
+  color: var(--lamp-text);
 }
 .rail-nav {
   flex: 1;
@@ -634,7 +675,7 @@ input:focus-visible {
   background: var(--surface-press);
 }
 .error {
-  color: var(--danger);
+  color: var(--danger-text);
   margin: 0 0 16px;
 }
 .empty {
@@ -747,14 +788,14 @@ input:focus-visible {
   white-space: nowrap;
 }
 .room-card.active .room-card-activity {
-  color: var(--lamp);
+  color: var(--lamp-text);
 }
 .room-card.attention:not(.empty) {
   border-style: dashed;
   border-color: rgba(var(--lamp-rgb), 0.45);
 }
 .room-card.attention:not(.empty) .room-card-activity {
-  color: var(--lamp);
+  color: var(--lamp-text);
 }
 @media (min-width: 861px) {
   /* the rail already lists every room here, so the grid is a glance, not the way around */
@@ -1111,10 +1152,10 @@ input:focus-visible {
 .scenes-stacked .scene.active .scene-icon,
 .scenes-stacked .scene.done .scene-icon {
   background: none;
-  color: var(--lamp);
+  color: var(--lamp-text);
 }
 .scenes-stacked .scene.done .scene-icon {
-  color: var(--live);
+  color: var(--live-text);
 }
 
 /* Everything below is the WALL panel's room, and only that.
@@ -1583,7 +1624,7 @@ input:focus-visible {
   border-color: rgba(var(--lamp-rgb), 0.32);
 }
 .reading.on svg {
-  color: var(--lamp);
+  color: var(--lamp-text);
 }
 .reading.dead {
   opacity: 0.55;
@@ -2120,7 +2161,7 @@ input:focus-visible {
     border-color: rgba(var(--lamp-rgb), 0.5);
   }
   .rail-tail .rail-add.attention svg {
-    color: var(--lamp);
+    color: var(--lamp-text);
   }
   .rail-tail .rail-add .rail-name {
     display: none;
@@ -2243,7 +2284,7 @@ input:focus-visible {
   color: var(--ink-2);
 }
 .home-next svg {
-  color: var(--lamp);
+  color: var(--lamp-text);
 }
 
 /* everything on across the house, one chip each; a tap quiets it */
@@ -2268,7 +2309,7 @@ input:focus-visible {
   color: var(--ink-2);
 }
 .onnow-chip.kept .onnow-place {
-  color: var(--lamp);
+  color: var(--lamp-text);
 }
 .onnow-leave-active {
   transition: opacity 0.26s ease, transform 0.26s ease;
@@ -2551,7 +2592,7 @@ input:focus-visible {
   font-size: 14px;
 }
 .banner svg {
-  color: var(--lamp);
+  color: var(--lamp-text);
   animation: spin 2.4s linear infinite;
 }
 @keyframes spin {
@@ -2792,7 +2833,7 @@ input:focus-visible {
   border-left: 1px solid rgba(255, 255, 255, 0.22);
 }
 .idle-fact.live {
-  color: var(--lamp);
+  color: var(--lamp-text);
 }
 .idle-fact-value {
   display: flex;
@@ -3165,7 +3206,7 @@ input:focus-visible {
   border: 1px solid rgba(var(--lamp-rgb), 0.35);
 }
 .chosen > svg {
-  color: var(--lamp);
+  color: var(--lamp-text);
 }
 .chosen-text {
   display: flex;
@@ -3234,7 +3275,7 @@ input:focus-visible {
   border-color: rgba(var(--lamp-rgb), 0.5);
 }
 .tile.arming .tile-state {
-  color: var(--lamp);
+  color: var(--lamp-text);
 }
 
 /* ---------- first run ---------- */
@@ -3288,7 +3329,7 @@ input:focus-visible {
   place-items: center;
   background: var(--surface);
   border: 1px solid var(--edge-hi);
-  color: var(--lamp);
+  color: var(--lamp-text);
   margin-bottom: 26px;
   backdrop-filter: var(--frost);
 }
@@ -3372,7 +3413,7 @@ input:focus-visible {
 .setup-note svg {
   flex: none;
   margin-top: 2px;
-  color: var(--lamp);
+  color: var(--lamp-text);
 }
 .setup-note.plain {
   display: block;
@@ -3445,10 +3486,10 @@ input:focus-visible {
   font-size: 14px;
 }
 .address-said.ok {
-  color: var(--live);
+  color: var(--live-text);
 }
 .address-said.no {
-  color: var(--danger);
+  color: var(--danger-text);
 }
 .address-picks {
   display: flex;
@@ -3595,7 +3636,7 @@ a.button {
   display: grid;
   place-items: center;
   background: var(--surface-hi);
-  color: var(--lamp);
+  color: var(--lamp-text);
 }
 
 /* fields: the few forms the product has */
@@ -3619,7 +3660,7 @@ a.button {
 }
 .field-err {
   font-size: 13px;
-  color: var(--danger);
+  color: var(--danger-text);
 }
 /* A field the house already knows the answer to. It sits where the input would, at the input's own
    height so the row below does not jump, and is deliberately not drawn as a box: a settled fact, not
@@ -3938,12 +3979,12 @@ select.input {
   color: var(--muted);
 }
 .drop.has svg {
-  color: var(--live);
+  color: var(--live-text);
 }
 .field-hint.warn {
   display: block;
   margin: -6px 0 14px;
-  color: var(--lamp);
+  color: var(--lamp-text);
   font-size: 13.5px;
 }
 .copy-row {
@@ -4382,10 +4423,10 @@ select.input {
 /* On right now: the one word on this line a person can act on without moving, because they can look
    up and see which lamp is lit. Lit like the lamp it is describing. */
 .sort-live {
-  color: var(--lamp);
+  color: var(--lamp-text);
 }
 .sort-dead {
-  color: var(--danger);
+  color: var(--danger-text);
 }
 /* What came of a blink: on the row it belongs to rather than in a toast over the list it came from,
    and across the row for the same reason the forgetting question is -- in the name's own column this
@@ -4683,7 +4724,7 @@ select.input {
   white-space: nowrap;
 }
 .door.attention .door-hint {
-  color: var(--lamp);
+  color: var(--lamp-text);
 }
 .door > .flip {
   display: none;
@@ -4957,7 +4998,7 @@ select.input {
   transition: background 0.18s var(--ease);
 }
 .why-line svg {
-  color: var(--lamp);
+  color: var(--lamp-text);
 }
 .why-line:active {
   background: var(--surface-press);
@@ -5095,10 +5136,10 @@ select.input {
   margin: 0;
 }
 .sig-tried {
-  color: var(--live);
+  color: var(--live-text);
 }
 .sig-tried.sig-bad {
-  color: var(--danger);
+  color: var(--danger-text);
 }
 .sig-try {
   white-space: nowrap;
@@ -5292,11 +5333,11 @@ select.input {
 }
 .sig-steps > li.st-ok .sig-mark {
   background: rgba(var(--live-rgb), 0.18);
-  color: var(--live);
+  color: var(--live-text);
 }
 .sig-steps > li.st-no .sig-mark {
   background: rgba(var(--danger-rgb), 0.18);
-  color: var(--danger);
+  color: var(--danger-text);
 }
 .sig-steps > li.st-skip .sig-mark {
   background: var(--surface-hi);
@@ -5429,7 +5470,7 @@ select.input {
 .routines-note {
   text-transform: none;
   letter-spacing: 0;
-  color: var(--lamp);
+  color: var(--lamp-text);
 }
 .nudge.quiet {
   cursor: default;
@@ -5557,7 +5598,7 @@ select.input {
   max-width: 60ch;
 }
 .say-answer svg {
-  color: var(--lamp);
+  color: var(--lamp-text);
   flex: 0 0 auto;
   margin-top: 3px;
 }
@@ -5674,7 +5715,7 @@ select.input {
   color: var(--ink-2);
 }
 .suggest-lede svg {
-  color: var(--lamp);
+  color: var(--lamp-text);
   flex: 0 0 auto;
 }
 .suggest-bar .button {
@@ -5692,7 +5733,7 @@ select.input {
   color: var(--ink-2);
 }
 .suggest-line svg {
-  color: var(--lamp);
+  color: var(--lamp-text);
   flex: 0 0 auto;
 }
 .suggest-line b {
@@ -5817,7 +5858,7 @@ select.input {
   font-weight: 500;
 }
 .phones-me {
-  color: var(--lamp);
+  color: var(--lamp-text);
   font-weight: 400;
 }
 .phones-sub {
@@ -5880,7 +5921,7 @@ select.input {
   text-decoration-color: var(--ink-2);
 }
 .things-a.warn {
-  color: var(--danger);
+  color: var(--danger-text);
   text-decoration-color: rgba(var(--danger-rgb), 0.45);
 }
 .things-a.still {
@@ -6078,7 +6119,7 @@ select.input {
 }
 .tile.alarm.on .tile-state,
 .tile.alarm.on .tile-name {
-  color: var(--danger);
+  color: var(--danger-text);
 }
 .tile.plain:active,
 .tile.light:active,
@@ -6907,11 +6948,11 @@ select.input {
    inside edit so it is never under somebody who opened the pane to turn a lamp off.
    design/forget/OnTheThing.dc.html. */
 .opened-kind-say.end {
-  color: var(--danger);
+  color: var(--danger-text);
   text-decoration-color: rgba(var(--danger-rgb), 0.45);
 }
 .opened-kind-say.end:hover {
-  color: var(--danger);
+  color: var(--danger-text);
   text-decoration-color: var(--danger);
 }
 .opened-kind-one.danger {
@@ -8390,7 +8431,7 @@ select.input {
 }
 /* the one door to everything that is not a light or a door: This house */
 .rail-house.attention .rail-sub {
-  color: var(--lamp);
+  color: var(--lamp-text);
 }
 /* the bar along the bottom: the command box on the left, the household on the
    right, floating over the sky as drawn -- no ground of its own, the way the
@@ -8720,7 +8761,7 @@ select.input {
   white-space: nowrap;
 }
 .people-state.in {
-  color: var(--live);
+  color: var(--live-text);
 }
 .household-line {
   font-size: 13.5px;
@@ -10040,7 +10081,7 @@ select.input {
   line-height: 23px;
 }
 .pane-why.roof-wrong {
-  color: var(--danger);
+  color: var(--danger-text);
 }
 @media (max-height: 860px) and (min-width: 861px) {
   .pane-body.pane-roof {
@@ -10352,7 +10393,7 @@ select.input {
 /* a verb that is on without being the primary one: a camera's floodlight */
 .opened-acts .ctl.lit {
   background: rgba(var(--lamp-rgb), 0.18);
-  color: var(--lamp);
+  color: var(--lamp-text);
 }
 
 /* ---- a control's own children must not take the gesture off it ----
@@ -10437,7 +10478,7 @@ select.input {
    and no more than that: this is a button saying what the next tap does, not an alert */
 .rig-big.arming {
   border-color: rgba(var(--lamp-rgb), 0.5);
-  color: var(--lamp);
+  color: var(--lamp-text);
 }
 .rig-btn.wide {
   justify-content: center;
@@ -10961,7 +11002,7 @@ select.input {
   left: 20px;
   font-size: 17px;
   font-weight: 500;
-  color: var(--lamp);
+  color: var(--lamp-text);
   transform: translateY(50%);
 }
 .rig-scale-now i {
@@ -11278,7 +11319,7 @@ select.input {
 .rig-when.said {
   border-style: dashed;
   cursor: default;
-  color: var(--lamp);
+  color: var(--lamp-text);
 }
 
 /* ---- the ones that only watch ---- */
@@ -11301,7 +11342,7 @@ select.input {
   color: var(--ink-2);
 }
 .rig-sense-now.on {
-  color: var(--lamp);
+  color: var(--lamp-text);
 }
 .rig-strip {
   position: relative;
@@ -12303,17 +12344,17 @@ button.reading[data-held] {
    Nothing else on the page takes it, so the eye lands on the only rows with
    buttons. The words are the brain's: see HappenedPage.vue. */
 .happened-live {
-  color: var(--lamp);
+  color: var(--lamp-text);
 }
 .happened-warm {
   background: var(--lamp-glow);
-  color: var(--lamp);
+  color: var(--lamp-text);
 }
 /* What the page just did, kept in the row it did it to. Nothing vanishes under a
    tap: re-reading from the brain would take the finding away mid-tap, and the
    heading and everything under it would jump up the screen. */
 .happened-did {
-  color: var(--live);
+  color: var(--live-text);
 }
 /* The half with nothing to do about it. .recent centers its three columns, which
    is right for one line; these sentences run to two on a phone, so the icon and
@@ -12401,7 +12442,7 @@ button.reading[data-held] {
   padding: 3px 9px;
   border-radius: 999px;
   background: var(--lamp-glow);
-  color: var(--lamp);
+  color: var(--lamp-text);
   font-size: 12px;
   vertical-align: 1px;
 }
@@ -12444,13 +12485,13 @@ button.reading[data-held] {
 }
 .tile.light.held .tile-icon {
   background: rgba(var(--lamp-rgb), 0.12);
-  color: var(--lamp);
+  color: var(--lamp-text);
 }
 .held-state {
   display: block;
   font-size: 15px;
   font-weight: 500;
-  color: var(--lamp);
+  color: var(--lamp-text);
 }
 .held-why {
   display: block;
@@ -12507,7 +12548,7 @@ button.reading[data-held] {
   color: var(--ink);
 }
 .held-supply.now .held-supply-v {
-  color: var(--lamp);
+  color: var(--lamp-text);
 }
 .held-step {
   display: flex;
@@ -12529,7 +12570,7 @@ button.reading[data-held] {
   height: 36px;
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.08);
-  color: var(--lamp);
+  color: var(--lamp-text);
 }
 .held-step b {
   display: block;
@@ -12554,7 +12595,7 @@ button.reading[data-held] {
   background: rgba(var(--lamp-rgb), 0.08);
 }
 .notes li.note-held .recent-icon {
-  color: var(--lamp);
+  color: var(--lamp-text);
 }
 
 /* ---------- a look for the roofline, said (design/roofline/SaidC.dc.html) ----------
@@ -12593,7 +12634,7 @@ button.reading[data-held] {
 .say-look-word.on {
   background: rgba(var(--lamp-rgb), 0.16);
   box-shadow: inset 0 0 0 1px rgba(var(--lamp-rgb), 0.5);
-  color: var(--lamp);
+  color: var(--lamp-text);
 }
 .say-look-comma {
   color: var(--muted);
@@ -12605,7 +12646,7 @@ button.reading[data-held] {
   color: var(--ink-2);
 }
 .say-look-live {
-  color: var(--live);
+  color: var(--live-text);
 }
 .say-look .draft-actions {
   flex-direction: row;
@@ -12869,7 +12910,7 @@ button.reading[data-held] {
   color: var(--ink-3, var(--muted));
 }
 .print-finished svg {
-  color: var(--live);
+  color: var(--live-text);
 }
 /* a phone's: the camera on the left, how far and when on the right (design/printers/PhoneB) */
 .print-card.compact {
@@ -13069,7 +13110,7 @@ button.reading[data-held] {
   cursor: pointer;
 }
 .print-act.cancel {
-  color: var(--danger);
+  color: var(--danger-text);
 }
 .print-act.primary {
   border-color: transparent;
@@ -13294,7 +13335,7 @@ button.reading[data-held] {
 }
 .printer-row.allowed .printer-icon {
   background: rgba(var(--live-rgb), 0.18);
-  color: var(--live);
+  color: var(--live-text);
 }
 .printer-text {
   flex: 1;
@@ -13610,7 +13651,7 @@ button.reading[data-held] {
   }
   .finish-count {
     font-size: 13px;
-    color: var(--lamp);
+    color: var(--lamp-text);
   }
   .finish-bar {
     height: 4px;
@@ -13637,7 +13678,7 @@ button.reading[data-held] {
     color: var(--ink);
   }
   .finish-step > svg:first-child {
-    color: var(--lamp);
+    color: var(--lamp-text);
   }
   .finish-step > svg:last-child:not(:first-child) {
     color: var(--ink-3);
@@ -13646,7 +13687,7 @@ button.reading[data-held] {
     color: var(--muted);
   }
   .finish-step.done > svg:first-child {
-    color: var(--live);
+    color: var(--live-text);
   }
   .finish-step.done span {
     text-decoration: line-through;
