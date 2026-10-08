@@ -609,3 +609,23 @@ class ThermostatCompanionEventTests(ApiTest):
         self.assertEqual(told[-1]["device"]["id"], "climate.thermostat")
         self.assertEqual(told[-1]["device"]["attrs"]["comfort"], "away")
         self.assertEqual(self.hub.log.recent(10, subject="climate.thermostat", kinds=("state",)), [])
+
+
+class FirstReadingTests(ApiTest):
+    """Reported 8 October: a thermostat paired over HomeKit said it was added and was nowhere on the wall
+    until a refresh. Its first reading arrived after the rebuild its registry entry set off, and a state
+    for a thing the house does not hold yet was simply dropped."""
+
+    def test_the_first_reading_of_a_thing_the_house_does_not_hold_rebuilds_it(self):
+        with unittest.mock.patch.object(self.hub, "rebuild_soon") as soon:
+            self.hub._on_event({"event_type": "state_changed", "data": {
+                "entity_id": "climate.my_ecobee", "old_state": None,
+                "new_state": {"state": "cool", "attributes": {"friendly_name": "My ecobee"}}}})
+        soon.assert_called_once()
+
+    def test_a_later_reading_of_something_the_house_leaves_out_does_not(self):
+        with unittest.mock.patch.object(self.hub, "rebuild_soon") as soon:
+            self.hub._on_event({"event_type": "state_changed", "data": {
+                "entity_id": "sensor.thermostat_wifi_signal", "old_state": {"state": "-60"},
+                "new_state": {"state": "-61", "attributes": {}}}})
+        soon.assert_not_called()
