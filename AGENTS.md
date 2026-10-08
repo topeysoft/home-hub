@@ -252,6 +252,12 @@ Do not reopen these, and do not propose around them.
   still. A household changes a look by saying it in the command box (a fixed grammar, five words of
   motion, no model), and it plays on the roof before it is kept. The way round is asked in the yard only
   once a chase is wanted. `brain/hub/roofline.py`, pinned by `brain/tests/test_roofline.py`.
+- **Every Elyir product with a screen starts the same way** (7 October, `design/boot/`, J). *elyir* is
+  written by hand, the dot of the i lights like a lamp and breathes, slowly, then glides into the
+  product's own mark (the hub's is the house) and breathes there until the product is ready. No logo
+  card, no progress, no words but the name -- one sentence only if a start is slow. The name and the lamp
+  are shared frame for frame; a product brings where the dot lands and when it is ready. `startup/`,
+  pinned to the board by `startup/startup.test.mjs`.
 
 - **The Brilliant work lives in a repository of its own, and public code never reaches into it**
   (5 October 2026). This repository is public and every hub clones it whole. The bridge puck here (`puck/`) is

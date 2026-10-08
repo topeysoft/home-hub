@@ -1,0 +1,57 @@
+/* The wall unit starting up, shared by every board in this collection. Each board is the glass at
+   1440x900; boot.js builds the layers and sets them for a moment in the startup. */
+html, body { margin: 0; background: #000; }
+body { width: 1440px; height: 900px; overflow: hidden; font-family: 'Instrument Sans', -apple-system, sans-serif; }
+
+.wall { position: relative; width: 1440px; height: 900px; overflow: hidden; background: #000; color: #f1eee8; }
+.wall > * { position: absolute; inset: 0; }
+
+/* A lit LCD with nothing drawn on it is not black, it is this. */
+.backlit { background: #1b1c1e; }
+
+/* The stock Linux console: one logo per core, then the boot log. */
+.console { padding: 14px 18px; font: 15px/19px 'DejaVu Sans Mono', ui-monospace, Menlo, monospace; color: #c8c8c8; white-space: pre; }
+.console .logos { display: flex; gap: 6px; margin-bottom: 10px; }
+.console .ok { color: #3ec43e; }
+.console .lines { position: absolute; left: 18px; right: 18px; top: 96px; bottom: 14px; overflow: hidden; display: flex; flex-direction: column; justify-content: flex-end; }
+
+.login { padding: 14px 18px; font: 15px/19px 'DejaVu Sans Mono', ui-monospace, Menlo, monospace; color: #c8c8c8; white-space: pre; }
+.white { background: #fff; }
+
+/* Chromium's own page for a server that is not answering yet, as it draws at this size. */
+.err { background: #fff; color: #202124; font-family: -apple-system, 'Segoe UI', Roboto, sans-serif; }
+.err .box { position: absolute; left: 330px; top: 250px; width: 600px; }
+.err h1 { font-size: 27px; font-weight: 500; margin: 34px 0 16px; }
+.err p { font-size: 17px; color: #5f6368; margin: 0 0 10px; }
+.err code { display: block; margin-top: 28px; font-size: 13px; color: #5f6368; letter-spacing: .02em; }
+.err button { position: absolute; left: 0; top: 330px; background: #1a73e8; color: #fff; border: 0; border-radius: 4px; padding: 9px 18px; font-size: 15px; }
+
+.panel { background: #0c0d10 url(panel.jpg) center / 1440px 900px no-repeat; }
+
+/* The mark, the same house the app's icon draws, at whatever size the direction gives it. */
+.mark svg { position: absolute; overflow: visible; }
+.mark .dotglow { position: absolute; border-radius: 50%; background: radial-gradient(circle, rgba(233, 184, 114, .55), rgba(233, 184, 114, 0) 68%); }
+
+.words { display: flex; flex-direction: column; align-items: center; }
+.words .line { position: absolute; left: 0; right: 0; top: 540px; text-align: center; font-size: 30px; font-weight: 400; color: #b9b5ad; letter-spacing: .005em; }
+.words .steps { position: absolute; left: 0; right: 0; top: 604px; display: flex; justify-content: center; gap: 12px; }
+.words .steps i { width: 8px; height: 8px; border-radius: 50%; background: #f1eee8; }
+
+/* The halo is a light around the glass, not on it. The board is the glass, so the halo is drawn as
+   what it throws inward across the edge of the screen. Its color is an emitter's -- saturated,
+   off-channels near zero -- not the panel's pastel lamp. */
+.halo { box-shadow: inset 0 0 0 3px rgba(255, 120, 10, .95), inset 0 0 70px 12px rgba(255, 110, 0, .55), inset 0 0 220px 40px rgba(255, 100, 0, .18); pointer-events: none; }
+
+/* Not the product: the board's own clock, so a frame can be read against the real startup. */
+.chip { inset: auto auto 22px 22px !important; padding: 7px 12px; border-radius: 8px; background: #fff3b0; color: #3a3000;
+        font: 13px/17px ui-monospace, Menlo, monospace; box-shadow: 0 2px 12px rgba(0, 0, 0, .4); cursor: pointer; user-select: none; }
+
+/* The pen at the end of a line that is still being drawn (E). */
+.mark .tip { position: absolute; width: 44px; height: 44px; border-radius: 50%; opacity: 0;
+             background: radial-gradient(circle, #f6d7a6 0 5px, rgba(233, 184, 114, .6) 6px, rgba(233, 184, 114, 0) 70%); }
+
+.hi-word { display: flex; align-items: center; justify-content: center; font-size: 240px; font-weight: 400; line-height: 1; letter-spacing: -.02em; color: #f1eee8; }
+.hi-word .i { display: inline-block; }
+.hi-script { display: flex; align-items: center; justify-content: center; }
+.hi-light { background: radial-gradient(520px 360px at 50% 50%, rgba(233, 184, 114, .20), rgba(233, 184, 114, 0) 70%); }
+.wall > .hi-dot { inset: auto; border-radius: 50%; }

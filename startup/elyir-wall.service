@@ -1,0 +1,32 @@
+# The panel on this unit's own screen, after the startup splash. Installed by startup/install.sh.
+# It conflicts with plymouth-quit.service, as a display manager does, so the splash stays up past the
+# end of boot until wall.sh lets it finish; if this unit fails, plymouth-quit takes the splash down.
+[Unit]
+Description=Elyir's screen
+After=systemd-user-sessions.service plymouth-start.service network-online.target dbus.socket systemd-logind.service
+Wants=network-online.target dbus.socket systemd-logind.service
+Conflicts=plymouth-quit.service getty@tty1.service
+After=plymouth-quit.service getty@tty1.service
+OnFailure=plymouth-quit.service
+ConditionPathExists=/dev/tty0
+
+[Service]
+Type=simple
+ExecStartPre=+/opt/home-hub/startup/wall.sh wait
+ExecStart=/opt/home-hub/startup/wall.sh run
+TimeoutStartSec=infinity
+Restart=always
+RestartSec=2
+User=elyir-wall
+PAMName=elyir-wall
+TTYPath=/dev/tty1
+# No TTYReset: systemd 257 (Trixie) asks the terminal a question while resetting it, and a console
+# held by the splash never answers, so the unit waited forever before running anything.
+TTYVHangup=yes
+TTYVTDisallocate=yes
+StandardInput=tty-fail
+UtmpIdentifier=tty1
+UtmpMode=user
+
+[Install]
+WantedBy=multi-user.target

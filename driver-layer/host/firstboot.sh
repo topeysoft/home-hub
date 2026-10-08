@@ -10,6 +10,7 @@
 #   2. On a Pi 5 that booted from SD with an empty NVMe attached: copy itself to the NVMe and reboot
 #      from it (HUB_AUTO_NVME=0 in /etc/home-hub.conf turns this off).
 #   3. Run install.sh, which does everything a hand install would.
+#   4. On a unit with its own screen: startup/install.sh, the splash and the panel full screen.
 set -euo pipefail
 MARK=/var/lib/home-hub/firstboot.done
 DIR="${HOME_HUB_DIR:-/opt/home-hub}"
@@ -49,6 +50,12 @@ if [ -x "$DIR/install.sh" ]; then
   HOME_HUB_DIR="$DIR" "$DIR/install.sh"
 else
   curl -fsSL https://raw.githubusercontent.com/topeysoft/home-hub/main/install.sh | HOME_HUB_DIR="$DIR" bash
+fi
+# A unit with a screen of its own -- the wall, on its DSI connector -- starts the way every Elyir
+# product does. A monitor on HDMI is somebody's desk, not the product's face, so it is left alone.
+if grep -qsx connected /sys/class/drm/card*-DSI-*/status && [ -x "$DIR/startup/install.sh" ]; then
+  log "a screen of its own: Elyir's startup"
+  HOME_HUB_DIR="$DIR" "$DIR/startup/install.sh" || log "could not set up the screen's startup; the hub is unaffected"
 fi
 touch "$MARK"
 log "done"
