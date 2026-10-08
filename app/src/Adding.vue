@@ -4,9 +4,10 @@
 -->
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
-import { moveDevice, renameDevice } from './api'
-import { store, notify, refreshFound, loadHealth, keepLooking, foundCount } from './store'
-import { doors, stripWaiting, type Act, type Caught, type Door, type Proof, type Working } from './adding'
+import { getSuggestions, moveDevice, renameDevice, type Device } from './api'
+import { store, cap, notify, refreshFound, loadHealth, keepLooking, foundCount, deviceById } from './store'
+import { doors, FITS, stripWaiting, unitKind, type Act, type Caught, type Door, type Proof, type Working } from './adding'
+import { partWord, unitsOf, type UnitRow } from './units'
 import Icon from './Icon.vue'
 import Blink from './prove/Blink.vue'
 import Press from './prove/Press.vue'
@@ -93,8 +94,10 @@ const working = (w: Working) => { acts.value = []; work.value = w; beat.value = 
 function caught(c: Caught) {
   acts.value = []
   got.value = c; name.value = c.name ?? ''; placed.value = ''
+  guessed.value = {}; changing.value = {}; chosen.value = {}
   beat.value = 'in'
   refreshFound(); loadHealth()
+  if (several.value.length) guess()
 }
 const failed = (text: string, retry = true) => { acts.value = []; wrong.value = { text, retry }; beat.value = 'wrong' }
 
@@ -126,14 +129,56 @@ async function place(id: string) {
 async function done() {
   const g = got.value
   if (g?.device_id && name.value.trim() && name.value.trim() !== g.name) {
-    try { await renameDevice(g.device_id, name.value.trim()) } catch (e: any) { notify(e.message, 'error') }
+    try { await renameDevice(g.device_id, name.value.trim(), g.unit) } catch (e: any) { notify(e.message, 'error') }
   }
   if (placed.value) notify(`${name.value.trim() || g?.name || 'It'} is in the ${rooms.value.find(r => r.id === placed.value)?.name ?? 'room'} now.`)
   notNow()
 }
 /* An account that brought in six things at once has no one room to be put in. The house does not
    pretend otherwise: it offers the screen that places them, rather than a paragraph about it. */
-function intoRooms() { store.goRoom = 'unassigned'; store.sheet = null }
+function intoRooms() {
+  store.justAdded = { from: got.value?.from, ids: got.value?.ids ?? [], at: Date.now() }
+  store.goRoom = 'unassigned'; store.sheet = null
+}
+
+/* ---- beat four, for a few things at once (design/arrived/, C) ----
+   What one add brought, a row a thing. Anything the house's own reasoning can place from its name -- an
+   Ecobee sensor somebody called Bedroom -- is placed the moment this appears, and says so with Change
+   beside it as its undo. Only what nothing places is asked. Never the assistant's guesses: this is a
+   move made before anybody taps, and it has to be one a person would make from the name alone. */
+const several = computed<UnitRow[]>(() => {
+  const ids = got.value?.ids ?? []
+  if (!ids.length) return []
+  const rows = unitsOf(ids.map(deviceById).filter((d): d is Device => !!d))
+  return rows.length > 1 && rows.length <= FITS ? rows : []
+})
+const guessed = ref<Record<string, string>>({})     // row key -> the room the house put it in
+const changing = ref<Record<string, boolean>>({})
+const chosen = ref<Record<string, string>>({})      // what was picked here, shown at once rather than when the house echoes it
+const roomOfRow = (u: UnitRow) => chosen.value[u.key] ?? deviceById(u.lead.id)?.room_id ?? ''
+const roomName = (id: string) => store.rooms.find(r => r.id === id)?.name ?? 'room'
+const partsLine = (u: UnitRow) => u.parts.length > 1 ? u.parts.map(d => partWord(d, u.name)).join(' · ') : ''
+const iconOf = (d: Device) => cap(d)
+const broughtLine = computed(() => several.value.map(unitKind).join(', and '))
+async function guess() {
+  let items: { id: string; room: string; source: string }[]
+  try { items = (await getSuggestions()).items } catch { return }
+  for (const u of several.value) {
+    const s = items.find(i => i.source === 'house' && i.room && u.parts.some(p => p.id === i.id))
+    if (!s || roomOfRow(u) !== 'unassigned') continue
+    try {
+      await moveDevice(u.lead.id, s.room)
+      guessed.value = { ...guessed.value, [u.key]: s.room }; chosen.value = { ...chosen.value, [u.key]: s.room }
+    } catch {}
+  }
+}
+async function placeRow(u: UnitRow, id: string) {
+  const was = chosen.value[u.key]
+  chosen.value = { ...chosen.value, [u.key]: id }
+  try { await moveDevice(u.lead.id, id) }
+  catch (e: any) { chosen.value = { ...chosen.value, [u.key]: was }; notify(e.message, 'error'); return }
+  if (guessed.value[u.key]) guessed.value = { ...guessed.value, [u.key]: id }
+}
 
 /* A strip still asking, while something else has the screen. The predicate is in adding.ts with
    the rest of this screen's vocabulary, and is pinned by a test. */
@@ -264,7 +309,8 @@ if (props.resume) open_('signin', props.resume, store.resumeName || 'Sign in aga
       <!-- beat four -->
       <template v-else-if="beat === 'in'">
         <p class="flow-desc">
-          <template v-if="got?.what">It turned out to be <b>{{ got.what }}</b>.</template>
+          <template v-if="several.length">It brought <b>{{ broughtLine }}</b>.</template>
+          <template v-else-if="got?.what">It turned out to be <b>{{ got.what }}</b>.</template>
           <template v-else>{{ got?.name || 'It' }} is part of the house now.</template>
         </p>
         <template v-if="got?.device_id">
@@ -280,6 +326,28 @@ if (props.resume) open_('signin', props.resume, store.resumeName || 'Sign in aga
             <span class="field-hint">Named after the room, so you usually won’t need to type anything.</span>
           </label>
         </template>
+        <template v-else-if="several.length">
+          <p class="arrived-from" v-if="got?.from"><Icon name="plus" :size="13" />Came with {{ got.from }}</p>
+          <div class="arrived-row" v-for="u in several" :key="u.key">
+            <div class="arrived-top">
+              <span class="arrived-icon"><Icon :name="iconOf(u.lead)" :size="20" /></span>
+              <span class="arrived-name"><b>{{ u.name }}</b>
+                <small>{{ partsLine(u) }}{{ partsLine(u) && (guessed[u.key] && !changing[u.key] || roomOfRow(u) === 'unassigned') ? ' — ' : '' }}{{ guessed[u.key] && !changing[u.key] ? `its name says ${roomName(guessed[u.key])}, so it’s there` : roomOfRow(u) === 'unassigned' ? 'nothing says where this one is' : '' }}</small></span>
+              <template v-if="guessed[u.key] && !changing[u.key]">
+                <span class="chip-btn on"><Icon name="check" :size="14" />{{ roomName(roomOfRow(u)) }}</span>
+                <button class="button small ghost" @click="changing = { ...changing, [u.key]: true }">Change</button>
+              </template>
+            </div>
+            <template v-if="!guessed[u.key] || changing[u.key]">
+              <h3 class="label">Which room is it in?</h3>
+              <div class="press-rooms">
+                <button v-for="r in rooms" :key="r.id" class="chip-btn" :class="{ on: roomOfRow(u) === r.id }" @click="placeRow(u, r.id)">
+                  <Icon v-if="roomOfRow(u) === r.id" name="check" :size="14" />{{ r.name }}
+                </button>
+              </div>
+            </template>
+          </div>
+        </template>
         <p class="flow-desc" v-else-if="got?.many">Its devices are added over the next minute. Any that don’t know their room wait in New devices.</p>
       </template>
 
@@ -291,7 +359,7 @@ if (props.resume) open_('signin', props.resume, store.resumeName || 'Sign in aga
       <div class="flow-actions">
         <template v-if="beat === 'in'">
           <button class="button" :class="{ busy }" @click="done">Done</button>
-          <button class="button ghost" v-if="got?.many" @click="intoRooms">Put them in rooms</button>
+          <button class="button ghost" v-if="got?.many && !several.length" @click="intoRooms">Put them in rooms</button>
           <button class="button ghost" v-else @click="notNow">Add another</button>
         </template>
         <template v-else-if="beat === 'wrong'">

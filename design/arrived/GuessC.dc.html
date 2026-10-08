@@ -102,7 +102,7 @@
     .note p { margin: 6px 0 0; }
   </style>
 </helmet>
-<!-- C -- the house guesses, you check: anything whose name says its room is already there; only the rest is asked. -->
+<!-- C, CHOSEN 8 OCTOBER -- the house guesses, you check: anything whose name says its room is already there; only the rest is asked. -->
 <div class="screen">
   <div class="abs" style="inset: 0; background: linear-gradient(rgb(16,18,28), rgb(26,26,40));"></div>
   <div class="abs" style="left: 40px; top: 28px; display: flex; align-items: baseline; gap: 12px; opacity: .8;">
@@ -116,17 +116,17 @@
       <span class="round glass" style="left: 1044px; top: 26px; width: 44px; height: 44px;"><svg class="i" width="18" height="18" viewBox="0 0 24 24" stroke-width="1.8" style=""><path d="M6 6l12 12M18 6L6 18"/></svg></span>
       <div class="rule"></div>
       <div class="col">
-  <div class="ok"><i><svg class="i" width="18" height="18" viewBox="0 0 24 24" stroke-width="2.2" style=""><path d="M20 6L9 17l-5-5"/></svg></i>It&rsquo;s in.</div>
-  <p class="desc">It brought a <b>thermostat</b>, and a <b>temperature sensor</b> for another room.</p>
-  <div class="came" style="margin-top: 20px;"><svg class="i" width="14" height="14" viewBox="0 0 24 24" stroke-width="1.8" style=""><path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 8v4l2.5 2.5"/></svg>Came with My ecobee</div>
+  <div class="ok"><i><svg class="i" width="18" height="18" viewBox="0 0 24 24" stroke-width="2.2" style=""><path d="M20 6L9 17l-5-5"/></svg></i>Added.</div>
+  <p class="desc">It brought <b>a thermostat, and a temperature sensor</b>.</p>
+  <div class="came" style="margin-top: 20px;"><svg class="i" width="13" height="13" viewBox="0 0 24 24" stroke-width="1.8" style=""><path d="M12 5v14M5 12h14"/></svg>Came with My ecobee</div>
   <div class="thing new" style="margin-top: 0;">
-    <div class="top"><span class="ti"><svg class="i" width="22" height="22" viewBox="0 0 24 24" stroke-width="1.8" style=""><path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"/></svg></span><span style="flex: 1;"><b>Bedroom sensor</b><small>Its name says Bedroom, so it&rsquo;s there</small></span>
-      <span class="cb on"><svg class="i" width="14" height="14" viewBox="0 0 24 24" stroke-width="1.8" style=""><path d="M20 6L9 17l-5-5"/></svg>Bedroom</span><span class="b2" style="height: 40px; font-size: 15px; margin-left: 8px;">Change</span></div>
+    <div class="top"><span class="ti"><svg class="i" width="22" height="22" viewBox="0 0 24 24" stroke-width="1.8" style=""><path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 8v4l2.5 2.5"/></svg></span><span><b>My ecobee</b><small>Thermostat &middot; Humidity &mdash; nothing says where this one is</small></span></div>
+    <div class="lab">Which room is it in?</div>
+    <div class="chips"><span class="cb">Living room</span><span class="cb">Kitchen</span><span class="cb">Bedroom</span><span class="cb">Office</span><span class="cb">Front door</span><span class="cb">Garage</span><span class="cb">Backyard</span><span class="cb">Bathroom</span></div>
   </div>
   <div class="thing new" style="margin-top: 12px;">
-    <div class="top"><span class="ti"><svg class="i" width="22" height="22" viewBox="0 0 24 24" stroke-width="1.8" style=""><path d="M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 8v4l2.5 2.5"/></svg></span><span><b>Thermostat</b><small>Nothing says where this one is</small></span></div>
-    <div class="lab">Which room is it in?</div>
-    <div class="chips"><span class="cb">Living room</span><span class="cb">Kitchen</span><span class="cb">Bedroom</span><span class="cb">Office</span><span class="cb">Front door</span><span class="cb">Garage</span><span class="cb">Backyard</span><span class="cb">Bathroom</span><span class="cb" style="color: var(--muted);">Somewhere else&hellip;</span></div>
+    <div class="top"><span class="ti"><svg class="i" width="22" height="22" viewBox="0 0 24 24" stroke-width="1.8" style=""><path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"/></svg></span><span style="flex: 1;"><b>Bedroom</b><small>Temperature &middot; Occupancy &mdash; its name says Bedroom, so it&rsquo;s there</small></span>
+      <span class="cb on"><svg class="i" width="14" height="14" viewBox="0 0 24 24" stroke-width="1.8" style=""><path d="M20 6L9 17l-5-5"/></svg>Bedroom</span><span class="b2" style="height: 40px; font-size: 15px; margin-left: 8px;">Change</span></div>
   </div>
   <div class="acts" style="margin-top: 22px;"><span class="b1">Done</span><span class="b2">Add another</span></div></div>
     </div>

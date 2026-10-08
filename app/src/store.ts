@@ -127,6 +127,7 @@ export const store = reactive({
   /* A room the panel has been asked to open from somewhere else -- New devices, after an account
      brought in six things at once. App.vue takes it and clears it; nothing else reads it. */
   goRoom: null as string | null,
+  justAdded: null as { from?: string; ids: string[]; at: number } | null,   // what an add just brought, for New devices to put first (design/arrived/)
   sky: { elevation: -20, azimuth: 0, phase: 0, hour: 0, month: 6, condition: 'clear-night', guessed: true },   // what the sky draws; month is seasonal (0 midwinter → 6 midsummer, either hemisphere)
 })
 
