@@ -115,7 +115,7 @@
     <div class="name">Ceiling light</div><div class="val"></div><div class="lvl"><i></i></div></div>
   <div class="card strip"><div class="sw"></div></div>
   <div class="orb"></div>
-  <div class="family">Temi and Ade are home <b>Family</b><span class="av"><i style="background:#8a7560">T</i><i style="background:#6a5448">S</i><i style="background:#5f7f72">A</i><i style="background:var(--chip);color:var(--page-ink)">+</i></span></div>`
+  <div class="family">Jordan and Alex are home <b>Family</b><span class="av"><i style="background:#8a7560">T</i><i style="background:#6a5448">S</i><i style="background:#5f7f72">A</i><i style="background:var(--chip);color:var(--page-ink)">+</i></span></div>`
 
   const REST = `<div class="time"></div><div class="day">Saturday, September 26</div>
     <div class="wx"><span>${CLOUD}</span>78° · Partly cloudy</div>

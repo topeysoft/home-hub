@@ -129,6 +129,31 @@
 :root[data-shade='light'] .house-veil {
   background: oklch(0.4 0.04 265 / 0.22);
 }
+/* A card that is a picture with a sheet over its foot -- the player, the printer -- is one thing in
+   light: the picture stays dark and the sheet is the same light glass, so two of them side by side
+   read as a pair. The printer's sheet was drawn dark for a dark page, and the player's art wore a
+   darkening ramp down to its foot that came through its glass as a dark rim. */
+:root[data-shade='light'] .print-sheet {
+  border-color: transparent;
+  background: var(--glass-sweep, none), var(--glass, var(--surface));
+  backdrop-filter: blur(var(--glass-blur, 26px)) saturate(var(--glass-sat, 1.4)) brightness(var(--glass-br, 1.03));
+  box-shadow: var(--glass-inner, none), var(--glass-drop, none);
+}
+:root[data-shade='light'] .print-chip {
+  color: var(--ink-lit);
+}
+:root[data-shade='light'] [data-face='glass'] .bento .tile.media::after {
+  background: none;
+}
+/* A room whose picture is what is playing -- album art, blurred into a wash -- is a light card in
+   light, like the rooms beside it: the art colors its top and fades into the card where the words
+   are. A camera's frame is a photograph and stays dark (the list above). */
+:root[data-shade='light'] .room-cell.shot:has(> .room-cell-art) .room-cell-veil {
+  background: linear-gradient(rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.6) 46%, rgba(255, 255, 255, 0.92) 100%);
+}
+:root[data-shade='light'] .room-cell.shot:has(> .room-cell-art) :is(.room-cell-chip, .room-cell-knob, .room-cell-pill) {
+  background: rgba(var(--wash-rgb), 0.08);
+}
 /* the resting clock is dark type on a light sky: a dark halo behind it only smudges it */
 :root[data-shade='light'] .idle {
   text-shadow: 0 1px 30px rgba(255, 255, 255, 0.55);
@@ -143,8 +168,7 @@
     .viewer,
     .rig-still,
     .finder,
-    .print-card,
-    .room-cell.shot,
+    .room-cell.shot:not(:has(> .room-cell-art)),
     .shell:not([data-face='glass']) .bento .tile.media,
     .room-share-card,
     .ask-pane .opened-panel
@@ -3510,6 +3534,85 @@ input:focus-visible {
   margin: 18px 0 0;
   color: var(--muted);
   font-size: 14px;
+}
+/* ---------- a screen joining a house that has a hub (design/companion/, C) ---------- */
+.screen-code {
+  max-width: 280px;
+  font-size: 30px;
+  padding-block: 18px;
+}
+.screen-trail {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin: 0 0 14px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.screen-trail b {
+  font-weight: 500;
+  color: var(--ink-2);
+}
+.screen-trail-ok {
+  display: inline-flex;
+  color: var(--live-text);
+}
+.screen-trail-now {
+  color: var(--ink);
+}
+.screen-rooms {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+.screen-room-tile {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 104px;
+  padding: 18px 18px 16px;
+  border-radius: var(--r-md);
+  background: var(--surface);
+  border: 1px solid var(--edge);
+  backdrop-filter: var(--frost);
+  color: var(--ink);
+  text-align: left;
+}
+.screen-room-tile.on {
+  background: rgba(var(--lamp-rgb), 0.14);
+  border-color: rgba(var(--lamp-rgb), 0.7);
+}
+.screen-room-tile.new {
+  background: transparent;
+  border-style: dashed;
+}
+.screen-room-tile.new .screen-room-name {
+  color: var(--ink-2);
+}
+.screen-room-name {
+  font-size: 17px;
+  font-weight: 500;
+}
+.screen-room-line {
+  font-size: 13px;
+  color: var(--muted);
+}
+.screen-room-input {
+  width: 100%;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--edge-hi);
+  color: var(--ink);
+  font: inherit;
+  font-size: 17px;
+  padding: 2px 0 6px;
+  outline: none;
+}
+@media (max-width: 560px) {
+  .screen-rooms {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 .setup-foot {
   margin: 22px 0 0;
@@ -9877,11 +9980,11 @@ select.input {
   background: rgba(255, 236, 200, 0.9);
 }
 /* lamplight drawn in cream reads on a dark card and vanishes on a pale one */
-:root[data-shade='light'] .room-cell.lit:not(.shot) .room-cell-mark,
-:root[data-shade='light'] .room-cell:not(.shot) .room-cell-lamp svg {
+:root[data-shade='light'] .room-cell.lit:not(.shot:not(:has(> .room-cell-art))) .room-cell-mark,
+:root[data-shade='light'] .room-cell:not(.shot:not(:has(> .room-cell-art))) .room-cell-lamp svg {
   color: var(--lamp-text);
 }
-:root[data-shade='light'] .room-cell:not(.shot) .room-cell-bar i {
+:root[data-shade='light'] .room-cell:not(.shot:not(:has(> .room-cell-art))) .room-cell-bar i {
   background: var(--lamp);
 }
 

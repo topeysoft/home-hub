@@ -12,6 +12,8 @@ ConditionPathExists=/dev/tty0
 
 [Service]
 Type=simple
+# A unit that is another hub's screen says where that hub is (driver-layer/host/firstboot.sh).
+EnvironmentFile=-/etc/home-hub.conf
 ExecStartPre=+/opt/home-hub/startup/wall.sh wait
 ExecStart=/opt/home-hub/startup/wall.sh run
 TimeoutStartSec=infinity

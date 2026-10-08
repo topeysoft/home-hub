@@ -10,7 +10,7 @@ python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
 HUB_RELOAD=1 .venv/bin/python main.py   # development: restarts itself whenever anything under hub/ changes
 curl localhost:8300/setup/status  # {"driver": "ready", "setup_done": true, ...}
 curl localhost:8300/home
-curl -X POST localhost:8300/devices/media_player.nadine_s_room_roku_tv/off
+curl -X POST localhost:8300/devices/media_player.robin_s_room_roku_tv/off
 curl -X POST localhost:8300/rooms/<room_id>/intent/asleep
 curl -X POST localhost:8300/home/intent/away          # the same intent in every room; a device that refuses is skipped
 curl localhost:8300/rules                             # the rules and whether the file is usable

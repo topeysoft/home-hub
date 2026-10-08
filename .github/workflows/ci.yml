@@ -241,6 +241,7 @@ jobs:
         driver-layer/host/pi-image/stage-hub/00-home-hub/*.sh
         startup/install.sh
         startup/wall.sh
+        startup/find-hub.sh
     steps:
       - uses: actions/checkout@v4
       # `bash -n a.sh b.sh` reads a.sh as the script and everything after it as that script's

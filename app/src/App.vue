@@ -11,6 +11,8 @@ import Setup from './Setup.vue'
 import Join from './Join.vue'
 import Away from './Away.vue'
 import MovePage from './MovePage.vue'
+import ScreenRoom from './ScreenRoom.vue'
+import { homeRoom, isScreen, needsRoom, screenRoom } from './screen'
 import CodePrompt from './CodePrompt.vue'
 import Keys from './Keys.vue'
 import { onWall } from './keys'
@@ -47,7 +49,8 @@ import Household from './Household.vue'
 import { locale } from './lang'
 
 const now = ref(new Date())
-const selected = ref<string | null>(new URLSearchParams(location.search).get('room') ?? safeGet('room'))   // ?room=kitchen deep-links a kiosk
+const screen = isScreen()   // a wall screen for a hub elsewhere, or for this one: it has a room of its own (design/companion/, C)
+const selected = ref<string | null>(new URLSearchParams(location.search).get('room') ?? (screen ? screenRoom() : null) ?? safeGet('room'))   // ?room=kitchen deep-links a kiosk
 function safeGet(k: string) { try { return localStorage.getItem(k) } catch { return null } }
 function open(id: string | null) { selected.value = id; try { id ? localStorage.setItem('room', id) : localStorage.removeItem('room') } catch {} }
 
@@ -61,7 +64,9 @@ watch(selected, () => nextTick(() => document.querySelector('.rail-item.active')
 const setup = computed(() => !!store.status && (store.previewSetup || needsSetup()))
 /* The house is not showing: either this phone is not in it yet, or it is being reached from outside and
    the house did not open. Both put a screen of their own up in place of everything. */
-const shut = computed(() => lock.unpaired || !!lock.away || store.moving)   // a page that is the whole screen: nothing of the house under it
+/* A screen in the house with no room yet is asked for one before anything else shows. */
+const placing = computed(() => screen && !lock.unpaired && !lock.away && !store.moving && !setup.value && needsRoom(rooms.value))
+const shut = computed(() => lock.unpaired || !!lock.away || store.moving || placing.value)   // a page that is the whole screen: nothing of the house under it
 const panel = computed(() => isPage(store.sheet))   // This house is open, on one of its pages
 /* A phone at the door opens its own pane, and stays open until it is answered or put aside. It is
    not `store.opened` -- that is a device -- but it is the same surface and the room recedes behind
@@ -199,12 +204,12 @@ function touched() {
   lastTouch = Date.now()
   if (!idle.value) return
   idle.value = false
-  /* Waking goes home, so what somebody left open before the panel rested goes with it. A phone
+  /* Waking goes home (a screen with a room goes to its room), so what somebody left open before the panel rested goes with it. A phone
      asking to join is the exception and stays: that one is a question still waiting for an answer,
      not something left lying around. */
   store.opened = null
   store.outside = false
-  open(null)
+  open(homeRoom(rooms.value))   // a screen wakes to its own room; everything else to Home
   woke.value++
 }
 /* A phone knocking wakes the wall, and clears anything put aside so the pane comes back up: this is
@@ -274,6 +279,7 @@ onUnmounted(() => {
     <Join v-else-if="lock.unpaired" @joined="rejoin" />
     <MovePage v-else-if="store.moving" />
     <Setup v-else-if="setup" />
+    <ScreenRoom v-else-if="placing" :home="store.status?.home || 'the house'" :locked="!!store.status?.locked" :rooms="rooms" :screens="store.phones" @placed="open" />
     <TopBar v-if="!setup && !shut && nav === 'top'" :clock="clock" :day="day" :now="shown" :tab="tab" :in-room="!!room" @go="go" />
     <aside class="rail" v-if="!setup && !shut && nav === 'side'">
       <div class="rail-clock">

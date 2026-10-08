@@ -20,7 +20,7 @@ class Base(ApiTest):
     def setUp(self):
         super().setUp()
         self.lock_the_house("4821")
-        self.phone, self.token = self.hub.phones.with_code("Temi's phone")
+        self.phone, self.token = self.hub.phones.with_code("Jordan's phone")
         self.client.cookies.set(COOKIE, self.token)
         (self.data / "address.json").write_text(json.dumps({"house": "maple-court", "secret": "s" * 43, "zone": "elyir.app", "want": "on"}))
 

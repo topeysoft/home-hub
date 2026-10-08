@@ -78,36 +78,36 @@ class CreateOwnerTests(unittest.TestCase):
     def test_the_owner_is_made_with_a_password_nobody_has_to_think_of(self):
         engine = FakeEngine(self.routes())
         with mock.patch.object(ha_setup.urllib.request, "urlopen", engine):
-            acct = ha_setup.create_owner(URL, "Temi Adeyeri")
-        self.assertEqual(acct["username"], "temiadeyeri")
+            acct = ha_setup.create_owner(URL, "Jordan Lee")
+        self.assertEqual(acct["username"], "jordanlee")
         self.assertGreaterEqual(len(acct["password"]), 20)       # generated, not guessable
         self.assertEqual(acct["access"], "AT")
 
     def test_the_rest_of_onboarding_is_answered_so_nobody_ever_sees_it(self):
         engine = FakeEngine(self.routes())
         with mock.patch.object(ha_setup.urllib.request, "urlopen", engine):
-            ha_setup.create_owner(URL, "Temi")
+            ha_setup.create_owner(URL, "Jordan")
         asked = [path for _, path, _ in engine.asked]
         for step in ("/api/onboarding/core_config", "/api/onboarding/analytics", "/api/onboarding/integration"):
             self.assertIn(step, asked)
 
     def test_two_hubs_set_up_the_same_day_do_not_get_the_same_password(self):
         with mock.patch.object(ha_setup.urllib.request, "urlopen", FakeEngine(self.routes())):
-            first = ha_setup.create_owner(URL, "Temi")
-            second = ha_setup.create_owner(URL, "Temi")
+            first = ha_setup.create_owner(URL, "Jordan")
+            second = ha_setup.create_owner(URL, "Jordan")
         self.assertNotEqual(first["password"], second["password"])
 
     def test_an_engine_that_refuses_the_owner_says_why_rather_than_failing_silently(self):
         with mock.patch.object(ha_setup.urllib.request, "urlopen", FakeEngine(self.routes(users=(400, {"message": "username taken"})))):
             with self.assertRaises(SetupError) as e:
-                ha_setup.create_owner(URL, "Temi")
+                ha_setup.create_owner(URL, "Jordan")
         self.assertIn("username taken", str(e.exception))
 
     def test_a_token_exchange_that_fails_is_not_mistaken_for_success(self):
         routes = self.routes() | {"/auth/token": (400, {"error": "invalid_grant"})}
         with mock.patch.object(ha_setup.urllib.request, "urlopen", FakeEngine(routes)):
             with self.assertRaises(SetupError) as e:
-                ha_setup.create_owner(URL, "Temi")
+                ha_setup.create_owner(URL, "Jordan")
         self.assertIn("token exchange failed", str(e.exception))
 
 
@@ -119,25 +119,25 @@ class LoginTests(unittest.TestCase):
 
     def test_signing_in_to_an_engine_someone_set_up_by_hand_gets_a_token(self):
         with mock.patch.object(ha_setup.urllib.request, "urlopen", FakeEngine(self.routes())):
-            self.assertEqual(ha_setup.login(URL, "temi", "pw")["access"], "AT")
+            self.assertEqual(ha_setup.login(URL, "jordan", "pw")["access"], "AT")
 
     def test_a_wrong_password_is_told_in_words_a_person_can_act_on(self):
         step = (200, {"type": "form", "errors": {"base": "invalid_auth"}})
         with mock.patch.object(ha_setup.urllib.request, "urlopen", FakeEngine(self.routes(step))):
             with self.assertRaises(SetupError) as e:
-                ha_setup.login(URL, "temi", "wrong")
+                ha_setup.login(URL, "jordan", "wrong")
         self.assertIn("did not work", str(e.exception))
 
     def test_an_engine_with_no_sign_in_to_offer_says_it_is_unavailable_rather_than_wrong_password(self):
         with mock.patch.object(ha_setup.urllib.request, "urlopen", FakeEngine({"/auth/login_flow": (500, "boom")})):
             with self.assertRaises(SetupError) as e:
-                ha_setup.login(URL, "temi", "pw")
+                ha_setup.login(URL, "jordan", "pw")
         self.assertIn("unavailable", str(e.exception))
 
     def test_the_password_is_never_put_in_the_address(self):
         engine = FakeEngine(self.routes())
         with mock.patch.object(ha_setup.urllib.request, "urlopen", engine):
-            ha_setup.login(URL, "temi", "hunter2")
+            ha_setup.login(URL, "jordan", "hunter2")
         for _, path, _ in engine.asked:
             self.assertNotIn("hunter2", path)
 

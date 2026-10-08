@@ -371,22 +371,22 @@ echo "1.1.1.1 via 192.168.86.1 dev eth0 src $(cat "$FAKE/lan" 2>/dev/null || ech
 I
   chmod +x "$bin/docker" "$bin/ip"
   local secret token; secret="$(printf 's%.0s' $(seq 43))"; token="$(printf 'a%.0s' $(seq 64))"
-  good() { printf 'HUB_AWAY_HOUSE=temi\nHUB_RELAY_SECRET=%s\nHUB_RELAY_TOKEN=%s\nHUB_RELAY_ADDR=relay.elyir.app\nHUB_AWAY_ZONE=elyir.app\n' "$secret" "$token" > "$data/away.env"; }
+  good() { printf 'HUB_AWAY_HOUSE=jordan\nHUB_RELAY_SECRET=%s\nHUB_RELAY_TOKEN=%s\nHUB_RELAY_ADDR=relay.elyir.app\nHUB_AWAY_ZONE=elyir.app\n' "$secret" "$token" > "$data/away.env"; }
   run() { printf '{"at": 1, "want": "%s"}' "$1" > "$data/away.request"; rm -f "$fake/docker"
           PATH="$bin:$PATH" FAKE="$fake" HOME_HUB_DIR="$dir" "$HERE/away.sh" >/dev/null 2>&1; }
   env_() { grep -m1 "^$1=" "$dl/.env" | cut -d= -f2-; }
 
   printf 'TZ=UTC\nCOMPOSE_PROFILES=zigbee,voice\n' > "$dl/.env"
   good; run on
-  is "on writes the house's name" "$(env_ HUB_AWAY_HOUSE)" temi
+  is "on writes the house's name" "$(env_ HUB_AWAY_HOUSE)" jordan
   is "...and its secret" "$(env_ HUB_RELAY_SECRET)" "$secret"
   is "...and turns the away door on" "$(env_ HUB_AWAY)" on
   is "...adding away beside the radios and the voice" "$(env_ COMPOSE_PROFILES)" "zigbee,voice,away"
   is "...and brings caddy, frpc and lan-cert up" "$(cat "$fake/docker")" "compose up -d caddy frpc lan-cert"
-  is "...naming the house at home from the address it really has" "$(env_ HUB_LAN_NAME)" "192-168-86-53.temi.home.elyir.app"
+  is "...naming the house at home from the address it really has" "$(env_ HUB_LAN_NAME)" "192-168-86-53.jordan.home.elyir.app"
   [ -f "$data/away.request" ] && no "...and takes the request away" "it is still there" || ok "...and takes the request away"
   python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); print(d["on"], d["house"])' "$data/away.json" > "$fake/said" 2>&1
-  is "...and says what it did" "$(cat "$fake/said")" "True temi"
+  is "...and says what it did" "$(cat "$fake/said")" "True jordan"
 
   run on
   is "on twice is still one away" "$(env_ COMPOSE_PROFILES)" "zigbee,voice,away"
@@ -394,7 +394,7 @@ I
   run off
   is "off turns the door off" "$(env_ HUB_AWAY)" off
   is "...takes away out and leaves the rest" "$(env_ COMPOSE_PROFILES)" "zigbee,voice"
-  is "...keeps the name for when it comes back" "$(env_ HUB_AWAY_HOUSE)" temi
+  is "...keeps the name for when it comes back" "$(env_ HUB_AWAY_HOUSE)" jordan
   is "...and stops frpc and lan-cert" "$(head -1 "$fake/docker")" "compose --profile away rm -sf frpc lan-cert"
 
   good; run on; : > "$data/away.env"; run forget
@@ -411,7 +411,7 @@ I
   is "the last profile going leaves none rather than nothing" "$(env_ COMPOSE_PROFILES)" none
 
   local before
-  for bad in 'HUB_AWAY_HOUSE=temi|evil' 'HUB_AWAY_HOUSE=Temi' 'HUB_AWAY_HOUSE=-temi' "HUB_RELAY_SECRET=x" 'HUB_RELAY_SECRET=abc$(reboot)defghijklmnop' \
+  for bad in 'HUB_AWAY_HOUSE=jordan|evil' 'HUB_AWAY_HOUSE=Jordan' 'HUB_AWAY_HOUSE=-jordan' "HUB_RELAY_SECRET=x" 'HUB_RELAY_SECRET=abc$(reboot)defghijklmnop' \
              'HUB_RELAY_ADDR=relay.elyir.app;rm' 'HUB_AWAY_ZONE=elyir.app;HUB_IMG_BRAIN=evil/brain'; do
     printf 'TZ=UTC\nCOMPOSE_PROFILES=none\n' > "$dl/.env"; before="$(cat "$dl/.env")"
     good; key="${bad%%=*}"; grep -v "^$key=" "$data/away.env" > "$fake/v"; printf '%b\n' "$bad" >> "$fake/v"; mv "$fake/v" "$data/away.env"
@@ -433,9 +433,79 @@ I
 }
 
 
+# A unit with a screen asks this before it installs a hub of its own (design/companion/, C). The
+# network is a script on PATH: avahi-browse says who announced themselves, curl says who answers like
+# a hub, and hostname says which addresses are this unit's own.
+finding() {
+  group "a screen looks for the house's hub before it builds a second house"
+  local root bin; root=$(mktemp -d); bin="$root/bin"; mkdir -p "$bin"
+  cat > "$bin/avahi-browse" <<'SH'
+#!/usr/bin/env bash
+printf '%s\n' "$ANNOUNCED"
+SH
+  cat > "$bin/curl" <<'SH'
+#!/usr/bin/env bash
+for a in "$@"; do case "$a" in http://*) url=$a ;; esac; done
+case " $HUBS " in *" ${url%/phones/me} "*) echo '{"locked": true, "paired": false, "home": "Maple Court"}' ;; *) exit 22 ;; esac
+SH
+  printf '#!/usr/bin/env bash\necho "$MINE"\n' > "$bin/hostname"
+  chmod +x "$bin"/*
+  find_hub() { PATH="$bin:$PATH" FIND_FOR=0 "$HERE/../../startup/find-hub.sh"; }
+
+  local hub='=;eth0;IPv4;hub;_home-hub._tcp;local;hub.local;192.168.1.20;80;"path=/"'
+  is "a hub that answers is found, by its name" "$(ANNOUNCED="$hub" HUBS="http://192.168.1.20" MINE="192.168.1.30" find_hub)" "http://hub.local"
+  ANNOUNCED="" HUBS="" MINE="192.168.1.30" find_hub >/dev/null; is "no hub, and it says so" "$?" "1"
+  ANNOUNCED="$hub" HUBS="" MINE="192.168.1.30" find_hub >/dev/null; is "something announcing itself that does not answer like a hub is not one" "$?" "1"
+  is "its own announcement is not another hub" "$(ANNOUNCED="$hub" HUBS="http://192.168.1.20" MINE="192.168.1.20" find_hub)" ""
+  local odd='=;eth0;IPv4;hub;_home-hub._tcp;local;hub.local;192.168.1.20;8300;"path=/"'
+  is "a hub on another port keeps its port" "$(ANNOUNCED="$odd" HUBS="http://192.168.1.20:8300" MINE="" find_hub)" "http://hub.local:8300"
+  rm -rf "$root"
+}
+
+
+# What first boot makes of a unit: the house's screen, or the house's hub. Never a second hub beside a
+# real one when the unit was told it is a screen (design/companion/, C). The checkout is fake: its
+# installers leave a file saying they ran, and find-hub.sh answers with $FOUND or nothing.
+becoming() {
+  group "first boot makes a screen, or a hub, and never a second hub when told it is a screen"
+  local root dir bin drm; root=$(mktemp -d); dir="$root/opt"; bin="$root/bin"; drm="$root/drm"
+  mkdir -p "$dir/startup" "$bin" "$drm"
+  printf '#!/usr/bin/env bash\n[ -n "${FOUND:-}" ] && echo "$FOUND"\n' > "$dir/startup/find-hub.sh"
+  printf '#!/usr/bin/env bash\ntouch "%s/screen-installed"\n' "$root" > "$dir/startup/install.sh"
+  printf '#!/usr/bin/env bash\ntouch "%s/hub-installed"\n' "$root" > "$dir/install.sh"
+  for c in hostnamectl apt-get avahi-browse; do printf '#!/usr/bin/env bash\nexit 0\n' > "$bin/$c"; done
+  chmod +x "$dir/startup/"*.sh "$dir/install.sh" "$bin"/*
+  boot() {   # role, found, dsi
+    rm -f "$root"/*-installed "$root/done" "$root/conf"; rm -rf "${drm:?}"/*
+    [ -n "$1" ] && echo "HUB_ROLE=\"$1\"" > "$root/conf"
+    [ -n "$3" ] && { mkdir -p "$drm/card1-DSI-1"; echo connected > "$drm/card1-DSI-1/status"; }
+    PATH="$bin:$PATH" FOUND="$2" HOME_HUB_DIR="$dir" HUB_CONF="$root/conf" HUB_FIRSTBOOT_MARK="$root/done" HUB_DRM="$drm" \
+      "$HERE/firstboot.sh" >/dev/null 2>&1
+  }
+  ran() { local out=""; for k in hub screen; do [ -f "$root/$k-installed" ] && out="$out$k "; done; [ -f "$root/done" ] && out="${out}done"; echo "${out% }"; }
+
+  boot screen http://hub.local ""
+  is "told it is a screen, on HDMI, with a hub on the Wi-Fi: it becomes the screen and nothing else" "$(ran)" "screen done"
+  is "...and opens the hub's panel as a screen" "$(grep '^ELYIR_PANEL_URL=' "$root/conf")" 'ELYIR_PANEL_URL="http://hub.local/?screen=1"'
+  is "...said once, not appended twice" "$(grep -c '^HUB_ROLE=' "$root/conf")" "1"
+  boot screen "" ""; local code=$?
+  is "told it is a screen, and no hub found: no hub installed, and it tries again next start" "$(ran)" ""
+  is "...and says it did not finish" "$code" "1"
+  boot "" http://hub.local dsi
+  is "the wall's own screen and a hub on the Wi-Fi: the screen, without being told" "$(ran)" "screen done"
+  boot "" "" dsi
+  is "the wall's own screen and no hub: it runs the house, on its own screen" "$(ran)" "hub screen done"
+  boot "" http://hub.local ""
+  is "a monitor on HDMI and nobody said screen: a hub, as before, whatever is on the Wi-Fi" "$(ran)" "hub done"
+  boot hub http://hub.local dsi
+  is "HUB_ROLE=hub skips the look" "$(ran)" "hub screen done"
+  rm -rf "$root"
+}
+
+
 for need in git openssl curl python3; do
   command -v "$need" >/dev/null 2>&1 || { echo "these tests need $need"; exit 2; }
 done
-signatures; holds; undo; radios; watchdog; away
+signatures; holds; undo; radios; watchdog; away; finding; becoming
 printf '\n%s passed, %s failed\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]

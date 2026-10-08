@@ -38,26 +38,26 @@ class Base(unittest.TestCase):
 
 class Names(Base):
     def test_what_a_house_may_be_called(self):
-        for ok in ("temi", "palace", "temis-house", "a1", "x", "a" * 30): self.assertIsNone(problem(ok), ok)
-        for bad in ("", "-temi", "temi-", "Temi", "temi house", "temi.app", "a" * 31, "café"): self.assertIsNotNone(problem(bad), bad)
+        for ok in ("jordan", "palace", "jordans-house", "a1", "x", "a" * 30): self.assertIsNone(problem(ok), ok)
+        for bad in ("", "-jordan", "jordan-", "Jordan", "jordan house", "jordan.app", "a" * 31, "café"): self.assertIsNotNone(problem(bad), bad)
 
     def test_the_services_own_names_are_kept(self):
         for kept in ("api", "www", "home", "relay", "selftest", "printers", "nearby", "houses"):
             self.assertEqual(problem(kept), "That one is kept for the service itself.")
 
     def test_what_somebody_typed_becomes_a_name(self):
-        self.assertEqual(clean("Temi's House"), "temis-house")
+        self.assertEqual(clean("Jordan's House"), "jordans-house")
         self.assertEqual(clean("  The  Palace!! "), "the-palace")
-        self.assertEqual(clean("Temi’s"), "temis")
+        self.assertEqual(clean("Jordan’s"), "jordans")
 
     def test_a_free_name_says_where_it_will_be(self):
-        self.assertEqual(self.r.look("temi"), {"name": "temi", "free": True, "address": "temi.elyir.app"})
+        self.assertEqual(self.r.look("jordan"), {"name": "jordan", "free": True, "address": "jordan.elyir.app"})
 
     def test_a_taken_name_offers_three_that_are_free(self):
-        self.r.claim("temi"); self.r.claim("temis-house")
-        seen = self.r.look("temi", ["Holts Summit", "Adeyeri"])
+        self.r.claim("jordan"); self.r.claim("jordans-house")
+        seen = self.r.look("jordan", ["Cedar Falls", "Lee"])
         self.assertFalse(seen["free"]); self.assertEqual(seen["why"], "taken")
-        self.assertEqual(seen["suggestions"], ["temi-house", "temi-holts-summit", "temi-adeyeri"])
+        self.assertEqual(seen["suggestions"], ["jordan-house", "jordan-cedar-falls", "jordan-lee"])
         for s in seen["suggestions"]: self.assertTrue(self.r.look(s)["free"])
 
     def test_a_name_that_cannot_be_still_gets_somewhere_to_go(self):
@@ -68,42 +68,42 @@ class Names(Base):
 
 class Claiming(Base):
     def test_a_claim_hands_over_a_secret_once_and_keeps_only_its_hash(self):
-        out = self.r.claim("temi")
-        self.assertEqual(out["address"], "temi.elyir.app")
+        out = self.r.claim("jordan")
+        self.assertEqual(out["address"], "jordan.elyir.app")
         self.assertGreater(len(out["secret"]), 30)
         raw = Path(self.dir.name, "houses.db").read_bytes()
         self.assertNotIn(out["secret"].encode(), raw)
-        self.assertTrue(self.r.holder("temi", out["secret"]))
-        self.assertFalse(self.r.holder("temi", out["secret"] + "x"))
-        self.assertFalse(self.r.holder("temi", ""))
+        self.assertTrue(self.r.holder("jordan", out["secret"]))
+        self.assertFalse(self.r.holder("jordan", out["secret"] + "x"))
+        self.assertFalse(self.r.holder("jordan", ""))
 
     def test_a_taken_name_cannot_be_claimed_twice(self):
-        self.r.claim("temi")
-        with self.assertRaises(LookupError): self.r.claim("temi")
+        self.r.claim("jordan")
+        with self.assertRaises(LookupError): self.r.claim("jordan")
 
     def test_a_name_nobody_pays_for_is_let_go_after_a_day(self):
-        self.r.claim("temi")
-        self.clock.t += DAY - 1; self.assertTrue(self.r.taken("temi"))
-        self.clock.t += 2;       self.assertFalse(self.r.taken("temi"))
-        self.r.claim("temi")     # somebody else may have it now
+        self.r.claim("jordan")
+        self.clock.t += DAY - 1; self.assertTrue(self.r.taken("jordan"))
+        self.clock.t += 2;       self.assertFalse(self.r.taken("jordan"))
+        self.r.claim("jordan")     # somebody else may have it now
 
     def test_a_granted_name_is_kept_and_carried(self):
-        self.r.claim("temi")
-        self.r.grant("temi", self.clock.t + 365 * DAY)
+        self.r.claim("jordan")
+        self.r.grant("jordan", self.clock.t + 365 * DAY)
         self.clock.t += 30 * DAY
-        self.assertTrue(self.r.taken("temi"))
-        self.assertTrue(self.r.status("temi")["carried"])
+        self.assertTrue(self.r.taken("jordan"))
+        self.assertTrue(self.r.status("jordan")["carried"])
 
     def test_a_lapsed_house_keeps_its_name_and_is_not_carried(self):
-        self.r.claim("temi"); self.r.grant("temi", self.clock.t + DAY)
+        self.r.claim("jordan"); self.r.grant("jordan", self.clock.t + DAY)
         self.clock.t += 2 * DAY
-        self.assertTrue(self.r.taken("temi"))
-        self.assertFalse(self.r.status("temi")["carried"])
+        self.assertTrue(self.r.taken("jordan"))
+        self.assertFalse(self.r.status("jordan")["carried"])
 
     def test_rotating_a_secret_retires_the_old_one(self):
-        old = self.r.claim("temi")["secret"]
-        new = self.r.rotate("temi")
-        self.assertFalse(self.r.holder("temi", old)); self.assertTrue(self.r.holder("temi", new))
+        old = self.r.claim("jordan")["secret"]
+        new = self.r.rotate("jordan")
+        self.assertFalse(self.r.holder("jordan", old)); self.assertTrue(self.r.holder("jordan", new))
 
     def test_granting_a_name_nobody_holds_says_so(self):
         with self.assertRaises(LookupError): self.r.grant("nobody", self.clock.t + DAY)
@@ -112,16 +112,16 @@ class Claiming(Base):
 class Judging(Base):
     def setUp(self):
         super().setUp()
-        self.secret = self.r.claim("temi")["secret"]
-        self.r.grant("temi", self.clock.t + 365 * DAY)
+        self.secret = self.r.claim("jordan")["secret"]
+        self.r.grant("jordan", self.clock.t + 365 * DAY)
 
     def test_a_carried_house_logs_in_and_is_carried_under_its_own_name(self):
-        self.assertIsNone(self.r.judge("Login", login("temi", self.secret)))
-        self.assertIsNone(self.r.judge("NewProxy", proxy("temi", self.secret, ["temi.elyir.app"])))
+        self.assertIsNone(self.r.judge("Login", login("jordan", self.secret)))
+        self.assertIsNone(self.r.judge("NewProxy", proxy("jordan", self.secret, ["jordan.elyir.app"])))
 
     def test_a_wrong_or_missing_secret_is_refused(self):
-        self.assertEqual(self.r.judge("Login", login("temi", "guess")), "this house is not known here")
-        self.assertEqual(self.r.judge("Login", {"user": "temi", "metas": {}}), "this house is not known here")
+        self.assertEqual(self.r.judge("Login", login("jordan", "guess")), "this house is not known here")
+        self.assertEqual(self.r.judge("Login", {"user": "jordan", "metas": {}}), "this house is not known here")
         self.assertEqual(self.r.judge("Login", {}), "this house is not known here")
 
     def test_a_claimed_house_nobody_has_paid_for_is_not_carried(self):
@@ -130,18 +130,18 @@ class Judging(Base):
 
     def test_a_lapsed_house_is_refused_at_its_next_login(self):
         self.clock.t += 400 * DAY
-        self.assertEqual(self.r.judge("Login", login("temi", self.secret)), "this house is not carried by this relay")
+        self.assertEqual(self.r.judge("Login", login("jordan", self.secret)), "this house is not carried by this relay")
 
     def test_the_user_must_be_the_house_because_frps_names_proxies_by_it(self):
-        self.assertEqual(self.r.judge("Login", login("temi", self.secret, user="palace")), "user must be the house's name")
+        self.assertEqual(self.r.judge("Login", login("jordan", self.secret, user="palace")), "user must be the house's name")
 
     def test_a_house_is_carried_for_its_own_name_and_nothing_else(self):
-        for domains in (["palace.elyir.app"], ["temi.elyir.app", "palace.elyir.app"], [], ["temi.elyir.app.evil.com"]):
-            self.assertEqual(self.r.judge("NewProxy", proxy("temi", self.secret, domains)), "a house is carried only under its own name", domains)
+        for domains in (["palace.elyir.app"], ["jordan.elyir.app", "palace.elyir.app"], [], ["jordan.elyir.app.evil.com"]):
+            self.assertEqual(self.r.judge("NewProxy", proxy("jordan", self.secret, domains)), "a house is carried only under its own name", domains)
 
     def test_only_raw_https_is_carried(self):
         for kind in ("tcp", "http", "udp", "stcp"):
-            self.assertEqual(self.r.judge("NewProxy", proxy("temi", self.secret, ["temi.elyir.app"], kind=kind)), "only https is carried", kind)
+            self.assertEqual(self.r.judge("NewProxy", proxy("jordan", self.secret, ["jordan.elyir.app"], kind=kind)), "only https is carried", kind)
 
     def test_the_services_own_name_is_always_carried(self):
         self.r.seed("api", "operator-chosen")

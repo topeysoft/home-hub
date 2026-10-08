@@ -38,6 +38,7 @@ import { mix, palette, rgb, wxOf } from './sky'
 import { FEELS, adjusted, feelFrom, lookOf, placeOf, TOUCHED_AT, type Feel, type FeelName } from './look'
 import { defaultChoice, pick as pickShade, picked, shade, type ShadeChoice } from './shade'
 import Icon from './Icon.vue'
+import { isScreen, keepScreenRoom, screenRoom } from './screen'
 
 const stored = computed<Partial<Look>>(() => store.ambient.look ?? {})
 const feel = computed(() => feelFrom(stored.value))
@@ -150,6 +151,8 @@ const SHADES: { id: ShadeChoice; label: string }[] = [
 
 const AUTO_LAYOUT = computed(() => LAYOUTS.find(l => l.id === place.value.layout)!)
 const AUTO_NAV = computed(() => NAVS.find(n => n.id === place.value.nav)!)
+/* A wall screen's own room (design/companion/, C): Change asks again, the way it was asked the first time. */
+const hangsIn = computed(() => isScreen() ? store.rooms.find(r => r.id === screenRoom())?.name ?? null : null)
 const AROUND = computed(() => place.value.nav === 'top' ? 'with tabs across the top' : 'with the rooms alongside')
 </script>
 
@@ -169,6 +172,7 @@ const AROUND = computed(() => place.value.nav === 'top' ? 'with tabs across the 
       </button>
     </div>
     <p class="shade-hint">{{ wide ? 'Only this screen. Phones pick their own.' : 'Only this phone. The wall screen is set on the wall screen.' }}</p>
+    <p class="shade-hint" v-if="hangsIn">This screen is in <b>{{ hangsIn }}</b>. <button class="linkish" @click="keepScreenRoom(null)">Change</button></p>
 
     <div class="look-feels">
       <button v-for="f in FEELS" :key="f.id" class="look-feel"

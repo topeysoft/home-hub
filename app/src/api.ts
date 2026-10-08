@@ -847,7 +847,7 @@ export const qrUrl = (text: string) => `/qr.svg?text=${encodeURIComponent(text)}
 
 /* The phones that belong to the house, once it has a code. A phone gets in by typing the code, or by asking and being
    allowed from a screen that is already in; the hub keeps a hash and the phone a cookie, so removing one is instant. */
-export type Phone = { id: string; name: string; kind: 'wall' | 'phone' | null; joined: number; expires: number | null; remote: boolean; last_seen: number | null; how: 'code' | 'wall' | 'setup'; me: boolean; moved?: boolean; in_app?: boolean }
+export type Phone = { id: string; name: string; kind: 'wall' | 'phone' | 'screen' | null; joined: number; expires: number | null; remote: boolean; last_seen: number | null; how: 'code' | 'wall' | 'setup'; me: boolean; moved?: boolean; in_app?: boolean; room?: string | null }
 export type Ask = { id: string; name: string; kind: string | null; asked: number }
 export type Me = { locked: boolean; paired: boolean; home: string; phone: Phone | null; away?: boolean; lan?: string | null; address?: string | null }
 export async function getMe(): Promise<Me> { const r = await fetch(apiUrl('/phones/me'), { headers: withToken(new Headers()) }); if (!r.ok) await fail(r); return r.json() }
@@ -859,9 +859,10 @@ export async function claimMove(code: string): Promise<{ token: string; phone: P
 }
 export const letOut = (id: string, remote: boolean) => post<Phone>(`/phones/${encodeURIComponent(id)}/remote`, { remote })
 export async function getPhones(): Promise<{ phones: Phone[]; asks: Ask[] }> { const r = await request('/phones'); if (!r.ok) await fail(r); return r.json() }
-export const askToJoin = (name: string) => post<Ask>('/phones/ask', { name })
+export const askToJoin = (name: string, kind?: 'screen') => post<Ask>('/phones/ask', { name, kind })
 export async function claimJoin(id: string): Promise<{ state: 'waiting' | 'allowed' | 'gone'; phone?: Phone }> { const r = await fetch(`/phones/claim/${encodeURIComponent(id)}`); if (!r.ok) await fail(r); return r.json() }
-export const joinWithCode = (code: string, name: string) => post<{ ok: boolean; phone: Phone }>('/phones/code', { code, name })
+export const joinWithCode = (code: string, name: string, kind?: 'screen') => post<{ ok: boolean; phone: Phone }>('/phones/code', { code, name, kind })
+export const placeScreen = (room: string) => post<{ room: string; phone: Phone | null }>('/phones/me/room', { room })
 export const allowPhone = (id: string, span: 'day' | 'weekend' | 'keep') => post<Phone>(`/phones/asks/${encodeURIComponent(id)}/allow`, { span })
 export async function denyPhone(id: string) { const r = await request(`/phones/asks/${encodeURIComponent(id)}`, { method: 'DELETE' }); if (!r.ok) await fail(r) }
 export async function removePhone(id: string) { const r = await request(`/phones/${encodeURIComponent(id)}`, { method: 'DELETE' }); if (!r.ok) await fail(r) }

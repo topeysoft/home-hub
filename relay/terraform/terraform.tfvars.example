@@ -3,6 +3,8 @@
 # The two API tokens are NOT here and never are -- they come from the environment:
 #
 #   export CLOUDFLARE_API_TOKEN=...   # scoped to the elyir.app zone: DNS edit, SSL and Certificates edit
+#                                     # and, for mail, Zone Settings edit and Email Routing Rules edit
+#                                     # on the zone, plus Email Routing Addresses edit on the account
 #   export HCLOUD_TOKEN=...           # a project token, read and write
 #
 # Those two are the only things minted by hand in this whole design, because they are the
