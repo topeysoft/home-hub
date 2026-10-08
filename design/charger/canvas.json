@@ -1,0 +1,117 @@
+{
+ "name": "The car charger",
+ "areas": [
+  "Garage",
+  "Car charger"
+ ],
+ "pages": [
+  {
+   "id": "charger",
+   "name": "The car charger"
+  }
+ ],
+ "launch": {
+  "view": "canvas",
+  "page": "charger"
+ },
+ "artboards": [
+  {
+   "file": "Today.dc.html",
+   "x": 0,
+   "y": 0,
+   "w": 1440,
+   "h": 900,
+   "title": "Today — the wall connector is added, and shown nowhere",
+   "page": "charger"
+  },
+  {
+   "file": "CardA.dc.html",
+   "x": 1560,
+   "y": 0,
+   "w": 1440,
+   "h": 900,
+   "title": "A — a card for it, in the garage",
+   "page": "charger"
+  },
+  {
+   "file": "SayB.dc.html",
+   "x": 3120,
+   "y": 0,
+   "w": 1440,
+   "h": 900,
+   "title": "B — say so when it is added",
+   "page": "charger"
+  },
+  {
+   "file": "BandC.dc.html",
+   "x": 4680,
+   "y": 0,
+   "w": 1440,
+   "h": 900,
+   "title": "C — a line in the band, only while it charges",
+   "page": "charger"
+  }
+ ],
+ "annotations": [
+  {
+   "id": "why",
+   "x": -620,
+   "y": 0,
+   "w": 500,
+   "page": "charger",
+   "text": "WHY THIS EXISTS\n\nA Tesla Wall Connector was found nearby, set up, and said Added -- and then appeared nowhere: not in a room, not under New devices, not on Home. Accounts listed it with one button, Remove (7 October 2026).\n\nNothing broke. Its nineteen readings are all diagnostics, and the panel draws what a household controls plus a room's temperature, humidity, light and motion; power and energy were left for an energy view that was never drawn. So the question is what a car charger is in this house, and it is a question about the screen, so it is drawn first."
+  },
+  {
+   "id": "today",
+   "x": 0,
+   "y": 960,
+   "w": 700,
+   "page": "charger",
+   "text": "TODAY\n\nThe garage as the panel draws it with the charger added: the rooms it already had, and nothing for the charger. The note stands where its card would be."
+  },
+  {
+   "id": "a",
+   "x": 1560,
+   "y": 960,
+   "w": 700,
+   "page": "charger",
+   "text": "A -- A CARD FOR IT\n\nThe charger is a thing in the garage like the door and the freezer, and says what it is doing in three words: Charging, Plugged in, Ready. Power shows while it charges. Nothing to tap, because the car decides when it charges; holding opens what it read.\n\nFor: a household checking whether the car is plugged in has somewhere to look. Against: a new kind of card, the first one with nothing to control."
+  },
+  {
+   "id": "b",
+   "x": 3120,
+   "y": 960,
+   "w": 700,
+   "page": "charger",
+   "text": "B -- SAY SO\n\nNo card: the last step of adding says what is true, in plain words, and where it is listed. The same rule covers anything else that arrives with only readings.\n\nFor: the smallest change, and it stops a success that leads nowhere. Against: the household learns the hub cannot show the thing it just bought, and that is all."
+  },
+  {
+   "id": "c",
+   "x": 4680,
+   "y": 960,
+   "w": 700,
+   "page": "charger",
+   "text": "C -- A LINE IN THE BAND\n\nWhile the car charges, the garage's band says so, and so does Home's, where the house already says a door is open. When it stops, the line goes at a moment nobody is watching.\n\nFor: news when there is news, and nothing otherwise. Against: a charger with no car, or a full car, says nothing, so there is nowhere to check whether the car is plugged in."
+  },
+  {
+   "id": "pick",
+   "x": -620,
+   "y": 1400,
+   "w": 500,
+   "page": "charger",
+   "text": "TO PICK\n\nA, B or C, or something else, described in words. A with C's line is a real option: a card to check, and a line on Home while it charges. B is the floor whichever is picked: an add that succeeds and leads nowhere should never say only Added."
+  }
+ ],
+ "reading": [
+  "why",
+  "Today.dc.html",
+  "today",
+  "CardA.dc.html",
+  "a",
+  "SayB.dc.html",
+  "b",
+  "BandC.dc.html",
+  "c",
+  "pick"
+ ]
+}
