@@ -93,7 +93,7 @@
     .note .gone { color: var(--muted); text-decoration: line-through; }
   </style>
 </helmet>
-<!-- B, CHOSEN -- the room that counts: the sensor row grows into the rooms the thermostat can feel, each with its temperature and whether someone is in it. -->
+<!-- B, CHOSEN, WHEN IT HAS GONE AWAY -- the thermostat switched itself to Away, and the sentence under the number says so. Nothing to pick. -->
 <div class="screen">
 
   <div class="abs" style="inset: 0; background: linear-gradient(rgb(16,18,28) 0%, rgb(22,24,38) 50%, rgb(30,28,40) 100%);"></div>
@@ -131,11 +131,11 @@
         <span class="ctl"><svg class="i" width="20" height="20" viewBox="0 0 24 24" stroke-width="1.8" style=""><path d="M12 3l1.8 5.4L19 10l-5.2 1.6L12 17l-1.8-5.4L5 10l5.2-1.6z"/></svg></span>
         <span class="ctl"><svg class="i" width="20" height="20" viewBox="0 0 24 24" stroke-width="1.8" style=""><path d="M4 20l4-1 9.5-9.5a2.1 2.1 0 0 0-3-3L5 16z"/></svg></span>
       </div>
-      <div class="dsp" style="margin-top: 40px; font-size: 76px; font-weight: 250; line-height: 76px; letter-spacing: -.04em;">74&deg;F</div>
-      <p style="margin: 18px 0 0; width: 500px; font-size: 15.5px; line-height: 23px; color: var(--ink-4);">Set to Cool at 8:42 PM.</p>
+      <div class="dsp" style="margin-top: 40px; font-size: 76px; font-weight: 250; line-height: 76px; letter-spacing: -.04em;">76&deg;F</div>
+      <p style="margin: 18px 0 0; width: 500px; font-size: 15.5px; line-height: 23px; color: var(--ink-4);">Set to Cool at 8:42 AM. <span style="color: var(--ink); outline: 1.5px dashed rgba(var(--lamp-rgb),.75); outline-offset: 4px;">The thermostat set itself to Away at 6:55 PM.</span></p>
     </div>
 
-    <div class="abs" style="left: 49px; top: 423px; width: 560px; border-top: 1px solid var(--edge); padding-top: 18px; display: flex; gap: 30px;"><div class="fact"><div class="fact-v">48%</div><div class="fact-k">Humidity</div></div><div class="fact"><div class="fact-v">71&deg;F</div><div class="fact-k">Set to</div></div><div class="fact"><div class="fact-v">Its own sensors</div><div class="fact-k">Sensing</div></div><div class="fact new"><div class="fact-v">Good</div><div class="fact-k">Air</div></div></div>
+    <div class="abs" style="left: 49px; top: 423px; width: 560px; border-top: 1px solid var(--edge); padding-top: 18px; display: flex; gap: 30px;"><div class="fact"><div class="fact-v">44%</div><div class="fact-k">Humidity</div></div><div class="fact"><div class="fact-v">78&deg;F</div><div class="fact-k">Set to</div></div><div class="fact"><div class="fact-v">Its own sensors</div><div class="fact-k">Sensing</div></div><div class="fact new"><div class="fact-v">Good</div><div class="fact-k">Air</div></div></div>
     <div class="rig"></div>
 
     <div class="abs" style="left: 670px; top: 152px; width: 330px; height: 330px;">
@@ -143,13 +143,13 @@
         <circle cx="165" cy="165" r="138" fill="none" stroke="rgba(255,255,255,.1)" stroke-width="12" stroke-linecap="round"
                 stroke-dasharray="650.3 867.1" transform="rotate(135 165 165)"/>
         <circle cx="165" cy="165" r="138" fill="none" stroke="rgb(122,176,232)" stroke-width="12" stroke-linecap="round"
-                stroke-dasharray="48.8 867.1" stroke-dashoffset="-341.4" transform="rotate(135 165 165)"/>
-        <rect x="165.2" y="17.0" width="32" height="22" rx="11" fill="rgb(241,238,232)" transform="rotate(366.8 181.2 28.0)"/>
+                stroke-dasharray="32.5 867.1" stroke-dashoffset="-422.7" transform="rotate(135 165 165)"/>
+        <rect x="260.6" y="72.9" width="32" height="22" rx="11" fill="rgb(241,238,232)" transform="rotate(414.0 276.6 83.9)"/>
       </svg>
       <div class="abs" style="left: 0; right: 0; top: 99px; text-align: center;">
-        <span class="dsp" style="font-size: 78px; font-weight: 250; letter-spacing: -.04em; line-height: 78px;">71</span><span style="font-size: 32px; font-weight: 250; vertical-align: 34px;">&deg;F</span>
+        <span class="dsp" style="font-size: 78px; font-weight: 250; letter-spacing: -.04em; line-height: 78px;">78</span><span style="font-size: 32px; font-weight: 250; vertical-align: 34px;">&deg;F</span>
         <div class="rlbl" style="margin-top: 2px;">Set to</div>
-        <div style="margin-top: 14px; font-size: 15px; color: var(--ink-4);">Cooling &middot; 74&deg;F in here now</div>
+        <div style="margin-top: 14px; font-size: 15px; color: var(--ink-4);">Nothing to do &middot; 76&deg;F in here now</div>
       </div>
       <span class="abs ctl" style="left: 0; top: 262px; width: 68px; height: 68px;"><svg class="i" width="22" height="22" viewBox="0 0 24 24" stroke-width="1.8" style=""><path d="M6 12h12"/></svg></span>
       <span class="abs ctl" style="left: 262px; top: 262px; width: 68px; height: 68px;"><svg class="i" width="22" height="22" viewBox="0 0 24 24" stroke-width="1.8" style=""><path d="M12 6v12M6 12h12"/></svg></span>
@@ -164,8 +164,8 @@
       </div>
       <div class="abs rlist new" style="left: 0; top: 161px; width: 334px;">
         <div class="hd"><svg class="i" width="18" height="18" viewBox="0 0 24 24" stroke-width="1.8" style=""><path d="M14 14.76V3.5a2.5 2.5 0 0 0-5 0v11.26a4.5 4.5 0 1 0 5 0z"/></svg>Keep it right in</div>
-        <div class="ri on"><span style="width: 7px; flex: none;"></span><span>Its own sensors</span><span class="t">74&deg;</span></div>
-        <div class="ri"><span class="here"></span><span>Living room</span><span class="t">74&deg;</span></div><div class="ri"><span class="here"></span><span>Office</span><span class="t">75&deg;</span></div><div class="ri"><span style="width: 7px; flex: none;"></span><span>Bedroom</span><span class="t">70&deg;</span></div>
+        <div class="ri on"><span style="width: 7px; flex: none;"></span><span>Its own sensors</span><span class="t">76&deg;</span></div>
+        <div class="ri"><span style="width: 7px; flex: none;"></span><span>Living room</span><span class="t">76&deg;</span></div><div class="ri"><span style="width: 7px; flex: none;"></span><span>Office</span><span class="t">77&deg;</span></div><div class="ri"><span style="width: 7px; flex: none;"></span><span>Bedroom</span><span class="t">74&deg;</span></div>
       </div>
       <div class="abs rrow" style="left: 0; top: 371px; width: 334px;">
         <span class="h"><svg class="i" width="18" height="18" viewBox="0 0 24 24" stroke-width="1.8" style=""><path d="M12 12c0-3 1-7 4-7s3 4 0 5.5M12 12c3 0 7 1 7 4s-4 3-5.5 0M12 12c0 3-1 7-4 7s-3-4 0-5.5M12 12c-3 0-7-1-7-4s4-3 5.5 0"/></svg>Fan for</span>
@@ -175,7 +175,7 @@
 
     <div class="abs" style="left: 49px; top: 584px; width: 1342px; border-top: 1px solid var(--edge); padding-top: 18px; display: flex; gap: 40px;">
       <span class="fact-k" style="margin-top: 0;">Today</span>
-      <div style="display: flex; gap: 40px;"><div><div style="font-size: 13px; color: oklch(0.596 0.01 274); line-height: 18px;">8:42 PM</div><div style="font-size: 15px; color: var(--ink-4); line-height: 21px; margin-top: 3px; white-space: nowrap;">Set to Cool</div></div><div><div style="font-size: 13px; color: oklch(0.596 0.01 274); line-height: 18px;">8:39 PM</div><div style="font-size: 15px; color: var(--ink-4); line-height: 21px; margin-top: 3px; white-space: nowrap;">Set to 71&deg;F, by hand</div></div><div><div style="font-size: 13px; color: oklch(0.596 0.01 274); line-height: 18px;">3:15 PM</div><div style="font-size: 15px; color: var(--ink-4); line-height: 21px; margin-top: 3px; white-space: nowrap;">Switched off</div></div><div><div style="font-size: 13px; color: oklch(0.596 0.01 274); line-height: 18px;">9:03 AM</div><div style="font-size: 15px; color: var(--ink-4); line-height: 21px; margin-top: 3px; white-space: nowrap;">Set to 70&deg;F, by hand</div></div></div>
+      <div style="display: flex; gap: 40px;"><div><div style="font-size: 13px; color: oklch(0.596 0.01 274); line-height: 18px;">8:42 AM</div><div style="font-size: 15px; color: var(--ink-4); line-height: 21px; margin-top: 3px; white-space: nowrap;">Set to Cool</div></div><div><div style="font-size: 13px; color: oklch(0.596 0.01 274); line-height: 18px;">Yesterday</div><div style="font-size: 15px; color: var(--ink-4); line-height: 21px; margin-top: 3px; white-space: nowrap;">Set to 71&deg;F, by hand</div></div></div>
     </div>
   </div>
 

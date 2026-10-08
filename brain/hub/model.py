@@ -77,6 +77,29 @@ def changed_at(s) -> float:
     except (TypeError, ValueError): return time.time()
 
 
+# What a thermostat that brings its own says beside its temperature: the Home, Away or Sleep it has
+# switched itself to, and the air it reads (an Ecobee over HomeKit; design/thermostat/, B). Read off
+# entities on the thermostat's own hardware, never guessed from a name.
+COMFORT = {"home", "sleep", "away"}
+AIR = {1: "Good", 2: "Good", 3: "Fair", 4: "Poor", 5: "Poor"}   # HomeKit's steps: excellent, good, fair, inferior, poor
+
+
+def companion_kind(e: dict, s: dict) -> str | None:
+    domain, a = e["entity_id"].split(".")[0], s.get("attributes") or {}
+    if domain == "select" and set(a.get("options") or []) == COMFORT: return "comfort"
+    if domain == "sensor" and (a.get("device_class") or e.get("original_device_class")) == "aqi": return "air"
+    return None
+
+
+def told_by(kind: str, s: dict) -> dict:
+    if kind == "comfort":
+        v = s.get("state")
+        return {"comfort": v, "comfort_since": changed_at(s)} if v in COMFORT else {"comfort": None, "comfort_since": None}
+    try: step = int(float(s.get("state")))
+    except (TypeError, ValueError): step = None
+    return {"air": AIR.get(step)}
+
+
 def capability_for(domain: str, device_class: str | None, words: str = "") -> str | None:
     """`words` is everything that names the entity and the device it belongs to; it decides sensor versus appliance."""
     if domain in CAP_BY_DOMAIN: return CAP_BY_DOMAIN[domain]
@@ -201,6 +224,8 @@ class Home:
         # dark, and why (hub/controller.py). Merged into its attrs like `extras`, but never replaced by a
         # timer's: device id -> {"strip": {...}}. Written by hub/strip.py.
         self.reports: dict[str, dict] = {}
+        self.companions: dict[str, tuple[str, str]] = {}   # entity id -> (thermostat id, "comfort" | "air")
+        self.told: dict[str, dict] = {}                    # thermostat id -> what its companions and room sensors say
         # LIGHTS FOLDED INTO ANOTHER LIGHT'S TILE: a roofline of several boxes is ONE light on the wall
         # (design/roofline/OneLight.dc.html). Hardware id of a box -> hardware id of the box whose light is
         # the tile. A folded light stays a device -- rules, the log and a tap on the roofline still reach
@@ -216,6 +241,7 @@ class Home:
         if eid in self.eyes: out["motion"] = self.eyes[eid]
         out.update(self.fixtures.get(eid, {}))
         out.update(self.reports.get(eid, {}))
+        out.update(self.told.get(eid, {}))
         if extra.get("fan_until", 0) > time.time(): out["fan_mode"] = "on"
         if cap.split(".")[0] == "light" and eid in self.color_pinned: out["color_pinned"] = True
         return out
@@ -309,6 +335,22 @@ class Home:
                 self.fixtures[fid] = {"light": d.id, "leads": lead}
                 self.fixtures[d.id] = {"fan": fid, "leads": lead}
         for eid, more in self.fixtures.items(): self.devices[eid].attrs.update(more)
+        # A thermostat with sensors of its own in other rooms -- each one its own device hanging off the
+        # thermostat's -- is told how many, so the pane can say "its own sensors" rather than "its own".
+        self.companions, self.told = {}, {}
+        thermostats = {d.hw: d.id for d in self.devices.values() if d.capability == "climate" and d.hw}
+        warm = {e.get("device_id") for e in entities if e["entity_id"].startswith("sensor.")
+                and (e.get("original_device_class") or (st.get(e["entity_id"]) or {}).get("attributes", {}).get("device_class")) == "temperature"}
+        for hw, cid in thermostats.items():
+            n = sum(1 for d in ha_devices if d.get("via_device_id") == hw and d["id"] in warm)
+            self.told[cid] = {"own_sensors": n} if n else {}
+        for e in entities:
+            cid, s = thermostats.get(e.get("device_id")), st.get(e["entity_id"])
+            kind = companion_kind(e, s) if cid and s and not e.get("disabled_by") else None
+            if not kind: continue
+            self.companions[e["entity_id"]] = (cid, kind)
+            self.told[cid].update(told_by(kind, s))
+        for cid, told in self.told.items(): self.devices[cid].attrs.update(told)
         return self
 
     def lead_for(self, hw: str | None) -> str:
@@ -340,6 +382,14 @@ class Home:
         return k if k and k != (guess or capability) and k in kinds_for(capability) else None
 
     def apply_state(self, entity_id, new_state) -> Device | None:
+        if entity_id in self.companions and new_state:
+            cid, kind = self.companions[entity_id]
+            d = self.devices.get(cid)
+            if not d: return None
+            more = told_by(kind, new_state)
+            self.told.setdefault(cid, {}).update(more)
+            d.attrs.update(more)
+            return d     # the thermostat changed, as far as anybody looking at it is concerned
         d = self.devices.get(entity_id)
         if not d or not new_state: return None
         d.state = new_state["state"]
