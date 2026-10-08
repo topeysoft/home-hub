@@ -13858,3 +13858,13 @@ button.reading[data-held] {
   border: 1px solid var(--edge);
   border-radius: var(--r-md);
 }
+
+/* A car charging (design/charger/CardA): the panel's green, not a lamp's amber -- charging the car is
+   not a light being on. Read-only, so nothing here changes on a press. */
+.tile.plain.charger.on {
+  border-color: rgba(var(--live-rgb), .45);
+  box-shadow: 0 0 0 1px rgba(var(--live-rgb), .16), 0 24px 50px -32px rgba(0, 0, 0, .85);
+}
+.tile.plain.charger.on .tile-state,
+.tile.plain.charger.on .tile-icon { color: var(--live); }
+.nudge.charging .nudge-icon { background: var(--live); color: #0b2216; }

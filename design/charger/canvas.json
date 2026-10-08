@@ -99,7 +99,7 @@
    "y": 1400,
    "w": 500,
    "page": "charger",
-   "text": "DECIDED 8 OCTOBER 2026 -- A, WITH C'S LINE\n\nA card in the garage that says Charging, Plugged in or Ready, with the power while it charges and nothing to tap; and while the car charges, a line in Home's band and the garage's: The car is charging, with the power.\n\nB stays the floor for anything else that arrives with only readings: an add that succeeds and leads nowhere should never say only Added."
+   "text": "DECIDED 8 OCTOBER 2026 -- A, WITH C'S LINE\n\nA card in the garage that says Charging, Plugged in or Ready, with the power while it charges and nothing to tap; and while the car charges, a line in Home's band: The car is charging, with the power and the room.\n\nHome's band only, as built: in the garage the card and the room's own line (Charging the car) already say it, and the band does not repeat a card on the same screen (app/src/printers.ts, bandNotes). When the car stops, the line stays until nobody is looking, like everything else in the band.\n\nB stays the floor for anything else that arrives with only readings: an add that succeeds and leads nowhere should never say only Added."
   }
  ],
  "reading": [

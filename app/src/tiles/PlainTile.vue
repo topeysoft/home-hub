@@ -7,6 +7,7 @@ import { computed } from 'vue'
 import type { Device } from '../api'
 import { cap, iconFor, isActive, isDead, perform, shortName, roomOf, store } from '../store'
 import { readingLabel } from '../readings'
+import { chargerWords, isCharging } from '../chargers'
 import Icon from '../Icon.vue'
 import DeviceArt from '../DeviceArt.vue'
 import { kindFor, type ArtState } from '../art'
@@ -16,10 +17,10 @@ import { makerWord } from '../telling'
 
 const props = defineProps<{ device: Device }>()
 const kind = computed(() => cap(props.device))
-const on = computed(() => isActive(props.device))
+const on = computed(() => kind.value === 'charger' ? isCharging(props.device) : isActive(props.device))
 const dead = computed(() => isDead(props.device))
 const pending = computed(() => !!store.pending[props.device.id])
-const passive = computed(() => ['sensor', 'motion', 'contact'].includes(kind.value))
+const passive = computed(() => ['sensor', 'motion', 'contact', 'charger'].includes(kind.value))
 const name = computed(() => shortName(props.device, roomOf(props.device)))
 
 /* null for the passive ones -- a sensor, a motion detector, a door contact. They
@@ -39,6 +40,7 @@ const artState = computed<ArtState>(() => {
 const label = computed(() => {
   const d = props.device, k = kind.value
   if (dead.value) return 'Not answering'
+  if (k === 'charger') return chargerWords(d)
   if (passive.value) return readingLabel(d)
   if (armed.value) return armed.value
   if (k === 'lock') return d.state === 'locked' ? 'Locked' : d.state === 'unlocked' ? 'Unlocked' : d.state

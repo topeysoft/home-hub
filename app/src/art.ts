@@ -160,6 +160,7 @@ const PLATE = 'url(#mPlate)'      // a flat metal face
 const MATTE = 'url(#mMatte)'      // painted or plastic, unlit
 const SHADE = 'url(#mShade)'      // a lampshade with light behind it
 const DARK = 'url(#mDark)'        // dark plastic
+const CHARGING = 'rgb(116, 198, 157)'   // the panel's --live: a car charging, not a lamp
 const POOL = 'url(#mPool)'        // light landing on a floor
 const CONE = 'url(#mCone)'        // light on its way down
 const GLASS = 'url(#mGlass)'      // a lit bulb
@@ -202,10 +203,10 @@ export type Art = {
 
 export type Kind =
   | 'floor-lamp' | 'table-lamp' | 'ceiling' | 'strip' | 'bulb' | 'pendant'
-  | 'camera' | 'doorbell' | 'thermostat' | 'speaker' | 'tv' | 'lock' | 'plug' | 'fan' | 'blind' | 'vacuum'
+  | 'camera' | 'doorbell' | 'thermostat' | 'speaker' | 'tv' | 'lock' | 'plug' | 'fan' | 'blind' | 'vacuum' | 'charger'
 export const LIGHT_KINDS: Kind[] = ['floor-lamp', 'table-lamp', 'ceiling', 'strip', 'bulb', 'pendant']
 export const KINDS: Kind[] = [...LIGHT_KINDS,
-  'camera', 'doorbell', 'thermostat', 'speaker', 'tv', 'lock', 'plug', 'fan', 'blind', 'vacuum']
+  'camera', 'doorbell', 'thermostat', 'speaker', 'tv', 'lock', 'plug', 'fan', 'blind', 'vacuum', 'charger']
 
 /* How much light is coming out, 0..1. Off is off: no pool, no cone, no glow, no
    exceptions. An "off" tile that still emits was a real bug on the first pass of
@@ -517,6 +518,22 @@ function thing(kind: Kind, s: ArtState, m: Materials): Art {
     }
   }
 
+  if (kind === 'charger') {
+    /* A wall connector and its cable. Its strip of light is the only thing that emits, and only while the
+       car charges -- in the panel's green, because charging the car is not a light being on. */
+    const on = s.on === true
+    return {
+      glow: on ? 0.3 : 0,
+      marks: [
+        rect(50, 8, 60, 104, m.metalLo, { rx: 17, opacity: 0.16 }),
+        rect(57, 12, 46, 88, MATTE, { rx: 15 }),
+        rect(69, 30, 22, 3.4, on ? CHARGING : m.metalLo, { rx: 1.7, opacity: on ? 1 : 0.8 }),
+        pathOf('M80 100c0 16 34 19 44 5c6-9 4-22-4-30', 'none', { stroke: m.darkLo, 'stroke-width': 5, 'stroke-linecap': 'round' }),
+        rect(112, 54, 18, 26, DARK, { rx: 6, transform: 'rotate(-12 121 67)' }),
+      ],
+    }
+  }
+
   /* vacuum */
   const cleaning = s.on === true
   return {
@@ -565,6 +582,7 @@ export function kindFor(capability: string, name: string): Kind | null {
     case 'fan': return 'fan'
     case 'cover': return 'blind'
     case 'vacuum': return 'vacuum'
+    case 'charger': return 'charger'
     case 'climate': return 'thermostat'
     /* a doorbell is a camera to the hub, and nothing like one on a wall */
     case 'camera': return /\b(doorbell|door ?bell|bell)\b/i.test(name) ? 'doorbell' : 'camera'
