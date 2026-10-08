@@ -867,6 +867,11 @@ const bridgeRows = process.env.BRIDGES === 'none' ? [] : [
     ? { locked: !!process.env.LOCKED, paired: true, home: 'Maple Court', phone: { ...phones.phones[1], me: true, moved: !!process.env.MOVED }, away: false,
         lan: '192-168-86-53.maple-court.home.elyir.app', address: 'https://maple-court.elyir.app' }
     : { locked: !!process.env.LOCKED, paired: true, home: 'Maple Court', phone: null })
+  /* A wall screen saying which room it hangs in (design/companion/, C). The mock house has no passcode, so no record. */
+  if (p === '/phones/me/room' && req.method === 'POST') { let b = ''; req.on('data', c => { b += c }); req.on('end', () => {
+    let room = ''; try { room = JSON.parse(b).room } catch {}
+    rooms.some(r => r.id === room) ? json(res, { room, phone: null }) : (res.writeHead(404, { 'Content-Type': 'application/json' }), res.end(JSON.stringify({ detail: 'No such room.' })))
+  }); return }
   /* Into the Houses app since 3 October (design/houses/, MoveToApp). K7Q4MPWR is the code that works; any other is
      the brain's 410, so the app's wrong-code line can be seen. */
   if (p === '/phones/move' && req.method === 'POST') return json(res, { code: 'K7Q4MPWR', url: 'https://houses.elyir.app/add#h=maple-court&c=K7Q4MPWR', ttl: 600 })

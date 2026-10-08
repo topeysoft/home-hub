@@ -129,6 +129,14 @@
       "y": 940,
       "w": 1440,
       "text": "AFTER IT JOINS — the same whichever of A, B or C is picked, drawn so the whole of it can be judged, not offered as a choice yet. Flip the chips.\n\nTHE HUB OUT OF REACH. The house as it last was, hushed, and one card: which hub, since when, that it comes back by itself, and what to check. Never the browser's words. This screen's own Restart stays on This screen, because restarting the glass is not restarting the house (docs/restart.md).\n\nA NEW HUB. The upgrade path: the house started on the wall, then a NUC was bought and the backup brought over with first run's 'Moving from another hub?'. The new hub tells the old one it now holds this house (same house id), and the wall offers to step down to a screen. Reverse is 'Make this the hub' on This screen, the same backup and restore.\n\nSCREENS, ON THE HUB. Each screen with its room and how it is; tap one to rename it, move it to another room, or forget it. Below them, what the screens lend the house, in plain words.\n\nNOT DRAWN, ON PURPOSE: a screen that keeps a standby copy of the house running in case the hub dies. Two home engines driving the same lights is the bug this collection exists to remove. If a spare is wanted later, it is a copy of the nightly backup that takes over only when asked."
+    },
+    {
+      "id": "built",
+      "page": "join",
+      "x": 3120,
+      "y": 1300,
+      "w": 500,
+      "text": "BUILT 8 OCTOBER 2026, AND WHERE IT DIFFERS FROM C\n\nThe join step is Join.vue's screen half, and the room step is ScreenRoom.vue. Both are served by the hub, so the wall unit and the tablet get the same pages, and they change when the hub does. The shells open the panel with ?screen=1 (startup/wall.sh, the kiosk's Wall.kt).\n\nThe passcode is one field, not four boxes: a passcode is 4 to 8 digits, so four boxes would be wrong half the time.\n\nThe line under the question says 'It opens on that room, and goes back to it after resting.' The board promised it 'tells the house when somebody walks past'. That is true only once a screen has a presence sensor reporting, and no screen does yet.\n\nThe Passcode tick shows only in a house that has one.\n\n'Not this house? Start a new one on this screen' is not built yet. It belongs to the wall unit's first start, which looks for a hub before it installs one, and that is the next piece.\n\nPinned by app/tests/screen.test.ts, app/e2e/companion.spec.ts and brain/tests/test_api_screens.py."
     }
   ],
   "decided": {

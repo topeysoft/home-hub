@@ -78,8 +78,9 @@ def needs_code(method: str, path: str) -> bool:
     if path.startswith("/share") and m == "POST": return True   # turning it on, and letting one more app in
     # Letting a phone in, or out, is a setting; asking is not. Nor is moving: the same phone, with the same stay
     # and the same `remote`, carried to the house's own name (design/away/, C) -- nothing about who may do what
-    # changes, and the page on the new name has no code yet to send with the claim.
-    if path.startswith("/phones") and m != "GET": return path not in ("/phones/ask", "/phones/code", "/phones/move", "/phones/move/claim")
+    # changes, and the page on the new name has no code yet to send with the claim. A screen saying which room it
+    # hangs in changes only itself (design/companion/, C), and one let in from another screen has no code to send.
+    if path.startswith("/phones") and m != "GET": return path not in ("/phones/ask", "/phones/code", "/phones/move", "/phones/move/claim", "/phones/me/room")
     return False
 
 

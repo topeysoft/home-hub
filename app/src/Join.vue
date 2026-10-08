@@ -7,6 +7,7 @@ import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { getMe, askToJoin, claimJoin, joinWithCode } from './api'
 import { lock, remember } from './code'
 import Icon from './Icon.vue'
+import { isScreen } from './screen'
 
 /* The house has a code and this device is not one of its phones yet. Two ways in: ask, and someone at a screen that
    is already in taps Allow (and types the passcode); or type the passcode here. Being on the Wi‑Fi alone gets nothing. */
@@ -15,7 +16,9 @@ const home = ref('the house'), who = ref(''), code = ref(''), mode = ref<'ask' |
 const ua = navigator.userAgent
 const device = /iPad/.test(ua) || (/Macintosh/.test(ua) && 'ontouchend' in document) ? 'iPad' : /iPhone/.test(ua) ? 'iPhone'
   : /Android/.test(ua) ? (/Mobile/.test(ua) ? 'Android phone' : 'Android tablet') : matchMedia('(max-width: 860px)').matches ? 'phone' : 'screen'
-const name = computed(() => { const w = who.value.trim(); return w ? `${w}'s ${device}` : `A ${device}` })
+/* A screen on the wall is nobody's, so it is not asked for a name: it takes its room's once it has one (design/companion/, C). */
+const screen = isScreen()
+const name = computed(() => { if (screen) return 'A screen'; const w = who.value.trim(); return w ? `${w}'s ${device}` : `A ${device}` })
 let poll: number | undefined
 const preview = new URLSearchParams(location.search).get('join') === '1'   // ?join=1 keeps the screen up against a hub that would let this device in
 onMounted(async () => { try { const me = await getMe(); home.value = me.home; if (me.paired && !preview) done() } catch {} })
@@ -24,7 +27,7 @@ function done() { clearInterval(poll); lock.unpaired = false; emit('joined') }
 async function ask() {
   if (busy.value) return
   error.value = ''; busy.value = true
-  try { const a = await askToJoin(name.value); asked.value = a.id; poll = window.setInterval(check, 2000) } catch (e: any) { error.value = e.message }
+  try { const a = await askToJoin(name.value, screen ? 'screen' : undefined); asked.value = a.id; poll = window.setInterval(check, 2000) } catch (e: any) { error.value = e.message }
   busy.value = false
 }
 async function check() {
@@ -41,14 +44,32 @@ async function withCode() {
   error.value = ''
   if (!/^\d{4,8}$/.test(code.value)) { error.value = 'A passcode is 4 to 8 digits.'; return }
   busy.value = true
-  try { await joinWithCode(code.value, name.value); remember(code.value); done() } catch (e: any) { error.value = e.message }
+  try { await joinWithCode(code.value, name.value, screen ? 'screen' : undefined); remember(code.value); done() } catch (e: any) { error.value = e.message }
   busy.value = false
 }
 </script>
 
 <template>
   <main class="setup join">
-    <section class="setup-page">
+    <section class="setup-page" v-if="screen">
+      <span class="setup-mark"><Icon name="home" :size="30" /></span>
+      <h1 class="display">This screen is for {{ home }}.</h1>
+      <template v-if="!asked">
+        <p class="setup-lede">Its hub is on this Wi‑Fi. Type the house passcode to finish.</p>
+        <input class="input code-input screen-code" v-model="code" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" maxlength="8" placeholder="••••" aria-label="The passcode" @keydown.enter="withCode" />
+        <p class="error" v-if="error">{{ error }}</p>
+        <div class="setup-actions">
+          <button class="button big" :class="{ busy }" :disabled="code.length < 4" @click="withCode">Continue</button>
+          <button class="button ghost big" @click="ask">Ask from another screen</button>
+        </div>
+      </template>
+      <template v-else>
+        <p class="setup-lede">Asked. Say yes on a phone or another screen in the house, and this one opens by itself.</p>
+        <p class="setup-status"><span class="pulse-dot"></span> Waiting for a yes…</p>
+        <p class="setup-foot"><button class="linkish" @click="cancel">Type the passcode instead</button></p>
+      </template>
+    </section>
+    <section class="setup-page" v-else>
       <span class="setup-mark"><Icon name="phone" :size="30" /></span>
       <h1 class="display">Join {{ home }}.</h1>
       <template v-if="!asked">

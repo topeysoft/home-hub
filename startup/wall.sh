@@ -14,7 +14,7 @@ HERE=$(cd "$(dirname "$0")" && pwd)
 # shellcheck source=plymouth/elyir/timing.sh
 . "$HERE/plymouth/elyir/timing.sh"
 READY_URL=${ELYIR_READY_URL:-http://localhost/alive}
-PANEL_URL=${ELYIR_PANEL_URL:-http://localhost/}
+PANEL_URL=${ELYIR_PANEL_URL:-http://localhost/?screen=1}   # a screen, so it asks which room it is in (design/companion/, C)
 
 # Seconds since the splash first drew, from when systemd says plymouth-start finished.
 splash_seconds() {

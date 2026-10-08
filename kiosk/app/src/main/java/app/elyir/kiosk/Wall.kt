@@ -181,7 +181,7 @@ class Wall : Activity() {
             web.reload()
         } else {
             showing = base
-            web.loadUrl("$base/")
+            web.loadUrl("$base/?screen=1")   // a screen on the wall: it asks which room it is in (design/companion/, C)
         }
     }
 
