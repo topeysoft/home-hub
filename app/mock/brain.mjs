@@ -870,7 +870,8 @@ const bridgeRows = process.env.BRIDGES === 'none' ? [] : [
   /* A wall screen saying which room it hangs in (design/companion/, C). The mock house has no passcode, so no record. */
   if (p === '/phones/me/room' && req.method === 'POST') { let b = ''; req.on('data', c => { b += c }); req.on('end', () => {
     let room = ''; try { room = JSON.parse(b).room } catch {}
-    rooms.some(r => r.id === room) ? json(res, { room, phone: null }) : (res.writeHead(404, { 'Content-Type': 'application/json' }), res.end(JSON.stringify({ detail: 'No such room.' })))
+    if (rooms.some(r => r.id === room)) return json(res, { room, phone: null })
+    res.writeHead(404, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ detail: 'No such room.' }))
   }); return }
   /* Into the Houses app since 3 October (design/houses/, MoveToApp). K7Q4MPWR is the code that works; any other is
      the brain's 410, so the app's wrong-code line can be seen. */
