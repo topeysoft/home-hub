@@ -35,6 +35,62 @@ class ApplianceTests(unittest.TestCase):
         self.assertEqual(home.devices["sensor.bedroom_temperature"].attrs, {"unit_of_measurement": "°F"})
 
 
+def charger_house(plug="on", charging="on", power="7.2", unit="kW", area="garage"):
+    """A wall connector as HA has one: the plug and charging readings are diagnostics, power is not,
+    and its temperatures and currents ride along on the same unit."""
+    areas = [{"area_id": "garage", "name": "Garage"}]
+    devices = [{"id": "twc", "area_id": area, "name": "Tesla Wall Connector", "manufacturer": "Tesla", "model": "Wall Connector"},
+               {"id": "robot", "area_id": "garage", "name": "Robot vacuum"}]
+    parts = [("binary_sensor.twc_vehicle_connected", "plug", plug, None, "diagnostic"),
+             ("binary_sensor.twc_contactor_closed", "battery_charging", charging, None, "diagnostic"),
+             ("sensor.twc_total_power", "power", power, unit, None),
+             ("sensor.twc_handle_temperature", "temperature", "83.4", "°F", "diagnostic"),
+             ("sensor.twc_session_energy", "energy", "43.2", "kWh", None),
+             ("sensor.twc_grid_voltage", "voltage", "235", "V", "diagnostic")]
+    entities = [{"entity_id": eid, "device_id": "twc", "entity_category": cat} for eid, _, _, _, cat in parts]
+    entities.append({"entity_id": "binary_sensor.robot_charging", "device_id": "robot"})
+    states = [{"entity_id": eid, "state": v, "attributes": {"device_class": cls, **({"unit_of_measurement": u} if u else {})}} for eid, cls, v, u, _ in parts]
+    states.append({"entity_id": "binary_sensor.robot_charging", "state": "on", "attributes": {"device_class": "battery_charging"}})
+    return areas, devices, entities, states
+
+
+class ACarChargerIsOneThing(unittest.TestCase):
+    """design/charger/, A with C's line: a card that says Charging, Plugged in or Ready, from the unit's plug,
+    charging and power readings -- which HA marks as diagnostics -- and nothing else of the unit."""
+
+    def test_it_is_one_device_in_its_room_and_its_other_readings_go_nowhere(self):
+        home = Home().build(*charger_house())
+        self.assertEqual(sorted(home.devices), ["binary_sensor.twc_vehicle_connected"])
+        d = home.devices["binary_sensor.twc_vehicle_connected"]
+        self.assertEqual((d.capability, d.kind, d.name, d.room_id, d.state, d.attrs), ("charger", "charger", "Car charger", "garage", "charging", {"power": 7.2}))
+        self.assertEqual([x.id for x in home.rooms["garage"].devices], [d.id])
+
+    def test_plugged_in_and_ready(self):
+        self.assertEqual(Home().build(*charger_house(charging="off", power="0.0")).devices["binary_sensor.twc_vehicle_connected"].state, "plugged")
+        d = Home().build(*charger_house(plug="off", charging="off", power="0.0")).devices["binary_sensor.twc_vehicle_connected"]
+        self.assertEqual((d.state, d.attrs), ("ready", {"power": None}))
+        self.assertEqual(Home().build(*charger_house(plug="unavailable")).devices["binary_sensor.twc_vehicle_connected"].state, "unavailable")
+
+    def test_watts_are_said_in_kilowatts(self):
+        self.assertEqual(Home().build(*charger_house(power="7200", unit="W")).devices["binary_sensor.twc_vehicle_connected"].attrs, {"power": 7.2})
+
+    def test_one_reading_changing_changes_the_charger(self):
+        home = Home().build(*charger_house(charging="off", power="0.0"))
+        d = home.apply_state("binary_sensor.twc_contactor_closed", {"entity_id": "binary_sensor.twc_contactor_closed", "state": "on", "attributes": {"device_class": "battery_charging"}})
+        self.assertEqual((d.id, d.state), ("binary_sensor.twc_vehicle_connected", "charging"))
+        d = home.apply_state("sensor.twc_total_power", {"entity_id": "sensor.twc_total_power", "state": "11.5", "attributes": {"device_class": "power", "unit_of_measurement": "kW"}})
+        self.assertEqual(d.attrs, {"power": 11.5})
+        self.assertIsNone(home.apply_state("sensor.twc_handle_temperature", {"entity_id": "sensor.twc_handle_temperature", "state": "90", "attributes": {}}))
+
+    def test_a_unit_missing_any_of_the_three_is_not_a_charger(self):
+        areas, devices, entities, states = charger_house()
+        entities = [e for e in entities if e["entity_id"] != "sensor.twc_total_power"]
+        states = [s for s in states if s["entity_id"] != "sensor.twc_total_power"]
+        home = Home().build(areas, devices, entities, states)
+        self.assertNotIn("charger", {d.capability for d in home.devices.values()})
+        self.assertNotIn("binary_sensor.robot_charging", home.devices)
+
+
 class ExtrasTests(unittest.TestCase):
     def test_a_fan_timer_rides_along_with_the_attrs(self):
         home = Home().build(*snap())

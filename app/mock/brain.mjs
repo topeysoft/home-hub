@@ -85,6 +85,8 @@ const rooms = [
   { id: 'garage', name: 'Garage', intent: 'occupied', set_by: null, hold_until: null, devices: [
     dev('g1', 'Garage View', 'garage', 'camera', 'idle', {}),
     dev('g2', 'Garage door', 'garage', 'cover', 'closed', {}),
+    /* a car charger (design/charger/): one device made from a wall connector's readings. CHARGING=1 to see it charge */
+    dev('g9', 'Car charger', 'garage', 'charger', process.env.CHARGING ? 'charging' : 'plugged', { power: process.env.CHARGING ? 7.2 : null }, 'Tesla', { kind: 'charger', hw: 'hw-twc', hw_name: 'Tesla Wall Connector', model: 'Wall Connector' }),
   ] },
   { id: 'backyard', name: 'Backyard', intent: 'occupied', set_by: null, hold_until: null, devices: [
     dev('y1', 'Backyard cam', 'backyard', 'camera', 'recording', { light: 'y1l' }),   // a floodlight cam: the viewer offers its lamp

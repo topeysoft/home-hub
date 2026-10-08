@@ -499,11 +499,12 @@ class Hub:
                 self.engine.on_presence()
             return
         old_state = d.get("old_state") or {}
-        before = self.home.devices.get(d["entity_id"])
-        old_attrs = self.home._keep_attrs(before.capability, old_state.get("attributes", {})) if before else None
+        part = d["entity_id"] in self.home.part_of   # one reading of a car charger: compare the charger, not the reading
+        before = self.home.devices.get(self.home.part_of.get(d["entity_id"], d["entity_id"]))
+        if part and before: old_attrs, old = dict(before.attrs), before.state
+        else: old_attrs, old = (self.home._keep_attrs(before.capability, old_state.get("attributes", {})) if before else None), old_state.get("state")
         dev = self.home.apply_state(d["entity_id"], d.get("new_state"))
         if not dev: return
-        old = old_state.get("state")
         # Cameras and media players re-announce the same state constantly; only real changes go in the log.
         if old != dev.state or old_attrs != dev.attrs:
             self.log.add("state", dev.id, old, dev.state, source="device", detail=dev.attrs)
