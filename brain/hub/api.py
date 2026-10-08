@@ -864,7 +864,9 @@ def _with_cookie(body: dict, request: Request, phone: dict, token: str) -> JSONR
     return r
 
 
-def _device_kind(request: Request) -> str:
+def _device_kind(request: Request, body: dict | None = None) -> str:
+    # A wall screen says so: the wall unit and the tablet open the panel with ?screen=1 (design/companion/).
+    if (body or {}).get("kind") == "screen": return "screen"
     ua = request.headers.get("user-agent", "")
     return "wall" if "Mobile" not in ua and "iPhone" not in ua and "Android" not in ua else "phone"
 
@@ -2447,6 +2449,19 @@ def phones_me(request: Request):
             "lan": hub.address.lan_name() if paired else None, "address": hub.address.public_origin() if paired else None}
 
 
+@app.post("/phones/me/room")
+def phones_me_room(body: dict, request: Request):
+    """{"room": id}: the room this screen hangs in. It opens on that room and wakes to it (design/companion/, C).
+
+    A house with no passcode has no phones to write it on, so there the screen keeps it to itself."""
+    hub.ready()
+    room = hub.home.rooms.get(str(body.get("room") or ""))
+    if not room: raise HTTPException(404, "No such room.")
+    phone = request.state.phone
+    if not phone: return {"room": room.id, "phone": None}
+    return {"room": room.id, "phone": hub.phones.place(phone["id"], room.id, room.name)}
+
+
 @app.post("/phones/move")
 def phones_move(request: Request):
     """A one-time code that carries this phone to the house's own name (design/away/, C). From inside the house,
@@ -2485,7 +2500,7 @@ def phones_list(request: Request): return hub.phones.list(request.state.phone)
 def phones_ask(body: dict, request: Request):
     """A phone asks to join. Someone at a paired screen answers; the phone polls /phones/claim meanwhile."""
     if not hub.lock.locked: raise HTTPException(409, "The house has no passcode, so every phone on the Wi‑Fi can already use it.")
-    return hub.phones.ask(str(body.get("name") or ""), _device_kind(request))
+    return hub.phones.ask(str(body.get("name") or ""), _device_kind(request, body))
 
 
 @app.get("/phones/claim/{ask_id}")
@@ -2503,7 +2518,7 @@ def phones_code(body: dict, request: Request):
     wait = hub.lock.waiting(who)
     if wait > 0: raise HTTPException(429, f"Too many tries. Wait {int(wait) + 1} seconds.")
     if not hub.lock.check(str(body.get("code") or ""), who): raise HTTPException(401, "That wasn't it.")
-    phone, token = hub.phones.with_code(str(body.get("name") or ""), _device_kind(request))
+    phone, token = hub.phones.with_code(str(body.get("name") or ""), _device_kind(request, body))
     return _with_cookie({"ok": True, "phone": hub.phones._public(phone)}, request, phone, token)
 
 

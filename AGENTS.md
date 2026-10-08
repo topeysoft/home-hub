@@ -245,6 +245,11 @@ Do not reopen these, and do not propose around them.
   Every phone switches to the web address once rather than being handed over each time it is set to Anywhere.
   The household chooses the name. Pinned by `app/tests/address.test.ts` and `app/e2e/address.spec.ts`; the
   brain's half is `brain/hub/address.py`, the host's `driver-layer/host/away.sh`, the maker's `relay/service`.
+- **A second screen joins the house's hub; it never builds a second house** (7 October, `design/companion/`, C).
+  One home engine per house. A wall screen in a house that has a hub says whose house it found, asks for the
+  passcode (or a yes from another screen), then asks which room it is in. It opens on that room and wakes to it.
+  The shells open the panel with `?screen=1`. Pinned by `app/e2e/companion.spec.ts` and
+  `brain/tests/test_api_screens.py`. Do not propose a screen that keeps a standby copy of the house running.
 - **The roofline is one light that keeps its own evenings; the occasion only decides how it looks**
   (1 October, `design/roofline/`). Several controllers are one tile. Evenings are asked once at the end of an
   outside light's setup, like a porch light, and an occasion still turns nothing on. The occasion owns

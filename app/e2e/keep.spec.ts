@@ -71,7 +71,8 @@ test('away is said under the number, and the air beside the humidity -- with not
   await page.setViewportSize({ width: 1440, height: 900 })
   await anEcobee(page)
   await openThermostat(page)
-  await expect(page.locator('.pane-why')).toContainText('The thermostat set itself to Away at')
+  // "yesterday at" once the clock has passed midnight since the mock's event: the suite runs at any hour
+  await expect(page.locator('.pane-why')).toContainText(/The thermostat set itself to Away (yesterday )?at/)
   await expect(page.locator('.opened-facts')).toContainText('Good')
   await expect(page.locator('.opened-facts')).toContainText(/air/i)
   await expect(page.locator('.pane-rig').getByText('Away', { exact: true })).toHaveCount(0)

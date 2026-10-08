@@ -1,0 +1,109 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>After it joins, whichever way it asked</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="companion.css">
+<style>
+  body[data-at="lost"] [data-when]:not([data-when~="lost"]) { display: none; }
+  body[data-at="moved"] [data-when]:not([data-when~="moved"]) { display: none; }
+  body[data-at="screens"] [data-when]:not([data-when~="screens"]) { display: none; }
+
+  /* the panel behind, drawn only as far as needed to read as the house: the tab row and the bento */
+  .panel { position: absolute; inset: 0; padding: 28px 40px; }
+  .tabs { display: flex; gap: 8px; align-items: center; }
+  .tab { padding: 10px 20px; border-radius: 999px; font-size: 16px; color: var(--ink-2); }
+  .tab.on { background: var(--surface-hi); color: var(--ink); border: 1px solid var(--edge); }
+  .bento { position: absolute; left: 40px; right: 40px; top: 100px; bottom: 40px; display: grid; gap: 14px;
+           grid-template-columns: 2fr 1fr 1fr; grid-template-rows: 1fr 1fr; }
+  .tile { border-radius: var(--r-lg); background: var(--surface); border: 1px solid var(--edge); padding: 22px 24px; }
+  .tile .t1 { font-size: 20px; }
+  .hush { position: absolute; inset: 0; background: rgba(12,13,16,.62); backdrop-filter: grayscale(.9); }
+
+  .over { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 620px; padding: 34px 36px 30px;
+          border-radius: 28px; background: rgba(20,21,26,.92); border: 1px solid var(--edge-hi); box-shadow: 0 40px 100px -40px #000; }
+  .over h2 { margin: 0; font-size: 36px; line-height: 1.08; letter-spacing: -.02em; font-weight: 400; }
+  .over .lede { font-size: 17px; margin: 12px 0 22px; }
+
+  .sheet { position: absolute; right: 0; top: 0; bottom: 0; width: 620px; padding: 40px 40px; background: rgba(20,21,26,.96);
+           border-left: 1px solid var(--edge-hi); }
+  .sheet h2 { margin: 0 0 6px; font-size: 36px; font-weight: 400; letter-spacing: -.02em; }
+  .group { margin-top: 28px; }
+  .group .cap { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
+  .rows { border-radius: var(--r-md); border: 1px solid var(--edge); background: var(--surface); }
+  .row { display: flex; align-items: center; gap: 14px; padding: 15px 18px; }
+  .row + .row { border-top: 1px solid var(--edge); }
+  .row .t1 { font-size: 16px; }
+  .row .t2 { font-size: 13.5px; }
+  .chev { color: var(--muted); }
+  .glyph { width: 38px; height: 38px; border-radius: 12px; display: grid; place-items: center; background: var(--surface-hi); color: var(--ink-2); flex: none; }
+</style>
+</head>
+<body data-at="lost">
+<div class="wall"><div class="sun"></div><div class="land"></div>
+  <div class="panel">
+    <div class="tabs"><span class="tab on">Evening</span><span class="tab">Rooms</span><span class="tab">Cameras</span>
+      <span style="margin-left: auto; font-size: 30px; font-weight: 300; letter-spacing: -.02em;">7:41</span></div>
+    <div class="bento">
+      <div class="tile" style="grid-row: span 2;"><span class="t1" style="display:block">Hallway</span><span class="t2">2 of 4 lights on</span></div>
+      <div class="tile"><span class="t1" style="display:block">Kitchen</span><span class="t2">Lights on</span></div>
+      <div class="tile"><span class="t1" style="display:block">Living room</span><span class="t2">TV playing</span></div>
+      <div class="tile"><span class="t1" style="display:block">Front door</span><span class="t2">Locked</span></div>
+      <div class="tile"><span class="t1" style="display:block">72&deg;</span><span class="t2">Heating to 70</span></div>
+    </div>
+  </div>
+
+  <!-- the hub has gone quiet: the house as it last was, hushed, and one card saying so -->
+  <div data-when="lost"><div class="hush"></div>
+    <div class="over">
+      <span class="dot" style="display:inline-block; margin-bottom: 18px;"></span>
+      <h2>Can&rsquo;t reach Maple Court&rsquo;s hub</h2>
+      <p class="lede">Last heard from 4 minutes ago. This screen shows the house as it was and will come back by itself when the hub answers.</p>
+      <div class="t2" style="margin-bottom: 18px;">Still nothing after a few minutes? Check that the hub is plugged in and its light is on.</div>
+      <div class="actions"><span class="ghost" style="padding: 12px 20px;">This screen</span></div>
+    </div>
+  </div>
+
+  <!-- the wall that USED to be the hub, after the house was restored onto a bigger machine -->
+  <div data-when="moved"><div class="hush"></div>
+    <div class="over">
+      <span class="house" style="margin-bottom: 18px;"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v9.5h13V10"/></svg></span>
+      <h2>Maple Court has a new hub</h2>
+      <p class="lede">Your backup was brought over to it this afternoon. From now on, this screen can show the house from the new hub and stop running the house itself.</p>
+      <div class="actions"><span class="cta">Use the new hub</span><span class="ghost">Not now</span></div>
+      <p class="foot">Until you choose, two hubs are running the same lights.</p>
+    </div>
+  </div>
+
+  <!-- the hub's own page, opened from any screen or phone: the screens are listed with the rooms they hang in -->
+  <div data-when="screens"><div class="hush" style="background: rgba(12,13,16,.5);"></div>
+    <div class="sheet">
+      <h2>The hub</h2>
+      <div class="t2">In the closet &middot; running for 12 days &middot; up to date</div>
+      <div class="group"><div class="cap">Screens</div>
+        <div class="rows">
+          <div class="row"><span class="glyph">&#9645;</span><span style="flex:1"><span class="t1" style="display:block">Hallway screen</span><span class="t2">Hallway &middot; somebody there now</span></span><span class="chev">&rsaquo;</span></div>
+          <div class="row"><span class="glyph">&#9645;</span><span style="flex:1"><span class="t1" style="display:block">Kitchen tablet</span><span class="t2">Kitchen &middot; resting</span></span><span class="chev">&rsaquo;</span></div>
+          <div class="row"><span class="glyph">&#9645;</span><span style="flex:1"><span class="t1" style="display:block">Bedroom screen</span><span class="t2">Bedroom &middot; can&rsquo;t reach it since 2:10</span></span><span class="chev">&rsaquo;</span></div>
+        </div>
+      </div>
+      <div class="group"><div class="cap">What the screens lend the house</div>
+        <div class="rows">
+          <div class="row"><span style="flex:1"><span class="t1" style="display:block">Listening</span><span class="t2">Hallway and bedroom hear you. The hub works out what you said.</span></span></div>
+          <div class="row"><span style="flex:1"><span class="t1" style="display:block">Knowing who&rsquo;s home</span><span class="t2">Each screen notices people in its own room.</span></span></div>
+        </div>
+      </div>
+      <p class="foot" style="margin-top: 26px;">A new screen joins by itself when it&rsquo;s switched on near the hub.</p>
+    </div>
+  </div>
+
+  <div class="flips"><span style="padding: 0 6px;">Showing</span>
+    <span class="flip on" data-to="lost">the hub out of reach</span><span class="flip" data-to="moved">a new hub</span><span class="flip" data-to="screens">screens, on The hub</span></div>
+</div>
+<script>
+  document.querySelectorAll('.flip').forEach(f => f.addEventListener('click', () => {
+    document.body.dataset.at = f.dataset.to
+    document.querySelectorAll('.flip').forEach(g => g.classList.toggle('on', g === f))
+  }))
+</script>
+</body>
+</html>

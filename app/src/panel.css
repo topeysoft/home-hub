@@ -3535,6 +3535,85 @@ input:focus-visible {
   color: var(--muted);
   font-size: 14px;
 }
+/* ---------- a screen joining a house that has a hub (design/companion/, C) ---------- */
+.screen-code {
+  max-width: 280px;
+  font-size: 30px;
+  padding-block: 18px;
+}
+.screen-trail {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin: 0 0 14px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.screen-trail b {
+  font-weight: 500;
+  color: var(--ink-2);
+}
+.screen-trail-ok {
+  display: inline-flex;
+  color: var(--live-text);
+}
+.screen-trail-now {
+  color: var(--ink);
+}
+.screen-rooms {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+.screen-room-tile {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 104px;
+  padding: 18px 18px 16px;
+  border-radius: var(--r-md);
+  background: var(--surface);
+  border: 1px solid var(--edge);
+  backdrop-filter: var(--frost);
+  color: var(--ink);
+  text-align: left;
+}
+.screen-room-tile.on {
+  background: rgba(var(--lamp-rgb), 0.14);
+  border-color: rgba(var(--lamp-rgb), 0.7);
+}
+.screen-room-tile.new {
+  background: transparent;
+  border-style: dashed;
+}
+.screen-room-tile.new .screen-room-name {
+  color: var(--ink-2);
+}
+.screen-room-name {
+  font-size: 17px;
+  font-weight: 500;
+}
+.screen-room-line {
+  font-size: 13px;
+  color: var(--muted);
+}
+.screen-room-input {
+  width: 100%;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--edge-hi);
+  color: var(--ink);
+  font: inherit;
+  font-size: 17px;
+  padding: 2px 0 6px;
+  outline: none;
+}
+@media (max-width: 560px) {
+  .screen-rooms {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
 .setup-foot {
   margin: 22px 0 0;
   font-size: 13px;
