@@ -2034,9 +2034,14 @@ def share_devices():
 @app.post("/share/bridge/status")
 def share_status(body: dict):
     """The bridge saying what it is: its pairing codes while it waits, and who holds it once commissioned."""
-    hub.share_status = {k: body.get(k) for k in ("running", "commissioned", "fabrics", "manual", "qr", "error")}
-    hub.share_status["at"] = time.time()   # when it said so, so `Share.bridge()` can tell living from remembered
-    hub._broadcast(json.dumps({"type": "share", "share": hub.share.state()}))
+    said = {k: body.get(k) for k in ("running", "commissioned", "fabrics", "manual", "qr", "error")}
+    was = {k: v for k, v in (hub.share_status or {}).items() if k != "at"}
+    hub.share_status = {**said, "at": time.time()}   # when it said so, so `Share.bridge()` can tell living from remembered
+    # Only news is broadcast. The bridge re-checks the house on every share broadcast and reports after
+    # each check, so announcing an unchanged report was a loop: 2 October to 7 October 2026 it ran about
+    # a hundred times a second, and every open panel refetched /share with it.
+    if said != was:
+        hub._broadcast(json.dumps({"type": "share", "share": hub.share.state()}))
     return {"ok": True}
 
 

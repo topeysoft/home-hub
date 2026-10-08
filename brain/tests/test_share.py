@@ -371,6 +371,28 @@ class LettingOneMoreAppIn(SharingTest):
         self.assertEqual(r.headers["content-type"], "image/svg+xml")
 
 
+class OnlyNewsIsBroadcast(SharingTest):
+    """The bridge re-checks the house on every share broadcast and reports after each check, so a report
+    that changed nothing must not be broadcast: that loop ran a hundred times a second for five days."""
+
+    STATUS = {"running": True, "commissioned": True, "fabrics": [{"index": 1, "vendor": 4937, "label": ""}]}
+
+    def told(self, status):
+        with mock.patch.object(self.hub, "_broadcast") as b:
+            self.bridge("post", "/share/bridge/status", json=status)
+        return [m for (m,), _ in b.call_args_list if '"share"' in m]
+
+    def test_a_report_that_changed_nothing_is_kept_but_not_broadcast(self):
+        self.assertEqual(len(self.told(self.STATUS)), 1)
+        first = self.hub.share_status["at"]
+        self.assertEqual(self.told(self.STATUS), [])
+        self.assertGreaterEqual(self.hub.share_status["at"], first, "still heard from, so still alive")
+
+    def test_a_report_that_changed_something_is(self):
+        self.told(self.STATUS)
+        self.assertEqual(len(self.told({**self.STATUS, "error": "the shared list did not load"})), 1)
+
+
 class NamingWhoHoldsTheHouse(SharingTest):
     """The vendor ids are read off the CSA's ledger, not guessed: a wrong name here would tell
     somebody the wrong app is in their house."""
