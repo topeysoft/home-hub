@@ -12,6 +12,8 @@ import Join from './Join.vue'
 import Away from './Away.vue'
 import MovePage from './MovePage.vue'
 import CodePrompt from './CodePrompt.vue'
+import Keys from './Keys.vue'
+import { onWall } from './keys'
 import { lock } from './code'
 import Sky from './Sky.vue'
 import ArtDefs from './ArtDefs.vue'
@@ -76,6 +78,8 @@ const ambient = computed(() => store.sky.elevation < -8 ? 'night' : store.sky.el
    ?tone= and ?layout= override it for this tab only, the way ?at= and ?wx= do,
    so previewing a look never changes what the rest of the house is showing. */
 const params = new URLSearchParams(location.search)
+// The wall unit has no keyboard of its own, so the panel brings one there and nowhere else (design/keyboard/, C).
+const wall = onWall()
 const toneParam = params.get('tone'), layoutParam = params.get('layout')
 
 /* The house's feel, which is what the Look page actually writes: one of three,
@@ -363,6 +367,7 @@ onUnmounted(() => {
     <Transition name="sheet"><YardSheet v-if="store.yard && store.roofline?.exists && store.roofline.yard" /></Transition>
     <Transition name="sheet"><StripSheet v-if="store.strip && stripSheetOpen(store.strip.state, store.sheet, store.stripAsked, store.stripPutDown) && !(store.bridge && store.bridge.state !== 'none')" /></Transition>
     <Transition name="sheet"><CodePrompt v-if="lock.prompt" /></Transition>
+    <Keys v-if="wall" />
 
     <Transition name="toast">
       <div class="toast" :class="store.toast.kind" v-if="store.toast" :key="store.toast.id" role="status">

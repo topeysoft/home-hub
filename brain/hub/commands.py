@@ -312,6 +312,42 @@ class Commands:
                                "text": out.get("text") or out.get("name") or out.get("answer"), "spoken": spoken})
         return {**out, "said": said, "spoken": spoken_line(out)}
 
+    def complete(self, text: str, room_id: str | None = None, limit: int = 6) -> list[str]:
+        """What the sentence being typed could finish as, in this house's own words: the wall's keyboard shows these
+        above its letters (design/keyboard/, C). Read-only -- nothing is run. Every sentence offered is one the
+        grammar understands, which tests/test_commands.py holds it to, so a tap on one is never a refusal."""
+        typed = " ".join(norm(text or "").split())
+        here = self.hub.home.rooms.get(room_id) if room_id and room_id != "unassigned" else None
+        found = []
+        for i, s in enumerate(self._sentences(here)):
+            n = norm(s)
+            if not typed: score = 0
+            elif n.startswith(typed): score = 1
+            elif re.search(r"\b" + re.escape(typed), n): score = 2
+            else: continue
+            found.append((score, i, s))
+        seen, out = set(), []
+        for _, _, s in sorted(found):
+            if s not in seen: seen.add(s); out.append(s)
+        return out[:limit]
+
+    def _sentences(self, here) -> list[str]:
+        """The house's sentences, the room on screen first: a light, a screen, a fan, a door or a lock per room, by the
+        words the grammar reads for them, then the questions anybody can ask."""
+        rooms = [r for r in self.hub.home.rooms.values() if r.id != "unassigned" and r.devices]
+        rooms.sort(key=lambda r: r is not here)
+        out = []
+        for r in rooms:
+            name, kinds = r.name.lower(), {kind_of(d) for d in r.devices}
+            if "light" in kinds: out += [f"{name} lights off", f"{name} lights on", f"dim the {name} lights"]
+            if any(kind_of(d) == "media" and TV.search(d.name) for d in r.devices):
+                out += [f"movie in the {name}", f"{name} tv off"]
+            if "fan" in kinds: out += [f"{name} fan on", f"{name} fan off"]
+            for d in r.devices:
+                if kind_of(d) == "lock": out += [f"lock the {d.name.lower()}", f"is the {d.name.lower()} locked?"]
+                if kind_of(d) == "cover": out += [f"open the {d.name.lower()}", f"close the {d.name.lower()}"]
+        return out + ["is anything on?"]
+
     def _log(self, said, here, detail):
         self.hub.log.add("said", here.id if here else "home", None, said, source="user", detail=detail)
 
@@ -603,7 +639,9 @@ class Commands:
                 d, v = vals[0]; r = self.hub.home.rooms.get(d.room_id)
                 return {"kind": "answer", "text": f"{round(v)}° in the {r.name if r else 'house'}."}
             return {"kind": "answer", "text": ", ".join(f"{self.hub.home.rooms[d.room_id].name} {round(v)}°" for d, v in vals if d.room_id in self.hub.home.rooms) + "."}
-        m = re.fullmatch(r"(what'?s|what is|whats) (still )?(on|playing|open|unlocked)( in here| here| at the moment)?\??", t)
+        # "Is anything on?" is the command box's own hint, so it has to be asked the same way as "what's on?" -- it
+        # used to fall through to "is the <thing> on" and come back as nothing called "anything".
+        m = re.fullmatch(r"(what'?s|what is|whats|is anything|is there anything|anything) (still )?(on|playing|open|unlocked)( in here| here| at the moment)?\??", t)
         if m:
             want = m.group(3)
             active = {"on": ("on", "playing"), "playing": ("playing",), "open": ("open",), "unlocked": ("unlocked",)}[want]

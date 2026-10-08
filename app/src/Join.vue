@@ -56,7 +56,7 @@ async function withCode() {
         <label class="field"><span class="field-label">Your name <span class="field-opt">· so the house knows whose this is</span></span>
           <input class="input" v-model="who" autocomplete="given-name" autocapitalize="words" placeholder="Sam" @keydown.enter="mode === 'code' ? withCode() : ask()" /></label>
         <label class="field" v-if="mode === 'code'"><span class="field-label">The passcode</span>
-          <input class="input code-input" v-model="code" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" maxlength="8" placeholder="••••" @keydown.enter="withCode" /></label>
+          <input class="input code-input secret" v-model="code" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" maxlength="8" placeholder="••••" @keydown.enter="withCode" /></label>
         <p class="error" v-if="error">{{ error }}</p>
         <div class="setup-actions" v-if="mode === 'ask'">
           <button class="button big" :class="{ busy }" @click="ask">Ask to join</button>

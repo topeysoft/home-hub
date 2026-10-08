@@ -202,8 +202,8 @@ async function saveCode() {
         <h1 class="display">Choose a passcode.</h1>
         <p class="setup-lede">You’ll need it to change the house: add phones or devices, rename rooms. Using the house doesn’t need it.</p>
         <p class="setup-note"><Icon name="lock" :size="16" /><span>Until it’s set, anyone on your Wi‑Fi can change the house.</span></p>
-        <label class="field"><span class="field-label">Passcode, 4 to 8 digits</span><input class="input code-input" v-model="pin" inputmode="numeric" pattern="[0-9]*" maxlength="8" autocomplete="off" @keydown.enter="saveCode" /></label>
-        <label class="field"><span class="field-label">Type it again</span><input class="input code-input" v-model="again" inputmode="numeric" pattern="[0-9]*" maxlength="8" autocomplete="off" @keydown.enter="saveCode" /></label>
+        <label class="field"><span class="field-label">Passcode, 4 to 8 digits</span><input class="input code-input secret" v-model="pin" inputmode="numeric" enterkeyhint="next" data-keys-keep=".setup-actions" pattern="[0-9]*" maxlength="8" autocomplete="off" @keydown.enter="saveCode" /></label>
+        <label class="field"><span class="field-label">Type it again</span><input class="input code-input secret" v-model="again" inputmode="numeric" enterkeyhint="next" data-keys-keep=".setup-actions" pattern="[0-9]*" maxlength="8" autocomplete="off" @keydown.enter="saveCode" /></label>
         <p class="error" v-if="error">{{ error }}</p>
         <div class="setup-actions">
           <button class="button big" :class="{ busy }" @click="saveCode">Continue</button>

@@ -28,7 +28,7 @@ watch(() => lock.prompt, p => { if (p) { code.value = ''; nextTick(() => input.v
       </div>
       <div class="sheet-body">
       <p class="sheet-lede">{{ lock.prompt?.wrong ? "That wasn't it. Try again." : 'Changing the house needs the passcode that was set for it.' }}</p>
-      <input ref="input" class="input code-input" v-model="code" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" maxlength="8" placeholder="••••" @keydown.enter="submit" />
+      <input ref="input" class="input code-input secret" v-model="code" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code" maxlength="8" placeholder="••••" @keydown.enter="submit" />
       <div class="flow-actions">
         <button class="button" :disabled="code.trim().length < 4" @click="submit">Continue</button>
         <button class="button ghost" @click="done(false)">Cancel</button>

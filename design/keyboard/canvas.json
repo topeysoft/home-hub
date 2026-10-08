@@ -1,0 +1,129 @@
+{
+  "name": "The wall's keyboard",
+  "areas": [
+    "Wall screens"
+  ],
+  "artboards": [
+    {
+      "file": "Today.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "Today \u2014 the field has focus and nothing comes up",
+      "page": "page-1"
+    },
+    {
+      "file": "DockedA.dc.html",
+      "x": 1560,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "A \u2014 one full keyboard, docked along the bottom",
+      "page": "page-2"
+    },
+    {
+      "file": "BesideB.dc.html",
+      "x": 3120,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "B \u2014 a small keyboard beside the field",
+      "page": "page-2"
+    },
+    {
+      "file": "ShapedC.dc.html",
+      "x": 4680,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "C \u2014 docked, in the shape the field wants",
+      "page": "page-1"
+    },
+    {
+      "file": "All.dc.html",
+      "x": 0,
+      "y": 1600,
+      "w": 1640,
+      "h": 1300,
+      "title": "Every field, every way",
+      "page": "page-1"
+    }
+  ],
+  "annotations": [
+    {
+      "id": "decided",
+      "page": "page-1",
+      "x": -620,
+      "y": -700,
+      "w": 500,
+      "text": "DECIDED 7 OCTOBER 2026\n\nC: the wall brings its own keyboard, docked along the bottom, in the shape the field wants. A passcode gets a keypad with Continue; a town gets letters and Search; the command box gets letters with the house's own completions above them, every one a sentence the grammar runs. Only on the wall (startup/wall.sh opens the panel with ?wall=1); phones and tablets keep their own keyboards.\n\nBuilt: app/src/Keys.vue and app/src/keys.ts, the completions in brain/hub/commands.py (Commands.complete, GET /say/complete). Pinned by app/tests/keys.test.ts, app/e2e/keyboard.touch.spec.ts and brain/tests/test_commands.py, which runs every sentence offered through the grammar. Writing that test found that \"is anything on?\", the command box's own hint, was not understood house-wide; it is now. A and B are on the next page, with their cases."
+    },
+    {
+      "id": "why",
+      "x": -620,
+      "y": 0,
+      "w": 500,
+      "text": "THE WALL CANNOT TYPE\n\nFound 7 October on the spare Pi 5: touch works, and a tapped field takes the focus, but nothing comes up. A tablet running kiosk/ gets Android's keyboard for free. The wall unit is cage and Chromium on Linux, which has none: Chromium's own on-screen keyboard exists only on ChromeOS, and a system one (squeekboard, wvkbd) needs a compositor cage is not. So the panel draws its own, and only on the wall: wall.sh opens the panel saying it is the wall, and phones and tablets keep their own keyboards.\n\nWHERE IT IS NEEDED. Setup (the names, the passcode, the town), the sign-ins (Wi-Fi, accounts), the searches, and the command box, which is the way to talk to the house until there is voice. Without a keyboard, setup cannot be finished on a wall unit at all. The three fields drawn are the three shapes typing takes here: digits, a word, a sentence.\n\nWHAT ALL THREE SHARE. The panel's own glass and type. Keys sized for a finger at arm's length on a wall, 62 px tall when docked. The return key named for what it does: Continue, Search, Go. The keyboard goes when the field is done or somebody taps outside it, never while they are still typing.\n\nRECOMMENDATION: C. A passcode is digits, and deserves a keypad like a lock screen rather than a symbol layer. And because the command box runs on a fixed grammar, the wall can finish a sentence after a few letters: on a wall, the fastest typing is the least typing. A is the simplest to build and what anyone who has used a tablet expects. B keeps the house in view, but its keys are small for a wall and it lands on whatever is beside the field.\n\nAND \"SOMETHING ELSE, I'LL DESCRIBE IT\" IS A REAL OPTION.",
+      "page": "page-1"
+    },
+    {
+      "id": "today",
+      "x": 0,
+      "y": 960,
+      "w": 1440,
+      "text": "TODAY, FROM THE REAL PANEL\n\nThe three screens are the panel itself on the mock house, at the wall's size: setup's Choose a passcode, setup's Where is home?, and Home with the command box open. The yellow switch flips between them on every board and is not part of the screen. The typed characters are drawn in to show a field in use; on the wall today the field takes the focus and the caret blinks, and that is all.",
+      "page": "page-1"
+    },
+    {
+      "id": "docked",
+      "x": 1560,
+      "y": 960,
+      "w": 1440,
+      "text": "A, DOCKED\n\nOne full keyboard along the bottom of the screen, on the panel's glass, the same for every field. A passcode opens on the symbol layer, digits along the top; a town and the command box on letters. The page slides up just far enough to keep the field, and what answers it, in view: a little in setup, and almost 400 px for the command box, so the clock and the band go off the top while somebody types.\n\nThe case: it is what everybody who has used a tablet already knows, and the simplest to build. Its limits: a passcode on a symbol layer is a worse keypad than a phone's lock screen, and the command box gets no help at all.",
+      "page": "page-2"
+    },
+    {
+      "id": "beside",
+      "x": 3120,
+      "y": 960,
+      "w": 1440,
+      "text": "B, BESIDE THE FIELD\n\nA small keyboard on its own piece of glass, beside the field it types into, with a tail pointing at it. Nothing else on the screen moves. A passcode gets a small keypad to the right of its fields; a town gets letters under what it found; the command box gets letters rising above it.\n\nThe case: the house stays where it was, and the keyboard reads as part of the field rather than a takeover. Its limits: keys of 56 by 50 are small for a finger at arm's length on a wall, it covers whatever is beside the field (on Home, the weather and the music), and near an edge there is nowhere good to put it.",
+      "page": "page-2"
+    },
+    {
+      "id": "shaped",
+      "x": 4680,
+      "y": 960,
+      "w": 1440,
+      "text": "C, SHAPED TO THE FIELD\n\nDocked like A, but its shape follows the field. A passcode gets a keypad with large keys, 150 px wide, and Continue where the lock screen would put it. A town gets letters and Search. The command box gets letters, with a row above them of what the house can finish the sentence as: after \"kitchen li\", kitchen lights off, on, dim, then the rooms and questions it knows.\n\nThe case: the least typing for each field, which on a wall is what fast means; and the command box becomes a few letters and a tap. Its cost: the completions need the grammar's words on the panel, which brain/hub/commands.py already has as a fixed list. The page still moves up for the command box, as in A.",
+      "page": "page-1"
+    },
+    {
+      "id": "all",
+      "x": 1760,
+      "y": 1600,
+      "w": 560,
+      "text": "THE SHEET\n\nThe four boards on each of the three fields, side by side, so they can be compared without flipping the switch on each.",
+      "page": "page-1"
+    }
+  ],
+  "launch": {
+    "view": "canvas"
+  },
+  "decided": {
+    "on": "2026-10-07",
+    "chose": "C",
+    "board": "ShapedC.dc.html"
+  },
+  "pages": [
+    {
+      "id": "page-1",
+      "name": "The wall's keyboard"
+    },
+    {
+      "id": "page-2",
+      "name": "The wall's keyboard: not chosen"
+    }
+  ]
+}

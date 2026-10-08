@@ -2392,6 +2392,14 @@ async def say(body: dict):
     return {**out, **({"speak": clip} if clip else {})}
 
 
+@app.get("/say/complete")
+def say_complete(text: str = "", room: str | None = None):
+    """{"sentences": [...]}: what the sentence being typed could finish as, in this house's words, for the wall's keyboard
+    (design/keyboard/, C). Nothing runs; every sentence is one the grammar understands."""
+    hub.ready()
+    return {"sentences": hub.commands.complete(text, room)}
+
+
 @app.get("/say/clip/{token}")
 def say_clip(token: str):
     """The house's own answer, as audio, for about a minute after it was minted.

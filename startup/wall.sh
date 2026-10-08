@@ -5,7 +5,7 @@
 # splash finish, then hand the screen to the panel. elyir-wall.service runs it twice:
 #
 #   wall.sh wait   as root, before the browser: waits for the product, tells the splash, lets it end
-#   wall.sh run    as the wall's own user: cage with Chromium on the panel, full screen
+#   wall.sh run    as the wall's own user: cage, with Chromium on the panel full screen at the design's size
 #
 # When only the browser restarts, the splash is long gone and `wait` returns at once, so a screen
 # coming back is a few seconds of nothing rather than the whole startup again.
@@ -14,7 +14,7 @@ HERE=$(cd "$(dirname "$0")" && pwd)
 # shellcheck source=plymouth/elyir/timing.sh
 . "$HERE/plymouth/elyir/timing.sh"
 READY_URL=${ELYIR_READY_URL:-http://localhost/alive}
-PANEL_URL=${ELYIR_PANEL_URL:-http://localhost/}
+PANEL_URL=${ELYIR_PANEL_URL:-http://localhost/?wall=1}
 
 # Seconds since the splash first drew, from when systemd says plymouth-start finished.
 splash_seconds() {
@@ -22,6 +22,19 @@ splash_seconds() {
   since=$(systemctl show -p ActiveEnterTimestampMonotonic --value plymouth-start.service 2>/dev/null || echo 0)
   now=$(awk '{print $1}' /proc/uptime)
   awk -v s="${since:-0}" -v n="$now" 'BEGIN { if (s == 0) print 0; else print n - s / 1000000 }'
+}
+
+# The panel is drawn for 1440x900, one screen with nothing to scroll. A wall's screen is whatever size it is, so
+# Chromium is told how big a CSS pixel is: big enough that the screen is at least 1440 by 900 of them. The 10-inch
+# wall at 1920x1200 comes out at exactly 4/3; a 1024x600 test screen at 2/3. Landscape either way round, since a
+# DSI panel can report its mode on its side. ELYIR_SCALE overrides it.
+scale() {
+  local mode s
+  for s in /sys/class/drm/card*-*/status; do
+    [ "$(cat "$s" 2>/dev/null)" = connected ] && mode=$(head -n1 "$(dirname "$s")/modes" 2>/dev/null) && [ -n "$mode" ] && break
+  done
+  awk -v m="${mode:-1440x900}" 'BEGIN { split(m, a, "x"); l = a[1] > a[2] ? a[1] : a[2]; t = a[1] > a[2] ? a[2] : a[1]
+    s = l / 1440; if (t / 900 < s) s = t / 900; if (s <= 0) s = 1; printf "%.4f", s }'
 }
 
 browser() {
@@ -40,11 +53,17 @@ case "${1:-}" in
       plymouth quit --retain-splash || true
     fi ;;
   run)
+    # cage runs this script again inside itself, so the display can be scaled before the browser starts.
+    exec cage -- "$0" browse "${ELYIR_SCALE:-$(scale)}" ;;
+  browse)
+    # The scale is set on the display, not in the browser: Chromium on Wayland draws a forced scale under 1 into a
+    # corner of the screen, while a scaled output is simply a bigger screen to it.
+    for out in $(wlr-randr 2>/dev/null | awk '/^[^ ]/ { print $1 }'); do wlr-randr --output "$out" --scale "$2" || true; done
     # A desktop browser ignores the panel's user-scalable=no, so a stray two-finger touch would zoom
     # the wall and a sideways swipe would go back a page; both are switched off here instead.
-    exec cage -- "$(browser)" --kiosk --noerrdialogs --disable-infobars --no-first-run \
+    exec "$(browser)" --kiosk --noerrdialogs --disable-infobars --no-first-run \
       --ozone-platform=wayland --disable-session-crashed-bubble --check-for-update-interval=31536000 \
       --disable-pinch --overscroll-history-navigation=0 \
       "$PANEL_URL" ;;
-  *) echo "usage: $0 wait|run" >&2; exit 2 ;;
+  *) echo "usage: $0 wait|run|browse <scale>" >&2; exit 2 ;;
 esac
