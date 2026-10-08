@@ -11,13 +11,17 @@
 #      from it (HUB_AUTO_NVME=0 in /etc/home-hub.conf turns this off).
 #   3. On a unit with its own screen, in a house that already has a hub: become that hub's screen and
 #      stop there -- no second house (design/companion/, C). HUB_ROLE=hub in /etc/home-hub.conf skips
-#      the look; HUB_ROLE=screen keeps looking for ten minutes instead of twenty seconds.
+#      the look. HUB_ROLE=screen makes any display the screen (an HDMI monitor too), looks for ten
+#      minutes instead of twenty seconds, and never installs a hub: finding none, it tries again at
+#      the next start.
 #   4. Run install.sh, which does everything a hand install would.
 #   5. On a unit with its own screen: startup/install.sh, the splash and the panel full screen.
 set -euo pipefail
-MARK=/var/lib/home-hub/firstboot.done
+MARK=${HUB_FIRSTBOOT_MARK:-/var/lib/home-hub/firstboot.done}
+CONF=${HUB_CONF:-/etc/home-hub.conf}
 DIR="${HOME_HUB_DIR:-/opt/home-hub}"
-[ -f /etc/home-hub.conf ] && . /etc/home-hub.conf
+# shellcheck disable=SC1090
+[ -f "$CONF" ] && . "$CONF"
 [ -f "$MARK" ] && exit 0
 mkdir -p "$(dirname "$MARK")"
 log() { printf '[home-hub] %s\n' "$*"; }
@@ -48,9 +52,12 @@ if is_pi5; then
   fi
 fi
 
-# The wall, on its DSI connector. A monitor on HDMI is somebody's desk, not the product's face.
-screen_here() { grep -qsx connected /sys/class/drm/card*-DSI-*/status && [ -x "$DIR/startup/install.sh" ]; }
-set_conf() { sed -i "/^$1=/d" /etc/home-hub.conf 2>/dev/null || true; echo "$1=\"$2\"" >> /etc/home-hub.conf; }
+# The wall, on its DSI connector. A monitor on HDMI is somebody's desk, not the product's face --
+# unless this unit was told it is a screen.
+screen_here() {
+  { [ "${HUB_ROLE:-}" = screen ] || grep -qsx connected "${HUB_DRM:-/sys/class/drm}"/card*-DSI-*/status; } && [ -x "$DIR/startup/install.sh" ]
+}
+set_conf() { { grep -v "^$1=" "$CONF" 2>/dev/null || true; echo "$1=\"$2\""; } > "$CONF.new" && mv "$CONF.new" "$CONF"; }
 
 if screen_here && [ "${HUB_ROLE:-}" != hub ]; then
   command -v avahi-browse >/dev/null 2>&1 || apt-get install -y --no-install-recommends avahi-utils >/dev/null 2>&1 || true
@@ -68,6 +75,11 @@ if screen_here && [ "${HUB_ROLE:-}" != hub ]; then
     touch "$MARK"
     log "done: the house's hub asks this screen in"
     exit 0
+  fi
+  if [ "${HUB_ROLE:-}" = screen ]; then
+    # Told it is a screen: becoming a second hub beside the house's real one is the one thing it must not do.
+    log "no hub found on this Wi-Fi. This unit is set to be a screen, so it will look again at the next start"
+    exit 1
   fi
   log "no hub found: this unit will run the house"
 fi
