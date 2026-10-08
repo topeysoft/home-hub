@@ -40,8 +40,11 @@ case "${1:-}" in
       plymouth quit --retain-splash || true
     fi ;;
   run)
+    # A desktop browser ignores the panel's user-scalable=no, so a stray two-finger touch would zoom
+    # the wall and a sideways swipe would go back a page; both are switched off here instead.
     exec cage -- "$(browser)" --kiosk --noerrdialogs --disable-infobars --no-first-run \
       --ozone-platform=wayland --disable-session-crashed-bubble --check-for-update-interval=31536000 \
+      --disable-pinch --overscroll-history-navigation=0 \
       "$PANEL_URL" ;;
   *) echo "usage: $0 wait|run" >&2; exit 2 ;;
 esac
