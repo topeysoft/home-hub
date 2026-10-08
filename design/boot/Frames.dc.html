@@ -1,0 +1,61 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>Frames, side by side</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="boot.css">
+<style>
+  /* The four startups held at the same seconds, so they can be compared without watching four
+     loops at once. Each thumbnail is the full 1440x900 board at a fifth of its size. */
+  html, body { width: 2820px; height: 1720px; background: #15161a; }
+  body { padding: 44px 40px; box-sizing: border-box; color: #f1eee8; }
+  h1 { margin: 0 0 6px; font-size: 30px; font-weight: 500; }
+  .sub { margin: 0 0 34px; color: #9a968e; font-size: 17px; }
+  .grid { display: grid; grid-template-columns: 200px repeat(8, 300px); gap: 20px 20px; align-items: start; }
+  .head { font-size: 15px; color: #b9b5ad; line-height: 1.3; }
+  .head b { display: block; color: #f1eee8; font: 600 17px ui-monospace, Menlo, monospace; margin-bottom: 3px; }
+  .row { font-size: 20px; font-weight: 500; padding-top: 6px; }
+  .row span { display: block; margin-top: 6px; font-size: 14px; font-weight: 400; color: #9a968e; line-height: 1.35; }
+  .thumb { width: 300px; height: 187.5px; overflow: hidden; border-radius: 6px; outline: 1px solid #2c2e34; position: relative; }
+  .thumb .wall { transform: scale(.208333); transform-origin: 0 0; }
+</style>
+</head>
+<body>
+<h1>The same eight moments, seven ways</h1>
+<p class="sub">A hub unit, from power to the house. The times are estimates until a unit is on the bench; a wall that is only a wall reaches the last two columns in about twenty seconds.</p>
+<div class="grid" id="g"></div>
+<script src="boot.js"></script>
+<script>
+  const cols = [
+    [0.4, '0:00', 'Power applied'],
+    [2, '0:02', 'Firmware'],
+    [5.4, '0:05', 'The screen first lights'],
+    [8, '0:08', 'Linux starting'],
+    [14.8, '0:14', 'The browser takes over'],
+    [40, '0:40', 'The house is starting'],
+    [75.5, '1:15', 'Ready'],
+    [77.5, '1:17', 'The panel'],
+  ]
+  const rows = [
+    ['today', 'Today', 'Stock Pi OS Lite, cage and Chromium, as the spec lists them'],
+    ['A', 'A · One mark', 'The mark holds still from the first frame to the panel'],
+    ['B', 'B · The halo first', 'The glass stays dark until it can show the house'],
+    ['C', 'C · It says what it is doing', 'Three stages the wall can see for itself'],
+    ['D', 'D · Drawn once', 'The outline draws itself, then the lamp breathes'],
+    ['E', 'E · Drawn as it goes', 'Each stage adds a stroke; the lamp lights when ready'],
+    ['F', 'F · A pen that keeps tracing', 'A warm point runs the line until the house is ready'],
+  ]
+  const g = document.getElementById('g')
+  const cell = (html, cls) => { const d = document.createElement('div'); d.className = cls; d.innerHTML = html; g.appendChild(d); return d }
+  cell('', 'head')
+  cols.forEach(([, at, what]) => cell(`<b>${at}</b>${what}`, 'head'))
+  rows.forEach(([dir, name, why]) => {
+    cell(`${name}<span>${why}</span>`, 'row')
+    cols.forEach(([t]) => {
+      const th = cell('', 'thumb')
+      const w = document.createElement('div'); w.className = 'wall'; w.dataset.dir = dir; w.dataset.t = t
+      th.appendChild(w); Boot.mount(w)
+    })
+  })
+</script>
+</body>
+</html>

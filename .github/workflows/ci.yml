@@ -119,6 +119,10 @@ jobs:
         run: cd app && npm run art-sheet:check
       - name: the weather sheet still matches the panel
         run: cd app && npm run weather-sheet:check
+      # the boot splash is rendered from startup/sequence.mjs, and the board chosen in design/boot/
+      # is its spec; this fails when the three stop agreeing
+      - name: the startup still matches its board
+        run: node --test startup/startup.test.mjs
 
   # The Matter bridge. It is the one part of the hub whose bugs land in somebody ELSE's app, so the
   # unit conversions are checked here: three of them are inversions -- a cover counted from the other
@@ -231,6 +235,8 @@ jobs:
         driver-layer/host/tests.sh
         driver-layer/host/pi-image/stage-hub/prerun.sh
         driver-layer/host/pi-image/stage-hub/00-home-hub/*.sh
+        startup/install.sh
+        startup/wall.sh
     steps:
       - uses: actions/checkout@v4
       # `bash -n a.sh b.sh` reads a.sh as the script and everything after it as that script's
