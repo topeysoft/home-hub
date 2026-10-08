@@ -498,6 +498,12 @@ class Hub:
                 self._broadcast(json.dumps({"type": "presence", "presence": self.presence.as_dict()}))
                 self.engine.on_presence()
             return
+        if d["entity_id"] in self.home.companions:
+            # Away, Sleep or the air, said beside a thermostat: news for the pane, and not a change in the
+            # thermostat's own state for the log or the rules to read as one.
+            dev = self.home.apply_state(d["entity_id"], d.get("new_state"))
+            if dev: self._broadcast(json.dumps({"type": "device", "device": dev.__dict__}))
+            return
         old_state = d.get("old_state") or {}
         part = d["entity_id"] in self.home.part_of   # one reading of a car charger: compare the charger, not the reading
         before = self.home.devices.get(self.home.part_of.get(d["entity_id"], d["entity_id"]))

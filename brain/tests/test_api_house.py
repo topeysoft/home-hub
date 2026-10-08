@@ -591,3 +591,21 @@ class IdentifyTests(ApiTest):
 
     def test_showing_a_thing_where_it_is_needs_no_code_because_it_is_a_tap_and_not_a_change(self):
         self.assertFalse(needs_code("POST", "/devices/light.kitchen/identify"))
+
+
+class ThermostatCompanionEventTests(ApiTest):
+    """The Ecobee switching itself to Away reaches the pane, and is not a change in the thermostat's own
+    state: an "away" in the log as the thermostat's state would read as a mode nobody set, and the rules
+    would see it as one."""
+
+    def test_away_beside_a_thermostat_is_broadcast_and_not_logged_as_its_state(self):
+        from tests.test_model import ThermostatCompanionTests
+        self.hub.home.build(*ThermostatCompanionTests().snap())
+        self.hub._on_event({"event_type": "state_changed", "data": {
+            "entity_id": "select.thermostat_current_mode",
+            "old_state": {"state": "home", "attributes": {"options": ["home", "sleep", "away"]}},
+            "new_state": {"state": "away", "last_changed": "2026-10-07T18:55:00+00:00", "attributes": {"options": ["home", "sleep", "away"]}}}})
+        told = self.sent("device")
+        self.assertEqual(told[-1]["device"]["id"], "climate.thermostat")
+        self.assertEqual(told[-1]["device"]["attrs"]["comfort"], "away")
+        self.assertEqual(self.hub.log.recent(10, subject="climate.thermostat", kinds=("state",)), [])

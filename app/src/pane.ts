@@ -116,7 +116,8 @@ export function facts(d: Device, room?: Room | null, unit = '°', events: Event[
   if (k === 'climate') {
     add('Humidity', a.current_humidity != null ? pct(a.current_humidity) : null)
     add('Set to', a.temperature != null ? `${Math.round(a.temperature)}${u}` : null)
-    add('Sensing', a.sense_from ? (a.sense_name || 'Another room') : 'Its own sensor')
+    add('Sensing', a.sense_from ? (a.sense_name || 'Another room') : a.own_sensors ? 'Its own sensors' : 'Its own sensor')
+    add('Air', a.air)
   }
   if (k === 'fan') add('Speed', a.percentage != null ? pct(a.percentage) : null)
   if (k === 'cover') add('Open', a.current_position != null ? pct(a.current_position) : null)
@@ -244,7 +245,39 @@ export function whyLine(d: Device, events: Event[], room?: Room | null, now = Da
   const m = moments(events, d, 1, now, unit)[0]
   const mine = m ? `${m.text} ${m.when.startsWith('Yesterday, ') ? m.when.replace(/^Yesterday, /, 'yesterday at ') : `at ${m.when}`}.` : ''
   const held = room?.hold_until && room.hold_until * 1000 > now ? ' Routines are staying out of this room for now.' : ''
-  return (mine + held).trim()
+  return (mine + held + wentAway(d, now)).trim()
+}
+/* An Ecobee switches itself to Away or Sleep, and this is the one place that says so: nothing on the wall
+   picks it, so a warm house at four in the afternoon would otherwise have no explanation. Why it went is
+   not said -- a schedule and an empty house look the same from here (design/thermostat/, B). */
+function wentAway(d: Device, now: number): string {
+  const c = d.attrs.comfort, at = d.attrs.comfort_since
+  if (cap(d) !== 'climate' || (c !== 'away' && c !== 'sleep') || !at) return ''
+  const when = whenText(at, now)
+  return ` The thermostat set itself to ${c === 'away' ? 'Away' : 'Sleep'} ${when.startsWith('Yesterday, ') ? when.replace(/^Yesterday, /, 'yesterday at ') : `at ${when}`}.`
+}
+
+/* ---------- which room a thermostat keeps right ----------
+   Its own sensor first -- or its own sensors, for one that brings some to other rooms -- and then every
+   room with a believable thermometer, with its reading and whether somebody is in it now. Picking a room
+   is the house's comfort (brain/hub/comfort.py); the first row is the thermostat doing it by itself. */
+export type KeepRow = { id: string | null; label: string; temp: number | null; here: boolean }
+export function keepRows(d: Device, rooms: Room[], unit = '°'): KeepRow[] {
+  const u = (unit || '°').replace(/[^°CF]/g, '') || '°', f = u.includes('F')
+  const toHouse = (v: number, from?: string) => !from || from.includes('F') === f ? v : f ? v * 9 / 5 + 32 : (v - 32) * 5 / 9
+  const own = Number(d.attrs.current_temperature)
+  const out: KeepRow[] = [{ id: null, label: d.attrs.own_sensors ? 'Its own sensors' : 'Its own', temp: Number.isFinite(own) ? Math.round(own) : null, here: false }]
+  for (const r of rooms) {
+    if (r.id === 'unassigned') continue
+    const here = r.devices.some(x => cap(x) === 'motion' && x.state === 'on')
+    const warm = r.devices.filter(x => x.capability === 'sensor.temperature')
+    for (const x of warm) {
+      const v = toHouse(Number(x.state), x.attrs.unit_of_measurement)
+      if ((d.hw && x.hw === d.hw) || isDead(x) || !Number.isFinite(v) || (f ? v < 45 || v > 95 : v < 7 || v > 35)) continue
+      out.push({ id: x.id, label: warm.length > 1 ? `${r.name} · ${shortName(x, r)}` : r.name, temp: Math.round(v), here })
+    }
+  }
+  return out
 }
 
 /* ---------- the day a watcher has had ----------

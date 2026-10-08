@@ -112,6 +112,55 @@ class ExtrasTests(unittest.TestCase):
         self.assertNotIn("fan_until", d.attrs)
 
 
+class ThermostatCompanionTests(unittest.TestCase):
+    """An Ecobee over HomeKit: a thermostat, a sensor in each room hanging off it, the Home, Away or Sleep it
+    switches itself between, and the Premium's air (design/thermostat/, B)."""
+    def snap(self, mode="home", air="2"):
+        areas = [{"area_id": "living", "name": "Living room"}, {"area_id": "bed", "name": "Bedroom"}]
+        devices = [{"id": "eco", "area_id": "living", "name": "Thermostat", "manufacturer": "ecobee Inc."},
+                   {"id": "eco-bed", "area_id": "bed", "name": "Bedroom", "via_device_id": "eco"},
+                   {"id": "eco-office", "area_id": None, "name": "Office", "via_device_id": "eco"},
+                   {"id": "aqara", "area_id": "bed", "name": "Temperature sensor"}]
+        entities = [{"entity_id": "climate.thermostat", "device_id": "eco"},
+                    {"entity_id": "select.thermostat_current_mode", "device_id": "eco"},
+                    {"entity_id": "sensor.thermostat_air_quality", "device_id": "eco", "original_device_class": "aqi"},
+                    {"entity_id": "sensor.bedroom_temperature", "device_id": "eco-bed", "original_device_class": "temperature"},
+                    {"entity_id": "sensor.office_temperature", "device_id": "eco-office", "original_device_class": "temperature"},
+                    {"entity_id": "sensor.aqara_temperature", "device_id": "aqara", "original_device_class": "temperature"}]
+        temp = lambda eid: {"entity_id": eid, "state": "70", "attributes": {"device_class": "temperature", "unit_of_measurement": "°F"}}
+        states = [{"entity_id": "climate.thermostat", "state": "cool", "attributes": {"friendly_name": "Thermostat", "temperature": 71, "current_temperature": 74}},
+                  {"entity_id": "select.thermostat_current_mode", "state": mode, "last_changed": "2026-10-07T18:55:00+00:00",
+                   "attributes": {"options": ["home", "sleep", "away"]}},
+                  {"entity_id": "sensor.thermostat_air_quality", "state": air, "attributes": {"device_class": "aqi"}},
+                  temp("sensor.bedroom_temperature"), temp("sensor.office_temperature"), temp("sensor.aqara_temperature")]
+        return areas, devices, entities, states
+
+    def test_it_is_told_its_room_sensors_its_setting_and_its_air(self):
+        a = Home().build(*self.snap(mode="away")).devices["climate.thermostat"].attrs
+        self.assertEqual(a["own_sensors"], 2, "the two hanging off it, not the Aqara in the bedroom")
+        self.assertEqual(a["comfort"], "away")
+        self.assertEqual(a["comfort_since"], 1791399300.0)
+        self.assertEqual(a["air"], "Good")
+
+    def test_the_select_and_the_air_are_not_things_in_a_room(self):
+        home = Home().build(*self.snap())
+        self.assertNotIn("select.thermostat_current_mode", home.devices)
+        self.assertNotIn("sensor.thermostat_air_quality", home.devices)
+
+    def test_a_change_beside_it_lands_on_the_thermostat(self):
+        home = Home().build(*self.snap())
+        d = home.apply_state("select.thermostat_current_mode", {"state": "sleep", "last_changed": "2026-10-07T23:30:00+00:00", "attributes": {"options": ["home", "sleep", "away"]}})
+        self.assertEqual(d.id, "climate.thermostat")
+        self.assertEqual(d.attrs["comfort"], "sleep")
+        self.assertEqual(home.apply_state("sensor.thermostat_air_quality", {"state": "5", "attributes": {"device_class": "aqi"}}).attrs["air"], "Poor")
+        home.apply_state("climate.thermostat", {"state": "cool", "attributes": {"friendly_name": "Thermostat", "temperature": 72}})
+        self.assertEqual(home.devices["climate.thermostat"].attrs["comfort"], "sleep", "the thermostat's own update keeps what was said beside it")
+
+    def test_a_thermostat_with_nothing_beside_it_says_nothing(self):
+        a = Home().build(*snap()).devices["climate.nest"].attrs
+        for k in ("own_sensors", "comfort", "air"): self.assertNotIn(k, a)
+
+
 class CameraLampTests(unittest.TestCase):
     """A Ring floodlight cam is one unit in HA with a camera entity and a light entity."""
     def snap(self, lamp="off"):
