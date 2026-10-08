@@ -1,4 +1,6 @@
 {
+  "name": "Nightfall",
+  "areas": ["Wall screens"],
   "pages": [
     {
       "id": "page-1",

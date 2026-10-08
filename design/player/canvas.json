@@ -1,4 +1,6 @@
 {
+  "name": "What is playing",
+  "areas": ["Wall screens"],
   "pages": [
     {
       "id": "page-1",
