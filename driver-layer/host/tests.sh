@@ -463,9 +463,49 @@ SH
 }
 
 
+# What first boot makes of a unit: the house's screen, or the house's hub. Never a second hub beside a
+# real one when the unit was told it is a screen (design/companion/, C). The checkout is fake: its
+# installers leave a file saying they ran, and find-hub.sh answers with $FOUND or nothing.
+becoming() {
+  group "first boot makes a screen, or a hub, and never a second hub when told it is a screen"
+  local root dir bin drm; root=$(mktemp -d); dir="$root/opt"; bin="$root/bin"; drm="$root/drm"
+  mkdir -p "$dir/startup" "$bin" "$drm"
+  printf '#!/usr/bin/env bash\n[ -n "${FOUND:-}" ] && echo "$FOUND"\n' > "$dir/startup/find-hub.sh"
+  printf '#!/usr/bin/env bash\ntouch "%s/screen-installed"\n' "$root" > "$dir/startup/install.sh"
+  printf '#!/usr/bin/env bash\ntouch "%s/hub-installed"\n' "$root" > "$dir/install.sh"
+  for c in hostnamectl apt-get avahi-browse; do printf '#!/usr/bin/env bash\nexit 0\n' > "$bin/$c"; done
+  chmod +x "$dir/startup/"*.sh "$dir/install.sh" "$bin"/*
+  boot() {   # role, found, dsi
+    rm -f "$root"/*-installed "$root/done" "$root/conf"; rm -rf "${drm:?}"/*
+    [ -n "$1" ] && echo "HUB_ROLE=\"$1\"" > "$root/conf"
+    [ -n "$3" ] && { mkdir -p "$drm/card1-DSI-1"; echo connected > "$drm/card1-DSI-1/status"; }
+    PATH="$bin:$PATH" FOUND="$2" HOME_HUB_DIR="$dir" HUB_CONF="$root/conf" HUB_FIRSTBOOT_MARK="$root/done" HUB_DRM="$drm" \
+      "$HERE/firstboot.sh" >/dev/null 2>&1
+  }
+  ran() { local out=""; for k in hub screen; do [ -f "$root/$k-installed" ] && out="$out$k "; done; [ -f "$root/done" ] && out="${out}done"; echo "${out% }"; }
+
+  boot screen http://hub.local ""
+  is "told it is a screen, on HDMI, with a hub on the Wi-Fi: it becomes the screen and nothing else" "$(ran)" "screen done"
+  is "...and opens the hub's panel as a screen" "$(grep '^ELYIR_PANEL_URL=' "$root/conf")" 'ELYIR_PANEL_URL="http://hub.local/?screen=1"'
+  is "...said once, not appended twice" "$(grep -c '^HUB_ROLE=' "$root/conf")" "1"
+  boot screen "" ""; local code=$?
+  is "told it is a screen, and no hub found: no hub installed, and it tries again next start" "$(ran)" ""
+  is "...and says it did not finish" "$code" "1"
+  boot "" http://hub.local dsi
+  is "the wall's own screen and a hub on the Wi-Fi: the screen, without being told" "$(ran)" "screen done"
+  boot "" "" dsi
+  is "the wall's own screen and no hub: it runs the house, on its own screen" "$(ran)" "hub screen done"
+  boot "" http://hub.local ""
+  is "a monitor on HDMI and nobody said screen: a hub, as before, whatever is on the Wi-Fi" "$(ran)" "hub done"
+  boot hub http://hub.local dsi
+  is "HUB_ROLE=hub skips the look" "$(ran)" "hub screen done"
+  rm -rf "$root"
+}
+
+
 for need in git openssl curl python3; do
   command -v "$need" >/dev/null 2>&1 || { echo "these tests need $need"; exit 2; }
 done
-signatures; holds; undo; radios; watchdog; away; finding
+signatures; holds; undo; radios; watchdog; away; finding; becoming
 printf '\n%s passed, %s failed\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]
