@@ -222,6 +222,12 @@ export function unitNamed(d: Device): boolean {
   if (d.attrs.fan) return false   // the light of a fan-with-a-light is "Bedroom Fan Light", not the fan: under a lamp drawing, "Fan" reads as the wrong thing
   return !!unit && new RegExp(`^${unit.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s+(light|switch|fan|plug|dimmer)$`, 'i').test(d.name.trim())
 }
+/** The name with its kind, where the name alone is a room's: Nest calls a thermostat after the room it hangs
+    in, and "Remove Living Room?" reads as taking the room away (reported 7 October). */
+export function nameInFull(d: Device): string {
+  const n = d.name.trim(), noun = (KIND_NOUN[cap(d)] ?? '').replace(/^an? /, '')
+  return noun && store.rooms.some(r => norm(r.name) === norm(n)) ? `the ${n} ${noun}` : n
+}
 export function shortName(d: Device, room?: Room | null): string {
   let n = d.name.trim()
   if (unitNamed(d)) n = (d.hw_name ?? '').trim()

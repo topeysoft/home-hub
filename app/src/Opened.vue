@@ -44,7 +44,7 @@ import { forgetDevice, getDeviceEvents, getDeviceKinds, moveDevice, renameDevice
 import { partnerOf, partsOf, renameParts, renamesUnit } from './units'
 import { isMachine } from './machines'
 import MachinePane from './panes/MachinePane.vue'
-import { canShare, cap, defaultKind, deviceById, isDead, isShared, load, notify, perform, roomOf, shownAs, store } from './store'
+import { canShare, cap, defaultKind, deviceById, isDead, isShared, load, nameInFull, notify, perform, roomOf, shownAs, store } from './store'
 import { facts as factsOf, moments as momentsOf, paneKind, reading, verbs as verbsOf, whyLine } from './pane'
 import { useArm } from './twice'
 import { bulbColor } from './art'
@@ -273,14 +273,16 @@ async function leadWith(k: 'fan' | 'light') {
  * at a time; the brain says which account it goes with, and this is where that sentence can be
  * acted on -- "What this house has" groups the thing under exactly that account.
  */
-const ending = ref(false), ended = ref(''), refused = ref('')
-watch(() => dev.value?.id, () => { ending.value = false; ended.value = ''; refused.value = '' })
+const ending = ref(false), ended = ref(''), keptBy = ref(''), refused = ref('')
+watch(() => dev.value?.id, () => { ending.value = false; ended.value = ''; keptBy.value = ''; refused.value = '' })
 async function takeItOut() {
   const d = dev.value; if (!d || saving.value) return
   saving.value = true
   try {
-    await forgetDevice(d.id)
-    ended.value = d.name
+    const r = await forgetDevice(d.id)
+    const full = nameInFull(d)
+    ended.value = full.charAt(0).toUpperCase() + full.slice(1)
+    keptBy.value = r.kept_by ?? ''
     editing.value = false; ending.value = false
     load()
   } catch (e: any) { refused.value = e.message; ending.value = false }
@@ -432,16 +434,17 @@ onUnmounted(() => {
               <button class="opened-kind-say end" :aria-expanded="ending" @click="ending = !ending">Remove it from the house</button>
               <div class="opened-kind-pick" v-if="ending">
                 <div class="opened-kind-row">
-                  <button class="opened-kind-one danger" :class="{ busy: saving }" @click="takeItOut">Remove {{ dev.name }}</button>
+                  <button class="opened-kind-one danger" :class="{ busy: saving }" @click="takeItOut">Remove {{ nameInFull(dev) }}</button>
                   <button class="opened-kind-one" @click="ending = false">Keep it</button>
                 </div>
-                <p class="opened-kind-why">It is removed from the house and from the app or account it came from, with its routines. If you plug it in again one day, it is added as something new.</p>
+                <p class="opened-kind-why">It is removed from the house and, where the account allows it, from the app or account it came from, with its routines. If you plug it in again one day, it is added as something new.</p>
               </div>
             </div>
             <!-- taken out, and still here: the pane says what happened and the person closes it -->
             <div class="opened-kind opened-end" v-if="ended">
               <span class="opened-kind-say still">{{ ended }} is removed</span>
-              <p class="opened-kind-why">It is gone from here and from the app or account it came from. Nothing else changed.</p>
+              <p class="opened-kind-why" v-if="keptBy">It has left the house. It is still on {{ keptBy }}, which would not let it go on its own; removing it in that app forgets it there too.</p>
+              <p class="opened-kind-why" v-else>It is gone from here and from the app or account it came from. Nothing else changed.</p>
             </div>
             <!-- ...or it would not go alone, and the brain named the account it goes with -->
             <div class="opened-kind opened-end" v-if="refused">

@@ -542,8 +542,12 @@ export async function getAccounts(): Promise<Account[]> {
 }
 export async function removeAccount(id: string) { const r = await request(`/accounts/${encodeURIComponent(id)}`, { method: 'DELETE' }); if (!r.ok) await fail(r) }
 
-/* The end of a thing's life in the house: off whatever brought it, and out of the model with it. */
-export async function forgetDevice(id: string) { const r = await request(`/devices/${encodeURIComponent(id)}`, { method: 'DELETE' }); if (!r.ok) await fail(r) }
+/* The end of a thing's life in the house: off whatever brought it, and out of the model with it.
+   `kept_by` names an account that would not let it go: it has left the house and is still on that account. */
+export async function forgetDevice(id: string): Promise<{ kept_by?: string }> {
+  const r = await request(`/devices/${encodeURIComponent(id)}`, { method: 'DELETE' }); if (!r.ok) await fail(r)
+  return r.json().catch(() => ({}))
+}
 export const setFan = (id: string, minutes: number) => post<{ ok: boolean; fan_until: number | null }>(`/devices/${encodeURIComponent(id)}/fan`, { minutes })
 /** On now, off again in `minutes`; 0 cancels the timer and leaves it on. A plug, a lamp, a heater. */
 export const runFor = (id: string, minutes: number) => post<{ ok: boolean; off_at: number | null }>(`/devices/${encodeURIComponent(id)}/timer`, { minutes })
