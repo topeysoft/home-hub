@@ -433,9 +433,39 @@ I
 }
 
 
+# A unit with a screen asks this before it installs a hub of its own (design/companion/, C). The
+# network is a script on PATH: avahi-browse says who announced themselves, curl says who answers like
+# a hub, and hostname says which addresses are this unit's own.
+finding() {
+  group "a screen looks for the house's hub before it builds a second house"
+  local root bin; root=$(mktemp -d); bin="$root/bin"; mkdir -p "$bin"
+  cat > "$bin/avahi-browse" <<'SH'
+#!/usr/bin/env bash
+printf '%s\n' "$ANNOUNCED"
+SH
+  cat > "$bin/curl" <<'SH'
+#!/usr/bin/env bash
+for a in "$@"; do case "$a" in http://*) url=$a ;; esac; done
+case " $HUBS " in *" ${url%/phones/me} "*) echo '{"locked": true, "paired": false, "home": "Maple Court"}' ;; *) exit 22 ;; esac
+SH
+  printf '#!/usr/bin/env bash\necho "$MINE"\n' > "$bin/hostname"
+  chmod +x "$bin"/*
+  find_hub() { PATH="$bin:$PATH" FIND_FOR=0 "$HERE/../../startup/find-hub.sh"; }
+
+  local hub='=;eth0;IPv4;hub;_home-hub._tcp;local;hub.local;192.168.1.20;80;"path=/"'
+  is "a hub that answers is found, by its name" "$(ANNOUNCED="$hub" HUBS="http://192.168.1.20" MINE="192.168.1.30" find_hub)" "http://hub.local"
+  ANNOUNCED="" HUBS="" MINE="192.168.1.30" find_hub >/dev/null; is "no hub, and it says so" "$?" "1"
+  ANNOUNCED="$hub" HUBS="" MINE="192.168.1.30" find_hub >/dev/null; is "something announcing itself that does not answer like a hub is not one" "$?" "1"
+  is "its own announcement is not another hub" "$(ANNOUNCED="$hub" HUBS="http://192.168.1.20" MINE="192.168.1.20" find_hub)" ""
+  local odd='=;eth0;IPv4;hub;_home-hub._tcp;local;hub.local;192.168.1.20;8300;"path=/"'
+  is "a hub on another port keeps its port" "$(ANNOUNCED="$odd" HUBS="http://192.168.1.20:8300" MINE="" find_hub)" "http://hub.local:8300"
+  rm -rf "$root"
+}
+
+
 for need in git openssl curl python3; do
   command -v "$need" >/dev/null 2>&1 || { echo "these tests need $need"; exit 2; }
 done
-signatures; holds; undo; radios; watchdog; away
+signatures; holds; undo; radios; watchdog; away; finding
 printf '\n%s passed, %s failed\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]
