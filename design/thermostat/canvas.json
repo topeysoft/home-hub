@@ -1,0 +1,102 @@
+{
+  "name": "A thermostat with sensors in the rooms",
+  "areas": ["Wall screens"],
+  "pages": [
+    {
+      "id": "settings",
+      "name": "What an Ecobee brings"
+    }
+  ],
+  "launch": {
+    "view": "canvas",
+    "page": "settings"
+  },
+  "artboards": [
+    {
+      "file": "Today.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "Today — an Ecobee lands in the Nest's pane, and half of it goes nowhere",
+      "page": "settings"
+    },
+    {
+      "file": "SettingsA.dc.html",
+      "x": 1560,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "A — everything it has, in its own pane",
+      "page": "settings"
+    },
+    {
+      "file": "RoomsB.dc.html",
+      "x": 3120,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "B — the room that counts",
+      "page": "settings"
+    },
+    {
+      "file": "HouseC.dc.html",
+      "x": 4680,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "C — the house keeps it",
+      "page": "settings"
+    }
+  ],
+  "annotations": [
+    {
+      "id": "why",
+      "x": -620,
+      "y": 0,
+      "w": 500,
+      "page": "settings",
+      "text": "WHY THIS EXISTS\n\nOn 7 October the Nest in the living room came off the wall and an Ecobee Smart Thermostat Premium went up in its place. The Ecobee joins the house over HomeKit, locally, with the eight-digit code on its own screen: Ecobee stopped issuing the developer keys its cloud integration needs, and HomeKit needs no account at all. It arrives through Add as a thing found on the network, the way any other does. Nothing about pairing needs drawing.\n\nWhat needs drawing is what it brings that a Nest never did. Over HomeKit an Ecobee hands the house four things. The thermostat itself, which the shipped dial already serves. A sensor in each room it was set up with, every one a temperature and an occupancy. Its comfort setting -- Home, Away or Sleep -- which it switches between on its own schedule and which the house can read and set. And, on the Premium, the air: a quality reading with CO2 and VOCs behind it.\n\nToday the first lands, the second lands in New devices with no room, and the last two are dropped without a word.\n\nTHE QUESTION is where the other three go, and in whose words. The three directions are whole answers to it, each drawn on the shipped pane at 1440 x 900 with the new parts outlined in dashed lamp. The air is placed the same way in all three -- a fact, Good, Fair or Poor, beside Humidity -- because where it goes is not what divides them.\n\nNOT IN QUESTION, and built whichever is picked: each room sensor goes into its room the first time it is seen, by the name the Ecobee already gave it, so the room's own line carries its temperature the way the living room's 73 degrees does today."
+    },
+    {
+      "id": "comfort",
+      "x": -620,
+      "y": 1240,
+      "w": 500,
+      "page": "settings",
+      "text": "THE HOUSE'S OWN SENSOR CHOICE, AND THE ECOBEE'S\n\nhub/comfort.py exists because Nest's remote sensors were invisible to Home Assistant: pick a room, and the brain offsets the setpoint by the difference between that room's reading and the thermostat's, so the room lands on the number.\n\nWith an Ecobee this does not fight the thermostat, as first feared. The offset is taken against the temperature the thermostat reports, and an Ecobee reports the average of the sensors it is using -- the same number it steers by. The real hazard is smaller: Ecobee's follow-me moves that average when somebody walks into a room, and each jump becomes a correction. SETTLE already keeps those five minutes apart.\n\nSo the question is not whether to switch comfort off, but which of the two choices of room a household sees. A shows the Ecobee's and hides the house's. B puts both in one list. C keeps the house's as it ships and lets the Ecobee's run unseen."
+    },
+    {
+      "id": "today",
+      "x": 0,
+      "y": 960,
+      "w": 700,
+      "page": "settings",
+      "text": "TODAY -- DRAWN FROM THE SHIPPED PANEL\n\nThe thermostat's pane in the mock house's living room, measured off app/src on the mock brain at 1440 x 900: .opened-panel at 0,225, the words at 49,270, .pane-rig at 643,298, the dial 330 across. An Ecobee lands in exactly this, because the pane reads a climate entity and an Ecobee is one.\n\nThe note in the corner is the board's, not the panel's. Its three sentences are the whole of the problem: what lands, what lands somewhere nobody looks, and what is dropped. Home, Away and Sleep reach Home Assistant as a select, which no kind in hub/model.py takes. The air arrives as sensor classes the house does not read (SENSOR_CLASSES is temperature, humidity and light level)."
+    },
+    {
+      "id": "a",
+      "x": 1560,
+      "y": 960,
+      "w": 700,
+      "page": "settings",
+      "text": "A -- EVERYTHING IT HAS, IN ITS OWN PANE\n\nThe pane shows the thermostat as the thermostat sees itself. A row under the modes, Right now, carries Home, Away and Sleep as chips, and a tap changes it. The Sensor row becomes Reading: how many rooms it is averaging, their temperatures, and a plain line saying that which rooms count is chosen on the thermostat -- because over HomeKit it is. The house's own choice of a sensor is not offered for a thermostat that brings its own.\n\nFOR: nothing is hidden and nothing is invented. A household that has used an Ecobee for years finds its own three settings where it expects them, and the wall and the thermostat never disagree about what it is doing. The least brain: one select read and written, and a list.\n\nAGAINST: Home, Away and Sleep are the thermostat's idea of the house, and the hub already has its own -- who is home, and when the wall goes to rest. A beside them is a second answer to the same question, and the two will disagree the first evening somebody stays home sick. The Reading row is a fact a household cannot act on from here. The rig gets one row denser."
+    },
+    {
+      "id": "b",
+      "x": 3120,
+      "y": 960,
+      "w": 700,
+      "page": "settings",
+      "text": "B -- THE ROOM THAT COUNTS\n\nThe Sensor row grows into the question people actually have about a thermostat -- the bedroom is cold -- and answers it with rooms. Keep it right in: Wherever someone is, which is the Ecobee steering by its own sensors as it does out of the box, and then each room it can feel, with its temperature now and a green dot where somebody is. Picking a room is the house's comfort, exactly as it ships, now with a reading in every room to choose from. The big words say which rooms are counting, in rooms. Home, Away and Sleep are not on the wall at all; the Ecobee keeps running its own schedule.\n\nFOR: no vocabulary of the thermostat's reaches the screen. It is the shipped sensor picker with better inputs, so it costs the least new panel, and it is the one place a sensor in every room changes what a household can do rather than what it can read.\n\nAGAINST: the first row is the Ecobee's choice and the rest are the house's trick on top of it, and a household cannot see the difference -- picking Bedroom while the Ecobee is averaging three rooms works, but less precisely than it looks. And the Ecobee's own Away still switches on when its sensors see nobody, unseen, which is the moment someone at home asks why it is warm."
+    },
+    {
+      "id": "c",
+      "x": 4680,
+      "y": 960,
+      "w": 700,
+      "page": "settings",
+      "text": "C -- THE HOUSE KEEPS IT\n\nThere is no Home, Away or Sleep to pick. The house sets them from what it already knows: Home while somebody is in, Sleep when the house goes to sleep, Away when the last person leaves -- hub/presence.py and the wall's own night. The pane says it once, in a card under the modes with an On beside it, and in the big words: Home, because Temi and Ade are here. Today's row writes each change down with its reason. How warm each one is stays set on the thermostat, because HomeKit can choose a comfort setting but cannot write what is in it.\n\nFOR: one answer to who is home, the house's, and the thermostat follows it like every other thing the house runs. Leaving is already a moment the house acts on -- the lights, the plugs -- and the heating joining it is the obvious next thing, not a feature. Nothing new to manage.\n\nAGAINST: it overrides a thermostat that was doing this itself, and doing it with sensors in every room; a family used to the Ecobee's app will see the hub change its mode and wonder who did. It needs a rule for a hand on the dial during Away. And the Sensor row is gone from this board to make room: keeping it means the card is one row denser or moves under the dial."
+    }
+  ]
+}
