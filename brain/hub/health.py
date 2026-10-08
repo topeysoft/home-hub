@@ -38,7 +38,7 @@ PART_DOMAIN = {pid: domain for pid, _, _, domain, _ in PARTS if domain}
 # What a thing is, for a line that has to help somebody walk to it. The panel's own KIND_WORD (api.py) is
 # the label on a menu; these are the same idea in the middle of a sentence.
 KIND_WORDS = {"light": "a light", "switch": "a plug", "fan": "a fan", "media": "a speaker", "cover": "a blind",
-              "climate": "a thermostat", "lock": "a lock", "camera": "a camera", "vacuum": "a vacuum"}
+              "climate": "a thermostat", "lock": "a lock", "camera": "a camera", "vacuum": "a vacuum", "charger": "a car charger"}
 
 
 def when(ts, tz, now=None) -> str:

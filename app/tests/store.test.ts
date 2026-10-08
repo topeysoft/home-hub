@@ -8,7 +8,7 @@ import type { Device, Room } from '../src/api'
 import { lock } from '../src/code'
 import {
   activity, cap, capsOf, currentScene, doneLine, forgetDone, houseLine, isActive, isDead, justDone, newBuild,
-  hubAway, perform, reloadOnto, restingLine, restingParts, roomActive, sayUpdated, sceneHolds, scenesFor, shortName, store,
+  hubAway, nameInFull, perform, reloadOnto, restingLine, restingParts, roomActive, sayUpdated, sceneHolds, scenesFor, shortName, store,
   updateReady, visibleRooms, whatsOn,
 } from '../src/store'
 
@@ -70,6 +70,14 @@ describe('names, read inside the room they are in', () => {
   it('copes with the apostrophes a phone types', () => {
     const kids = room('kids', "Kids’ room")
     expect(shortName(dev('l', "Kids' room light", 'light', 'on'), kids)).toBe('Light')
+  })
+})
+
+describe('a name said in full', () => {
+  it('adds the kind when the name is a room\'s, so removing a Nest thermostat does not ask about the room', () => {
+    store.rooms = [room('living', 'Living Room')]
+    expect(nameInFull(dev('t', 'Living Room', 'climate', 'cool'))).toBe('the Living Room thermostat')
+    expect(nameInFull(dev('l', 'Desk lamp', 'light', 'on'))).toBe('Desk lamp')
   })
 })
 

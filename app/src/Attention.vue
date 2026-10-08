@@ -26,6 +26,7 @@
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { deviceById, installUpdate, keptPrints, loadHealth, notify, perform, plainly, store } from './store'
 import { bandNotes, printCards } from './printers'
+import { chargerBand } from './chargers'
 import { stripSecondLater } from './api'
 import { controllerBand, type ControllerLine } from './controller'
 import Icon from './Icon.vue'
@@ -99,7 +100,9 @@ function openUpdate() { if (narrow.value) store.sheet = 'hub'; else installUpdat
 const knock = computed(() => waiting.value.filter(w => w.id === 'knock'))
 const found = computed(() => waiting.value.filter(w => w.id !== 'knock'))
 /* rendered only with something in it, so an empty band still collapses (.nudges:not(:has(> *))) */
-const news = computed(() => updateReady.value || !!whatsNew.value || !!moveTo.value || found.value.length > 0)
+/* the car charging, as news (design/charger/, C's line): its card is in its room, so this is Home's only */
+const charging = computed(() => chargerBand())
+const news = computed(() => updateReady.value || !!whatsNew.value || !!moveTo.value || found.value.length > 0 || charging.value.length > 0)
 
 let t3: number | undefined
 onMounted(() => {
@@ -155,6 +158,10 @@ defineExpose({ updateReady })
   <button class="nudge" v-for="w in found" :key="w.id" @click="openWaiting(w)">
     <span class="nudge-icon"><Icon name="sparkle" :size="20" /></span>
     <span class="nudge-text"><span class="nudge-title">{{ w.title }}</span><span class="nudge-sub">{{ w.sub }}</span></span>
+  </button>
+  <button class="nudge charging" v-for="c in charging" :key="'charger:' + c.id" @click="store.opened = c.device">
+    <span class="nudge-icon"><Icon name="charger" :size="20" /></span>
+    <span class="nudge-text"><span class="nudge-title">{{ c.title }}</span><span class="nudge-sub">{{ c.sub }}</span></span>
   </button>
   </div>
   <button class="nudge" v-for="l in fromControllers" :key="l.id" @click="openController(l)">

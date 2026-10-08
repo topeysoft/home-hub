@@ -204,9 +204,11 @@ class ForgettingTests(ApiTest):
         self.assertIn(("config/entity_registry/remove", {"entity_id": "light.ceiling"}), self.ha.sent)
 
     def test_what_will_not_go_on_its_own_says_so_in_the_houses_words(self):
-        """HA lets an integration refuse. The person is told what to do about it, not what HA said."""
+        """HA lets an integration refuse, and when switching it off fails too the person is told what to
+        do about it, not what HA said."""
         self.registry({"id": "hw-ceiling", "config_entries": ["entry-hw-ceiling"]})
         self.ha.fail["config/device_registry/remove_config_entry_from_device"] = RuntimeError("Integration does not support device removal")
+        self.ha.fail["config/device_registry/update"] = RuntimeError("Integration does not support device removal")
         r = self.client.delete("/devices/light.ceiling")
         self.assertEqual(r.status_code, 502)
         self.assertIn("Ceiling light", r.json()["detail"])
@@ -262,22 +264,35 @@ class ForgettingTests(ApiTest):
         self.assertIn(("config/device_registry/remove_config_entry_from_device",
                        {"device_id": "hw-ceiling", "config_entry_id": "entry-hw-ceiling"}), self.ha.sent)
 
-    def test_what_will_not_go_names_the_account_it_goes_with(self):
-        """The refusal has always said the true thing and then left somebody on a row with no idea
-        which of their accounts it meant. The name is the one fact that makes it actionable."""
+    def test_what_its_account_will_not_let_go_still_leaves_the_house_and_says_where_it_stays(self):
+        """Reported 7 October: a Nest thermostat taken off the wall could not be removed, because Nest
+        never lets one device go, and the only door left was removing Google Nest -- cameras, doorbell
+        and all. It is switched off in the registry instead, and the account is named so the pane can
+        say where it still is."""
+        self.registry({"id": "hw-ceiling", "config_entries": ["entry-hw-ceiling"]})
+        self.ha.answers["config_entries/get"] = [{"entry_id": "entry-hw-ceiling", "domain": "nest",
+                                                  "title": "Google Nest"}]
+        self.ha.fail["config/device_registry/remove_config_entry_from_device"] = RuntimeError("nope")
+        r = self.client.delete("/devices/light.ceiling")
+        self.assertEqual(r.status_code, 200, r.text)
+        self.assertEqual(r.json()["kept_by"], "Google Nest")
+        self.assertIn(("config/device_registry/update", {"device_id": "hw-ceiling", "disabled_by": "user"}), self.ha.sent)
+        self.assertNotIn("config/config_entries/delete", [ty for ty, _ in self.ha.sent])   # the account stays
+
+    def test_and_says_the_account_plainly_when_the_engine_will_not_say_which(self):
+        self.registry({"id": "hw-ceiling", "config_entries": ["entry-a", "entry-b"]})
+        self.ha.fail["config/device_registry/remove_config_entry_from_device"] = RuntimeError("nope")
+        self.assertEqual(self.client.delete("/devices/light.ceiling").json()["kept_by"], "the account that brought it")
+
+    def test_what_cannot_even_be_switched_off_names_the_account_it_goes_with(self):
         self.registry({"id": "hw-ceiling", "config_entries": ["entry-hw-ceiling"]})
         self.ha.answers["config_entries/get"] = [{"entry_id": "entry-hw-ceiling", "domain": "ring",
                                                   "title": "Ring"}]
         self.ha.fail["config/device_registry/remove_config_entry_from_device"] = RuntimeError("nope")
+        self.ha.fail["config/device_registry/update"] = RuntimeError("nope")
         detail = self.client.delete("/devices/light.ceiling").json()["detail"]
         self.assertIn("It goes when Ring is removed", detail)
-        self.assertIn("What this house has", detail)   # the page the button under it opens
-
-    def test_and_falls_back_to_the_words_it_used_before_when_the_engine_will_not_say(self):
-        self.registry({"id": "hw-ceiling", "config_entries": ["entry-a", "entry-b"]})
-        self.ha.fail["config/device_registry/remove_config_entry_from_device"] = RuntimeError("nope")
-        self.assertIn("the account that brought it",
-                      self.client.delete("/devices/light.ceiling").json()["detail"])
+        self.assertIn("What this house has", detail)
 
     def test_forgetting_something_that_is_not_there(self):
         self.assertEqual(self.client.delete("/devices/light.nowhere").status_code, 404)

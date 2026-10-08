@@ -18,6 +18,7 @@ import type { Device, Event, Room } from './api'
 import { cap, isDead, shortName, deviceById, LABELS } from './store'
 import { partsOfMachine } from './machines'
 import { readingLabel } from './readings'
+import { chargerWords } from './chargers'
 import { makerWord } from './telling'
 import { whenText } from './why'
 
@@ -38,7 +39,7 @@ const bright = (d: Device) => d.attrs.brightness != null ? Math.round((d.attrs.b
     verb, so what they are owed is the day they have had. */
 export function paneKind(d: Device): string {
   const k = cap(d)
-  return k === 'sensor' || k === 'motion' || k === 'contact' ? 'sense' : k
+  return k === 'sensor' || k === 'motion' || k === 'contact' || k === 'charger' ? 'sense' : k
 }
 
 /* ---------- the one reading, large ---------- */
@@ -54,6 +55,7 @@ export function reading(d: Device, unit = '°'): string {
       return s !== 'on' ? 'Off' : b != null ? pct(b) : 'On'
     }
     case 'switch': case 'appliance': return s === 'on' ? 'On' : 'Off'
+    case 'charger': return chargerWords(d)
     case 'machine': {   // a fridge says how many of its features are running, which is the one thing worth saying about it in large type
       const parts = partsOfMachine(d), on = parts.filter(p => p.state === 'on').length
       return !parts.length ? 'Nothing here' : !on ? 'Nothing on' : on === parts.length ? 'All on' : `${on} of ${parts.length} on`

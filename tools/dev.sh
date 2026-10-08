@@ -8,8 +8,10 @@
 #   tools/dev.sh hub      the panel against a real brain, started fresh so it is your code
 #   tools/dev.sh live     the panel against a house that is up and lived in, its brain answering
 #   tools/dev.sh check    what CI runs, here, before pushing
-#   tools/dev.sh design   every artboard in a browser, on the canvas they were drawn on
+#   tools/dev.sh design   the artboards in a browser: searched, read in order, or on their canvas
 #   tools/dev.sh free     let go of a port something is still listening on from yesterday
+#   tools/dev.sh checkouts  every worktree on this machine, and which hold work that would be lost
+#   tools/dev.sh tidy     remove what is merged and clean, after saying what and asking
 #   tools/dev.sh graft    this tree's brain onto a hub, without a release
 #   tools/dev.sh says     what a hub's brain is saying, with its request log taken out
 #   tools/dev.sh puck     this tree's bridge firmware onto one puck, now, through the hub
@@ -205,6 +207,10 @@ where_you_were() {
            | grep -v "^${branch} " | head -3 | paste -sd '  ' - || true)
   [ -n "$others" ] && row "also" "$D$others$R"
 
+  # The other checkouts. Sessions run side by side, each in a worktree, and one that has ended
+  # leaves its work behind on this disk only; this names those, and stays quiet when there are none.
+  tools/checkouts.sh brief || true
+
   # Anything still running from before the break, and how old it is.
   held=
   while read -r port what; do
@@ -228,7 +234,7 @@ where_you_were() {
   echo "  ${D}tools/dev.sh design${R} — the artboards, before any of it is code"
 }
 
-usage() { sed -n '4,16p' "$0" | sed 's/^# \{0,1\}//'; }
+usage() { sed -n '4,18p' "$0" | sed 's/^# \{0,1\}//'; }
 
 case "${1:-status}" in
   status|"") if fresh; then first_time; else where_you_were; fi ;;
@@ -261,6 +267,8 @@ case "${1:-status}" in
   # NOT call ensure: looking at the design is the one thing here that should work in a clone
   # where nothing has been installed. Extra flags (--port, --no-open) pass straight through.
   design) shift || true; exec node tools/artboards.mjs "$@" ;;
+  checkouts) exec tools/checkouts.sh full ;;
+  tidy)  shift || true; exec tools/checkouts.sh tidy "$@" ;;
   # dev.py stops whatever hub is holding the port and starts yours with the reloader on, so the
   # brain here is always the code you just wrote.
   hub)   ensure both
@@ -477,6 +485,7 @@ sys.exit(0 if "+mesh" in v or (m and tuple(map(int, m.groups())) < (0, 7, 0)) el
          ( cd brain && .venv/bin/python -m ruff check . && .venv/bin/python -m pytest tests -q )
          ( cd app && npm run typecheck && npm run lint && npm test \
                   && npm run art-sheet:check && npm run weather-sheet:check )
+         node --test tools/artboards/lib.test.mjs
          if [ -d matter-bridge/node_modules ]; then ( cd matter-bridge && npm run check && npm test )
          else echo "${D}matter-bridge skipped: cd matter-bridge && npm install${R}"; fi
          echo "${D}e2e is the slow half: cd app && npm run build && npm run e2e${R}" ;;

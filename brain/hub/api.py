@@ -505,11 +505,12 @@ class Hub:
             if dev: self._broadcast(json.dumps({"type": "device", "device": dev.__dict__}))
             return
         old_state = d.get("old_state") or {}
-        before = self.home.devices.get(d["entity_id"])
-        old_attrs = self.home._keep_attrs(before.capability, old_state.get("attributes", {})) if before else None
+        part = d["entity_id"] in self.home.part_of   # one reading of a car charger: compare the charger, not the reading
+        before = self.home.devices.get(self.home.part_of.get(d["entity_id"], d["entity_id"]))
+        if part and before: old_attrs, old = dict(before.attrs), before.state
+        else: old_attrs, old = (self.home._keep_attrs(before.capability, old_state.get("attributes", {})) if before else None), old_state.get("state")
         dev = self.home.apply_state(d["entity_id"], d.get("new_state"))
         if not dev: return
-        old = old_state.get("state")
         # Cameras and media players re-announce the same state constantly; only real changes go in the log.
         if old != dev.state or old_attrs != dev.attrs:
             self.log.add("state", dev.id, old, dev.state, source="device", detail=dev.attrs)
@@ -1187,6 +1188,7 @@ async def forget_device(device_id: str):
     if not dev: raise HTTPException(404, "unknown device")
     name = dev.name
     entries: list[str] = []
+    kept_by = ""
     try:
         if dev.hw:
             rows = await hub.ha.send("config/device_registry/list") or []
@@ -1212,8 +1214,18 @@ async def forget_device(device_id: str):
             else:
                 entries = list((row or {}).get("config_entries") or [])
                 if not entries: raise RuntimeError("nothing owns it")
-                for entry in entries:
-                    await hub.ha.send("config/device_registry/remove_config_entry_from_device", device_id=dev.hw, config_entry_id=entry)
+                try:
+                    for entry in entries:
+                        await hub.ha.send("config/device_registry/remove_config_entry_from_device", device_id=dev.hw, config_entry_id=entry)
+                except Exception as e:
+                    # Some accounts never let one thing go (Nest has no way to), and the only door left
+                    # took everything else on the account with it: a thermostat taken off the wall
+                    # could not leave without the cameras. Switched off in the registry, it leaves
+                    # every screen, routine and command, and the account keeps it until the maker's
+                    # own app lets it go. Reported 7 October.
+                    log.info("%s will not leave %s on its own (%s); switching it off instead", device_id, entries, e)
+                    await hub.ha.send("config/device_registry/update", device_id=dev.hw, disabled_by="user")
+                    kept_by = await _account_named(entries)
         else:
             await hub.ha.send("config/entity_registry/remove", entity_id=dev.id)
     except HTTPException:
@@ -1223,7 +1235,7 @@ async def forget_device(device_id: str):
         raise HTTPException(502, f"{name} cannot be removed on its own. "
                                  f"It goes when {await _account_named(entries)} is removed, from What this house has.")
     hub.log.add("home", dev.id, dev.room_id, "forgotten", source="user", detail={"name": name})
-    return {"ok": True}
+    return {"ok": True, "kept_by": kept_by} if kept_by else {"ok": True}
 
 
 async def _account_named(entries: list[str]) -> str:

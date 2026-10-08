@@ -1,4 +1,6 @@
 {
+  "name": "The wall at rest",
+  "areas": ["Wall screens"],
   "artboards": [
     {
       "file": "Today.dc.html",

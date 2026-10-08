@@ -27,7 +27,7 @@ cannot be reviewed as one. Work that followed it has been settled in a single me
 `canvas.json` that places every board and every note on a canvas:
 
 ```sh
-tools/dev.sh design        # every collection, on the canvas it was drawn on
+tools/dev.sh design        # the contents of design/: search, each collection read in order or on its canvas
 ```
 
 A board is a `.dc.html` file: the markup carries the design's real values — colors, sizes, spacing,
@@ -35,6 +35,17 @@ radii, shadows — and `canvas.json` gives it an `x`, a `y`, a `title`, and an a
 saying what it argues. Boards that need state extend `DCLogic` in a `<script data-dc-script>` and
 interpolate `{{ dotted.paths }}`; `data-props` turns a value into a chip you can flip while looking
 at it, which is how one board covers fifteen weather conditions instead of fifteen boards.
+
+A collection's `canvas.json` also carries its `name` (unless an `index.html` gives one) and its
+`areas` — the parts of the house it is about, `["Light strips"]` — which is how the viewer's contents
+group it; `tools/artboards/lib.test.mjs` fails on a collection without them. When a direction is
+picked, say so on the page it was picked on, either as `"decided": {"on": "2026-10-01", "chose": "A,
+with B's row"}` or as a note headed `DECIDED 1 OCTOBER 2026`; the viewer reads either, puts it at the
+top of the page, and opens the canvas on the board that won.
+
+A collection drawn in another worktree is on the viewer's front page under **From other checkouts**
+until its branch is merged, marked **Waiting for you** while nothing on it says what was picked. Ask
+for a pick by the collection's folder name; search finds it by that, from any checkout.
 
 The wall is **1440×900**. The phone is **390×844**. A board that argues about another screen says so
 by being that size.
@@ -55,7 +66,8 @@ by being that size.
 5. **Then build it**, and pin the arrangement with a test that fails on purpose if it drifts
    (`app/tests/rooms.test.ts` is the model). The picture the user chose is the spec.
 6. **Leave the rejected boards in place**, on their own canvas page, with their cases intact. They
-   are the record of why the shipped thing is the shipped thing.
+   are the record of why the shipped thing is the shipped thing. Name that page after the one it
+   lost on — `"Held dark, and why: not chosen"` — and the viewer folds it in at the end of that page.
 
 **Changing a screen that already has boards means changing the artboard first, then the test, then
 the code** — in that order. The alternative is a test that pins the panel to a drawing nobody
@@ -133,6 +145,13 @@ More than one session works in this tree at a time, and the git index is shared 
   minutes have passed. If someone else's lines ride along, say so rather than letting it pass.
 - Expect your own uncommitted work to disappear into their commits. Check `git log` before assuming
   an edit was lost.
+
+- **Push a branch at its first commit** (`git push -u origin <branch>`, never with `development`
+  as its upstream). A session ends and its worktree is forgotten; a commit on no remote is then one
+  `rm` from gone. `tools/dev.sh` names any checkout or branch holding such work, `tools/dev.sh
+  checkouts` lists them all, and `tools/dev.sh tidy` removes only what is merged and clean, after
+  asking. Work a session leaves uncommitted when it ends is kept under `refs/wip/` by the
+  `SessionEnd` hook in `.claude/settings.json` (`tools/wip-snapshot.sh`), without touching the files.
 
 Branch off `development`; pull requests target `development`, not `main`.
 

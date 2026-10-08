@@ -196,11 +196,11 @@ export const defaultKind = (d: Device) => d.guess || d.capability
 /** Said quietly under the name on a thing's own pane, and nowhere else: a tile is a glance, and the
     point of the override is that the thing stops looking unusual. Empty where nobody has said anything. */
 export const shownAs = (d: Device) => d.kind && d.kind !== defaultKind(d) ? `Shown as ${KIND_NOUN[cap(d)] ?? cap(d)}` : ''
-export const KIND_NOUN: Record<string, string> = { light: 'a light', switch: 'a plug', fan: 'a fan', alarm: 'an alarm', appliance: 'an appliance', media: 'a speaker', cover: 'a blind', climate: 'a thermostat', lock: 'a lock', camera: 'a camera', vacuum: 'a vacuum' }
+export const KIND_NOUN: Record<string, string> = { light: 'a light', switch: 'a plug', fan: 'a fan', alarm: 'an alarm', appliance: 'an appliance', media: 'a speaker', cover: 'a blind', climate: 'a thermostat', lock: 'a lock', camera: 'a camera', vacuum: 'a vacuum', charger: 'a car charger' }
 /** The glyph for a thing, which for an appliance reads its name: a fridge's ice maker gets the snowflake
     the weather already draws, and any other machine's feature the machine. Every other kind is its own icon. */
 export const iconFor = (d: Device) => cap(d) === 'appliance' && /\bice\b|freez/i.test(d.name) ? 'snow' : cap(d)
-export const PASSIVE = new Set(['sensor', 'motion', 'contact', 'camera'])
+export const PASSIVE = new Set(['sensor', 'motion', 'contact', 'camera', 'charger'])
 export const visibleRooms = () => {
   const rs = store.rooms.filter(r => r.id !== 'unassigned' || r.devices.length)
   return [...rs.filter(r => !bare(r)), ...rs.filter(bare)]   // rooms with something in them first
@@ -221,6 +221,12 @@ export function unitNamed(d: Device): boolean {
   const unit = (d.hw_name ?? '').trim()
   if (d.attrs.fan) return false   // the light of a fan-with-a-light is "Bedroom Fan Light", not the fan: under a lamp drawing, "Fan" reads as the wrong thing
   return !!unit && new RegExp(`^${unit.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s+(light|switch|fan|plug|dimmer)$`, 'i').test(d.name.trim())
+}
+/** The name with its kind, where the name alone is a room's: Nest calls a thermostat after the room it hangs
+    in, and "Remove Living Room?" reads as taking the room away (reported 7 October). */
+export function nameInFull(d: Device): string {
+  const n = d.name.trim(), noun = (KIND_NOUN[cap(d)] ?? '').replace(/^an? /, '')
+  return noun && store.rooms.some(r => norm(r.name) === norm(n)) ? `the ${n} ${noun}` : n
 }
 export function shortName(d: Device, room?: Room | null): string {
   let n = d.name.trim()
@@ -266,6 +272,7 @@ export function activityParts(r: Room, withMedia = true): string[] {
   if (plugs.length === 1) parts.push(`${shortName(plugs[0], r)} on`); else if (plugs.length) parts.push(`${plugs.length} plugs on`)
   for (const d of r.devices.filter(d => cap(d) === 'fan' && d.state === 'on')) parts.push(`${shortName(d, r)} on`)
   for (const d of r.devices.filter(d => cap(d) === 'vacuum' && d.state === 'cleaning')) parts.push(`${shortName(d, r)} cleaning`)
+  if (r.devices.some(d => cap(d) === 'charger' && d.state === 'charging')) parts.push('Charging the car')
   if (r.devices.some(d => cap(d) === 'motion' && d.state === 'on')) parts.push('Motion')
   if (r.devices.some(d => cap(d) === 'camera' && d.state === 'recording')) parts.push('Recording')
   return parts
@@ -288,6 +295,7 @@ export function restingParts(r: Room): string[] {
   const parts: string[] = []
   const locks = r.devices.filter(d => cap(d) === 'lock' && !isDead(d))
   if (locks.length && locks.every(d => d.state === 'locked')) parts.push('Locked')
+  if (r.devices.some(d => cap(d) === 'charger' && d.state === 'plugged')) parts.push('Car plugged in')
   const shut = r.devices.filter(d => cap(d) === 'cover' && d.state === 'closed').length
   if (shut) parts.push(shut === 1 ? 'Blind closed' : `${shut} blinds closed`)
   /* A camera watching the porch is not the house doing something -- roomActive
@@ -334,7 +342,9 @@ function roomLine(r: Room, resting: boolean): string {
 }
 /* An appliance's feature being on is not the house doing anything: an ice maker is on all year, and a
    card for it in "on right now" would be a card that never leaves. It is on its own tile, and that is where. */
-export function roomActive(r: Room) { return r.devices.some(d => isActive(d) && cap(d) !== 'camera' && cap(d) !== 'appliance') || printersIn(r).some(printerOn) }
+export function roomActive(r: Room) {
+  return r.devices.some(d => (isActive(d) && cap(d) !== 'camera' && cap(d) !== 'appliance') || (cap(d) === 'charger' && d.state === 'charging')) || printersIn(r).some(printerOn)
+}
 /** Everything that is on across the house, cameras and appliances excluded: the "on right now" strip. */
 export function whatsOn(): Device[] {
   return store.rooms.flatMap(r => r.devices.filter(d => isActive(d) && !PASSIVE.has(cap(d)) && cap(d) !== 'appliance'))
@@ -463,6 +473,12 @@ export const keepDone = (id: string, line: string, at?: number) => markDone(id, 
 export function forgetDone(all = false) {
   const now = Date.now()
   for (const id of Object.keys(done)) if (all || now - done[id].at > DONE_FOR) delete done[id]
+}
+/** A car that stops charging keeps its line in Home's band until nobody is looking (chargers.ts). */
+export function noteCharger(was: Device, now: Device) {
+  if (cap(now) !== 'charger') return
+  if (now.state === 'charging') delete done[`charger:${now.id}`]
+  else if (was.state === 'charging') keepDone(`charger:${now.id}`, 'stopped')
 }
 /** What Home is still showing though it is off: quieted by hand, not yet forgotten. */
 export function justDone(): Device[] {
@@ -910,7 +926,9 @@ function applyIntent(i: Intent) {
 function applyDevice(d: Device) {
   for (const r of store.rooms) {
     const i = r.devices.findIndex(x => x.id === d.id)
-    if (i >= 0) { r.devices[i] = d; delete store.pending[d.id]; if (store.viewer?.id === d.id) store.viewer = d; if (store.opened?.id === d.id) store.opened = d; eventsSoon(); return }
+    if (i >= 0) {
+      noteCharger(r.devices[i], d)
+      r.devices[i] = d; delete store.pending[d.id]; if (store.viewer?.id === d.id) store.viewer = d; if (store.opened?.id === d.id) store.opened = d; eventsSoon(); return }
   }
 }
 let stop: (() => void) | undefined, lostTimer: number | undefined, skyTimer: number | undefined
