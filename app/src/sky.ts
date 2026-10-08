@@ -37,7 +37,7 @@ export const mix = (a: RGB, b: RGB, t: number): RGB => [lerp(a[0], b[0], t), ler
 export const rgb = (c: RGB, a = 1) => `rgba(${c[0] | 0},${c[1] | 0},${c[2] | 0},${a})`
 export const clamp = (v: number, lo = 0, hi = 1) => Math.min(hi, Math.max(lo, v))
 
-export function palette(el: number, wx: Wx): RGB[] {
+export function palette(el: number, wx: Wx, shade: 'light' | 'dark' = 'dark'): RGB[] {
   let i = 0; while (i < KEYS.length - 2 && el > KEYS[i + 1][0]) i++
   const [e0, a] = KEYS[i], [e1, b] = KEYS[i + 1]
   const t = clamp((el - e0) / (e1 - e0))
@@ -46,8 +46,23 @@ export function palette(el: number, wx: Wx): RGB[] {
     out = mix(out, [58, 64, 72], wx.clouds * .55)             // overcast grays the sky
     out = mix(out, [22, 24, 30], wx.rain * .3)                // rain darkens it
     out = mix(out, [116, 122, 128], wx.fog * .3)              // fog flattens it
-    return out
+    return shade === 'light' ? hold(out, k, el, wx) : out
   })
+}
+
+/*
+ * The light sky (design/appearance/, B): the same sky, held up into the light. Each band keeps the
+ * hue the hour and the weather gave it and gives up its darkness, so the hour shows by its color --
+ * open blue at noon, lilac and apricot at dusk, a pale periwinkle at night -- and never by going dark.
+ * Lightness still moves a little with the day and the weather, enough that a storm still reads as one.
+ */
+const HELD_L: [number, number][] = [[0.74, 0.8], [0.81, 0.89], [0.87, 0.95]]   // per band, [night, noon]
+const HELD_C = [0.075, 0.055, 0.045]
+export function hold(c: RGB, band: number, el: number, wx: Wx = wxOf('')): RGB {
+  const { C, H } = oklch(c)
+  const day = clamp((el + 6) / 30)
+  const L = lerp(HELD_L[band][0], HELD_L[band][1], day) - wx.rain * 0.06 - wx.clouds * 0.03
+  return fromOklch(L, Math.min(C * 1.6 + 0.015, HELD_C[band]), H)
 }
 
 /* the veil that keeps the interface readable, sampled where the cards sit (panel.css .sky-veil) */
@@ -55,9 +70,9 @@ const VEIL: RGB = [12, 13, 16]
 const VEIL_A = 0.52
 
 /* what a card is actually laid over: the sky's middle band, seen through the veil */
-export function ground(el: number, condition: string): RGB {
-  const [, band] = palette(el, wxOf(condition))
-  return mix(band, VEIL, VEIL_A)
+export function ground(el: number, condition: string, shade: 'light' | 'dark' = 'dark'): RGB {
+  const [, band] = palette(el, wxOf(condition), shade)
+  return shade === 'light' ? band : mix(band, VEIL, VEIL_A)   // a light sky has no veil over it
 }
 
 export type Oklch = { L: number; C: number; H: number }
@@ -76,6 +91,18 @@ export function oklch([r, g, b]: RGB): Oklch {
   let H = Math.atan2(Bb, A) * 180 / Math.PI
   if (H < 0) H += 360
   return { L, C: Math.hypot(A, Bb), H }
+}
+
+/* and back, clipped into sRGB */
+export function fromOklch(L: number, C: number, H: number): RGB {
+  const h = H * Math.PI / 180, A = C * Math.cos(h), Bb = C * Math.sin(h)
+  const l = (L + 0.3963377774 * A + 0.2158037573 * Bb) ** 3
+  const m = (L - 0.1055613458 * A - 0.0638541728 * Bb) ** 3
+  const s = (L - 0.0894841775 * A - 1.2914855480 * Bb) ** 3
+  const g = (c: number) => 255 * clamp(c <= 0.0031308 ? 12.92 * c : 1.055 * Math.pow(c, 1 / 2.4) - 0.055)
+  return [g(4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s),
+    g(-1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s),
+    g(-0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s)]
 }
 
 /* ---------- the weather illustration ---------- */
@@ -137,9 +164,12 @@ const STARS = [[24, 28, 1.7], [46, 15, 1.2], [70, 34, 1.5], [32, 54, 1.3], [100,
                [194, 46, 1.6], [18, 74, 1.2], [186, 82, 1.5], [148, 10, 1.3], [122, 40, 1.1], [60, 70, 1.4]]
 const FIELD = STARS.map(([x, y, r]) => dot(x, y, r)).join('')
 
-export function illustration(el: number, condition: string): Illustration {
+export function illustration(el: number, condition: string, shade: 'light' | 'dark' = 'dark'): Illustration {
   const wx = wxOf(condition)
   const night = nightness(el)
+  /* on a light sky the moon still rises, but the cloud stays a daytime cloud: a moonlit gray mass is
+     a hole in a pale page, where the same mass reads as a cloud against the dark */
+  const dusk = shade === 'light' ? night * 0.2 : night
   const cover = wx.clouds
   /* the cloud grays and swells as cover thickens, and by night the moon is the only light on it --
      but a thin wisp still catches that light, so only a full deck goes to a dark mass */
@@ -147,8 +177,8 @@ export function illustration(el: number, condition: string): Illustration {
   const lit = 0.44 + thick * 0.32
   const scale = 0.66 + cover * 0.34
   const shows = 0.25 + (1 - Math.min(1, cover / 0.55)) * 0.75       // how much of the disc is still out
-  const body = BODY.map(([a, b], i) => rgb(mix(mix(a, b, thick), MOONLIT, (lit + i * 0.04) * night))) as [string, string, string]
-  const wet = (c: [RGB, RGB]) => rgb(mix(c[0], c[1], night))
+  const body = BODY.map(([a, b], i) => rgb(mix(mix(a, b, thick), MOONLIT, (lit + i * 0.04) * dusk))) as [string, string, string]
+  const wet = (c: [RGB, RGB]) => rgb(mix(c[0], c[1], dusk))
 
   return {
     cloud: {

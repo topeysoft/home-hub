@@ -1,4 +1,8 @@
 {
+ "name": "The bridge light",
+ "areas": [
+  "Light strips"
+ ],
  "launch": {
   "view": "canvas",
   "page": "light"

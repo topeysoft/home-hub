@@ -174,7 +174,7 @@ function sayAnother() {
   padding: 20px 22px;
   border-radius: 24px;
   border: 1px solid var(--edge);
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(var(--wash-rgb), 0.05);
 }
 .roof-card-head {
   display: flex;
@@ -233,7 +233,7 @@ function sayAnother() {
 .roof-say {
   padding: 0 0 2px;
   border: 0;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.18);
+  border-bottom: 1px solid rgba(var(--wash-rgb), 0.18);
   background: none;
   color: var(--ink-2);
   font: inherit;

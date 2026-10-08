@@ -1,4 +1,6 @@
 {
+  "name": "What happened",
+  "areas": ["Wall screens"],
   "artboards": [
     { "file": "Today.dc.html", "x": 0, "y": 0, "w": 1440, "h": 900, "title": "Today — and what is not in it", "page": "page-1" },
     { "file": "Main.dc.html", "x": 1560, "y": 0, "w": 1440, "h": 900, "title": "A — the catch-up", "page": "page-1" },

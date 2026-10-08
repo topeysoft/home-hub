@@ -1,4 +1,6 @@
 {
+  "areas": ["Adding things"],
+  "decided": {"on": "2026-09-22", "chose": "C, with A", "board": "OnAdd.dc.html"},
   "artboards": [
     {
       "file": "Today.dc.html",

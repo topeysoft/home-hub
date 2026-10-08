@@ -123,6 +123,10 @@ jobs:
       # is its spec; this fails when the three stop agreeing
       - name: the startup still matches its board
         run: node --test startup/startup.test.mjs
+      # the artboard viewer reads design/ the way design/artboards/ was decided: every collection
+      # named and in an area, a canvas opening on the board that won
+      - name: the artboard viewer still reads design/ as drawn
+        run: node --test tools/artboards/lib.test.mjs
 
   # The Matter bridge. It is the one part of the hub whose bugs land in somebody ELSE's app, so the
   # unit conversions are checked here: three of them are inversions -- a cover counted from the other

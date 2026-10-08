@@ -1,4 +1,6 @@
 {
+  "name": "A device, opened",
+  "areas": ["Wall screens"],
   "artboards": [
     {
       "file": "Today.dc.html",

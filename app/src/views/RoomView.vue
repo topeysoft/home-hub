@@ -29,7 +29,7 @@ const editing = ref(false)
 /* an empty room is not a dead end: things waiting under New devices can be placed here, or something new added */
 const waiting = computed(() => store.rooms.find(r => r.id === 'unassigned')?.devices.length ?? 0)
 
-const order = ['media', 'light', 'cover', 'lock', 'fan', 'switch', 'appliance', 'vacuum', 'climate', 'camera', 'motion', 'contact', 'sensor']
+const order = ['media', 'light', 'cover', 'lock', 'fan', 'switch', 'charger', 'appliance', 'vacuum', 'climate', 'camera', 'motion', 'contact', 'sensor']
 const sorted = computed(() => [...props.room.devices].sort((a, b) => order.indexOf(cap(a)) - order.indexOf(cap(b))))
 /* sensors say something; they are read, not tapped. A switch's own motion sensor is said on the switch's tile (units.ts), not here as well */
 const readings = computed(() => sorted.value.filter(d => isReading(d) && !onATile(d, props.room)))
@@ -86,13 +86,14 @@ function sizeOf(d: Device): Size {
   if (c === 'media') return 'third'                                 // paused, it keeps its artwork and one button, and that fits in a third -- which is how both boards draw it
   if (d.id === brightest.value) return 'half'
   if (c === 'camera') return 'half'                                 // it brings a picture, and a picture needs room
+  if (c === 'charger') return d.state === 'charging' ? 'half' : 'third'   // design/charger/CardA: charging is the news, so it gets the room
   return 'third'                                                    // a thermostat with it: the number and what it is doing fit, and the dial is in the pane
 }
 
 /* Bigger first, and within a size the things that are doing something before
    the things that are not. Equal sizes ending up adjacent is not a nicety: it
    is what lets a column pack full instead of leaving a hole halfway down. */
-const doing = (d: Device) => !isDead(d) && d.state !== 'off' && d.state !== 'unavailable'
+const doing = (d: Device) => !isDead(d) && (cap(d) === 'charger' ? d.state === 'charging' : d.state !== 'off' && d.state !== 'unavailable')
 type Cell = { key: string; size: Size }
 
 function arrange(): Cell[] {

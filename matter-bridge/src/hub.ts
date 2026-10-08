@@ -119,6 +119,23 @@ export async function report(status: BridgeStatus): Promise<void> {
 }
 
 /**
+ * A report only when something changed, and otherwise once a heartbeat so the brain can tell a living
+ * bridge from a remembered one. Reporting after every check fed a loop: the brain broadcasts each
+ * report, and the bridge checks again on every broadcast.
+ */
+export function teller(send: (s: BridgeStatus) => Promise<void>, beatMs = 50_000, now = () => Date.now()) {
+    let last = "";
+    let at = -Infinity;
+    return async (s: BridgeStatus): Promise<void> => {
+        const said = JSON.stringify(s);
+        if (said === last && now() - at < beatMs) return;
+        last = said;
+        at = now();
+        await send(s);
+    };
+}
+
+/**
  * The same broadcasts the panels watch. A device changing, or the household changing its mind about
  * what is shared, both arrive here; either way the answer is to reconcile against a fresh list rather
  * than to patch from the message, because the list IS the decision and a message is only a nudge.

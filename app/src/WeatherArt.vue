@@ -22,8 +22,9 @@
 import { computed, useId } from 'vue'
 import { illustration } from './sky'
 import { store } from './store'
+import { shade } from './shade'
 
-const wx = computed(() => illustration(store.sky.elevation, store.sky.condition))
+const wx = computed(() => illustration(store.sky.elevation, store.sky.condition, shade.value))
 
 /* A name of its own for this copy's gradient and mask, because there is more than one copy.
    The bar carries a second drawing for a phone and the stylesheet decides which screen shows

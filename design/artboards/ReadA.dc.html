@@ -1,0 +1,209 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap">
+  <style>
+    /* THE VIEWER'S OWN TOKENS -- not the panel's. Light and dark are the viewer's chrome only: the boards it
+       shows are the spec and keep the colors they were drawn in, so in light mode a wall board is still a
+       dark rectangle on paper. The accent is the panel's lamp, darkened in light mode until it reads as text. */
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: "Instrument Sans", -apple-system, "SF Pro Text", system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    .ui { position: absolute; inset: 0; overflow: hidden; background: var(--bg); color: var(--ink); font-size: 14px; line-height: 1.5; }
+    .ui.dark {
+      --bg: #0d0e11; --pane: #121317; --surface: #17191e; --raise: #20232a; --scrim: rgba(5,6,8,.72);
+      --ink: #f1eee8; --ink-2: #b9b5ad; --ink-3: #7f7d77; --line: rgba(241,238,232,.08); --line-2: rgba(241,238,232,.16);
+      --accent-rgb: 233,184,114; --accent: rgb(var(--accent-rgb)); --accent-text: #e9b872; --accent-ink: #2a1c07;
+      --ok-rgb: 116,198,157; --ok: rgb(var(--ok-rgb)); --hl: rgba(233,184,114,.3);
+      --shadow: 0 30px 70px -36px rgba(0,0,0,.95); --pop: 0 40px 120px -20px rgba(0,0,0,.9);
+    }
+    .ui.light {
+      --bg: #f6f4ef; --pane: #eeebe4; --surface: #ffffff; --raise: #e9e5dd; --scrim: rgba(40,34,24,.34);
+      --ink: #1c1b18; --ink-2: #55524b; --ink-3: #8b877e; --line: rgba(28,27,24,.09); --line-2: rgba(28,27,24,.17);
+      --accent-rgb: 192,138,53; --accent: rgb(var(--accent-rgb)); --accent-text: #875811; --accent-ink: #fff;
+      --ok-rgb: 47,138,92; --ok: rgb(var(--ok-rgb)); --hl: rgba(233,184,114,.5);
+      --shadow: 0 22px 50px -28px rgba(60,45,20,.38); --pop: 0 40px 100px -30px rgba(60,45,20,.45);
+    }
+    .abs { position: absolute; }
+    .cap { font-size: 11.5px; letter-spacing: .11em; text-transform: uppercase; color: var(--ink-3); font-weight: 500; }
+    .dim { color: var(--ink-3); }
+    .num { font-variant-numeric: tabular-nums; }
+    mark { background: var(--hl); color: inherit; border-radius: 3px; padding: 0 2px; }
+    svg.i { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+    .kbd { font-size: 11.5px; color: var(--ink-3); border: 1px solid var(--line-2); border-radius: 5px; padding: 0 6px; line-height: 19px; font-variant-numeric: tabular-nums; }
+
+    .search { display: flex; align-items: center; gap: 10px; height: 38px; padding: 0 10px 0 13px; border-radius: 10px;
+              background: var(--surface); border: 1px solid var(--line-2); color: var(--ink-3); cursor: text; }
+    .search .q { flex: 1; color: var(--ink); white-space: nowrap; overflow: hidden; }
+    .search .ph { flex: 1; color: var(--ink-3); white-space: nowrap; overflow: hidden; }
+    .search.on { border-color: rgba(var(--accent-rgb),.6); box-shadow: 0 0 0 3px rgba(var(--accent-rgb),.14); }
+
+    .seg { display: inline-flex; padding: 3px; gap: 2px; border-radius: 9px; background: var(--raise); }
+    .seg > span { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 9px; border-radius: 7px; color: var(--ink-3); cursor: pointer; font-size: 13px; white-space: nowrap; }
+    .seg > span.on { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,.18); }
+
+    .chip { display: inline-flex; align-items: center; gap: 6px; height: 22px; padding: 0 8px; border-radius: 6px; font-size: 12px; font-weight: 500; white-space: nowrap; }
+    .chip i { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+    .chip.chosen { color: var(--ok); background: rgba(var(--ok-rgb),.13); }
+    .chip.open { color: var(--accent-text); background: rgba(var(--accent-rgb),.13); }
+    .chip.no { color: var(--ink-3); background: var(--raise); }
+
+    /* a real board, drawn small: the board's own file in a frame, scaled -- never a screenshot that can go stale */
+    .th { position: relative; overflow: hidden; border-radius: 7px; background: var(--raise); border: 1px solid var(--line); flex: none; }
+    .th iframe { position: absolute; left: 0; top: 0; border: 0; transform-origin: 0 0; pointer-events: none; }
+    .th.won { border-color: rgba(var(--ok-rgb),.8); box-shadow: 0 0 0 2px rgba(var(--ok-rgb),.35); }
+    .th.lost { opacity: .5; }
+
+    /* the dashed chips are the board's own: flip what it shows, as on every board here */
+    .try { position: absolute; right: 16px; bottom: 14px; z-index: 40; display: flex; align-items: center; gap: 6px; padding: 6px 8px 6px 12px;
+           border-radius: 999px; background: rgba(12,13,16,.86); border: 1px dashed rgba(255,255,255,.22); font-size: 12px; color: #b9b5ad; }
+    .flip { padding: 3px 10px; border-radius: 999px; border: 1px dashed rgba(255,255,255,.22); cursor: pointer; white-space: nowrap; }
+    .flip.on { border-style: solid; border-color: rgba(233,184,114,.7); color: #e9b872; background: rgba(233,184,114,.08); }
+
+    .top { position: absolute; left: 0; right: 0; top: 0; height: 60px; display: flex; align-items: center; gap: 14px; padding: 0 24px;
+           border-bottom: 1px solid var(--line); background: var(--bg); z-index: 5; }
+    .mark { display: flex; align-items: center; gap: 10px; font-weight: 500; font-size: 15px; }
+    .mark b { width: 22px; height: 22px; border-radius: 6px; background: var(--accent); display: block; position: relative; }
+    .mark b::after { content: ''; position: absolute; left: 6px; top: 6px; width: 10px; height: 10px; border-radius: 2px; background: var(--bg); opacity: .9; }
+    .crumb { color: var(--ink-3); font-size: 14px; display: flex; align-items: center; gap: 8px; }
+    .rail { position: absolute; left: 0; top: 60px; bottom: 0; width: 272px; background: var(--pane); border-right: 1px solid var(--line); padding: 22px 16px; }
+    .rail .pg { display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 8px; font-size: 13.5px; font-weight: 500; color: var(--ink); }
+    .rail .pg .chip { margin-left: auto; height: 20px; font-size: 11.5px; }
+    .rail .it { display: flex; align-items: center; gap: 8px; height: 30px; padding: 0 8px 0 26px; font-size: 13.5px; color: var(--ink-2); border-radius: 7px; cursor: pointer; position: relative; }
+    .rail .it.on { background: var(--surface); color: var(--ink); box-shadow: inset 0 0 0 1px var(--line); }
+    .rail .it.on::before { content: ''; position: absolute; left: 10px; top: 9px; bottom: 9px; width: 2px; border-radius: 2px; background: var(--accent); }
+    .rail .it.lost { color: var(--ink-3); }
+    .rail .it .ok { color: var(--ok); margin-left: auto; display: flex; }
+    .main { position: absolute; left: 272px; right: 0; top: 60px; bottom: 0; overflow: hidden; }
+    .eyebrow { font-size: 13px; color: var(--ink-3); }
+    h1.pg { margin: 6px 0 0; font-size: 36px; line-height: 1.1; font-weight: 400; letter-spacing: -.03em; }
+    .decided { display: grid; grid-template-columns: 22px 1fr auto; gap: 14px; align-items: start; padding: 16px 20px; border-radius: 12px;
+               background: rgba(var(--ok-rgb),.08); border: 1px solid rgba(var(--ok-rgb),.32); font-size: 14.5px; color: var(--ink-2); line-height: 1.55; }
+    .decided b { color: var(--ink); font-weight: 600; }
+    .sec { display: flex; align-items: baseline; gap: 12px; }
+    .sec .letter { font-size: 13px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3); font-weight: 500; }
+    .sec h2 { margin: 0; font-size: 22px; font-weight: 500; letter-spacing: -.015em; }
+    .fig { position: absolute; }
+    .fig .cap2 { display: flex; align-items: center; gap: 16px; margin-top: 12px; font-size: 12.5px; color: var(--ink-3); }
+    .fig .cap2 span { display: inline-flex; align-items: center; gap: 6px; }
+    .note { position: absolute; width: 400px; font-size: 14px; line-height: 1.65; color: var(--ink-2); }
+    .note h3 { margin: 0 0 10px; font-size: 15px; font-weight: 600; color: var(--ink); letter-spacing: -.005em; }
+    .note p { margin: 0 0 12px; }
+    .note p b { color: var(--ink); font-weight: 600; }
+    .note .for, .note .against { padding: 10px 14px; border-radius: 10px; margin: 0 0 10px; }
+    .note .for { background: rgba(var(--ok-rgb),.08); }
+    .note .against { background: var(--raise); }
+    .fade { position: absolute; left: 0; right: 0; bottom: 0; height: 120px; background: linear-gradient(transparent, var(--bg)); pointer-events: none; }
+  </style>
+</helmet>
+<div class="{{ui}}">
+  <div class="top">
+    <span class="mark"><b></b>Artboards</span>
+    <span class="crumb">/ Light strips / <span style="color: var(--ink);">The strip controller on the wall</span></span>
+    <span class="search" style="width: 300px; margin-left: auto; height: 34px;"><svg class="i" width="16" height="16" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg><span class="ph">Search</span><span class="kbd">&#8984;K</span></span>
+    <span class="seg"><span class="on"><svg class="i" width="15" height="15" viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z"/><path d="M9 11h7M9 15h7M9 7h3"/></svg>Page</span><span><svg class="i" width="15" height="15" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><rect x="6" y="7" width="6" height="4" rx="1"/><rect x="13" y="13" width="5" height="4" rx="1"/></svg>Canvas</span></span>
+    <span class="seg"><span class="{{t.auto}}" onClick="{{t.toAuto}}"><svg class="i" width="15" height="15" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg></span><span class="{{t.light}}" onClick="{{t.toLight}}"><svg class="i" width="15" height="15" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg></span><span class="{{t.dark}}" onClick="{{t.toDark}}"><svg class="i" width="15" height="15" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg></span></span>
+  </div>
+
+  <div class="rail">
+    <div style="padding: 0 8px 18px;">
+      <div style="font-size: 16px; font-weight: 500; line-height: 1.3;">The strip controller on the wall</div>
+      <div class="dim" style="font-size: 12.5px; margin-top: 4px;">15 boards &middot; 26 notes &middot; 3 pages &middot; 2 Oct</div>
+    </div>
+    <div class="it" style="padding-left: 8px;">Why it is a collection</div>
+    <div class="pg" style="margin-top: 8px;"><svg class="i" width="14" height="14" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>Held dark, and why<span class="chip chosen">Chosen</span></div>
+    <div class="{{itToday}}" onClick="{{goToday}}">Today</div>
+    <div class="{{itA}}" onClick="{{goA}}">A &mdash; in the room<span class="ok"><svg class="i" width="15" height="15" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span></div>
+    <div class="it">B &mdash; Needs a look<span class="dim" style="margin-left: auto; font-size: 12px;">its row</span></div>
+    <div class="it">What opens</div>
+    <div class="it">The words</div>
+    <div class="it lost">C &mdash; said when asked<span style="margin-left: auto; font-size: 12px;">not chosen</span></div>
+    <div class="pg" style="margin-top: 8px;"><svg class="i" width="14" height="14" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>The second run<span class="chip chosen">Chosen</span></div>
+    <div class="pg"><svg class="i" width="14" height="14" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg>One wire or two<span class="chip chosen">Chosen</span></div>
+    <div class="abs dim" style="left: 24px; right: 16px; bottom: 20px; font-size: 12px; line-height: 2;">
+      <span class="kbd">j</span> <span class="kbd">k</span> next and last board<br><span class="kbd">c</span> this place on the canvas<br><span class="kbd">l</span> copy a link to this board
+    </div>
+  </div>
+
+  <div class="main">
+    <sc-if value="{{atToday}}">
+      <div class="abs" style="left: 56px; top: 30px; width: 1056px;">
+        <div class="eyebrow">Light strips &middot; The strip controller on the wall &middot; page 1 of 3</div>
+        <h1 class="pg">Held dark, and why</h1>
+      </div>
+      <div class="abs decided" style="left: 56px; top: 116px; width: 1056px;">
+        <span style="color: var(--ok); padding-top: 1px;"><svg class="i" width="20" height="20" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span>
+        <span><b>Decided 1 October &mdash; A, with B&rsquo;s row.</b> A strip held dark says so where people reach for it: its tile reads Staying off with the reason, the room gets a Why?, and a tap opens its pane. A roofline is in no room anybody opens, so it also gets B&rsquo;s row on Needs a look.</span>
+        <span onClick="{{goA}}" style="color: var(--accent-text); font-weight: 500; white-space: nowrap; cursor: pointer;">Go to A &darr;</span>
+      </div>
+      <div class="abs sec" style="left: 56px; top: 238px;"><span class="letter">Today</span><h2>The strip is dark, and the wall says it is on</h2></div>
+      <div class="fig" style="left: 56px; top: 280px;">
+        <div class="th " style="width: 620px; height: 388px;"><iframe src="../controller-panel/Today.dc.html" width="1440" height="900" loading="lazy" scrolling="no" style="left: 0.0px; top: 0.2px; transform: scale(0.4306);"></iframe></div>
+        <div class="cap2"><span>Wall &middot; 1440 &times; 900</span><span style="margin-left: auto;"><svg class="i" width="14" height="14" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-8 8M10 5H5v14h14v-5"/></svg>Open alone</span><span><svg class="i" width="14" height="14" viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg>Copy link</span><span><svg class="i" width="14" height="14" viewBox="0 0 24 24"><rect x="3" y="5" width="8" height="14" rx="1.5"/><rect x="13" y="5" width="8" height="14" rx="1.5"/></svg>Beside the panel</span></div>
+      </div>
+      <div class="note" style="left: 712px; top: 280px;">
+        <h3>Drawn from the shipped panel</h3>
+        <p>The mock house&rsquo;s kitchen, card for card where the shipped panel puts them at 1440 &times; 900, at dusk. The Under-cabinet strip reads On, 100%, warm, exactly as it would if it were lit.</p>
+        <p><b>It is not lit.</b> Its controller was moved to a 24 V supply, the guard held the run off at boot, and it has said why every ten seconds since. The hub files a leaf it does not know and does nothing with it. That is exactly the problem: the tile is the hub&rsquo;s memory of what it asked for, and nothing tells it otherwise.</p>
+      </div>
+      <div class="abs sec" style="left: 56px; top: 728px;"><span class="letter">A</span><h2>In the room: the light says it where you reach for it</h2><span class="chip chosen"><i></i>Chosen</span></div>
+      <div class="abs" style="left: 56px; top: 770px;"><div class="th won" style="width: 620px; height: 388px;"><iframe src="../controller-panel/InRoomA.dc.html" width="1440" height="900" loading="lazy" scrolling="no" style="left: 0.0px; top: 0.2px; transform: scale(0.4306);"></iframe></div></div>
+      <div class="fade"></div>
+    </sc-if>
+
+    <sc-if value="{{atA}}">
+      <div class="abs" style="left: 56px; top: 30px; width: 1056px;">
+        <div class="eyebrow">Held dark, and why &middot; direction A of three</div>
+        <div class="sec" style="margin-top: 8px;"><h2 style="font-size: 30px; font-weight: 400; letter-spacing: -.025em;">In the room: the light says it where you reach for it</h2><span class="chip chosen"><i></i>Chosen 1 Oct</span></div>
+      </div>
+      <div class="fig" style="left: 56px; top: 118px;">
+        <div class="th won" style="width: 620px; height: 388px;"><iframe src="../controller-panel/InRoomA.dc.html" width="1440" height="900" loading="lazy" scrolling="no" style="left: 0.0px; top: 0.2px; transform: scale(0.4306);"></iframe></div>
+        <div class="cap2"><span>Wall &middot; 1440 &times; 900</span><span style="margin-left: auto;"><svg class="i" width="14" height="14" viewBox="0 0 24 24"><path d="M14 4h6v6M20 4l-8 8M10 5H5v14h14v-5"/></svg>Open alone</span><span><svg class="i" width="14" height="14" viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1"/><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1"/></svg>Copy link</span><span><svg class="i" width="14" height="14" viewBox="0 0 24 24"><rect x="3" y="5" width="8" height="14" rx="1.5"/><rect x="13" y="5" width="8" height="14" rx="1.5"/></svg>Beside the panel</span></div>
+      </div>
+      <div class="note" style="left: 712px; top: 118px;">
+        <p>The tile stops claiming a state it cannot have. It reads Staying off, with the reason in a few words under it and a small shield where the bulb was, in the lamp color: the strip is being looked after rather than broken.</p>
+        <p><b>The tap.</b> A light that cannot come on cannot honor a tap, so on this one tile a tap opens why instead of doing nothing. Holding opens the same pane, as on every light.</p>
+        <div class="for"><b style="color: var(--ok);">For</b> &mdash; the fault is in the room and so is the fix. No new surface, no new sheet, no new rule about when to interrupt. And it is always true.</div>
+        <div class="against"><b>Against</b> &mdash; it is quiet to the point of hiding. A roofline on a timer is in no room anybody opens, and the first anybody learns of it is a dark house at dusk.</div>
+      </div>
+      <div class="abs sec" style="left: 56px; top: 588px;"><span class="letter">B</span><h2>It is a job, so it goes on Needs a look</h2><span class="chip open">Its row is kept</span></div>
+      <div class="abs" style="left: 56px; top: 630px;"><div class="th " style="width: 620px; height: 388px;"><iframe src="../controller-panel/NeedsLookB.dc.html" width="1440" height="900" loading="lazy" scrolling="no" style="left: 0.0px; top: 0.2px; transform: scale(0.4306);"></iframe></div></div>
+      <div class="note" style="left: 712px; top: 630px;"><p>Needs a look is already the house&rsquo;s list of what it cannot fix by itself, a row each, every row carrying its own acts. A held run is exactly that: something only hands can put right&hellip;</p></div>
+      <div class="fade"></div>
+    </sc-if>
+  </div>
+<div class="try"><span>Theme</span><sc-for list="{{themeFlips}}" as="f"><span class="{{f.cls}}" onClick="{{f.go}}">{{f.label}}</span></sc-for><span style="margin-left: 10px;">Showing</span><sc-for list="{{viewFlips}}" as="f"><span class="{{f.cls}}" onClick="{{f.go}}">{{f.label}}</span></sc-for></div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"theme": {"editor": "enum", "options": ["Auto", "Light", "Dark"], "default": "Dark", "section": "The viewer"}, "view": {"editor": "enum", "options": ["At Today", "At A"], "default": "At Today", "section": "The viewer"}}'>
+
+const VIEWS = ["At Today", "At A"]
+/* A -- INSIDE A COLLECTION. The collection reads as a document, the way the printer-setup page does: an
+   outline down the side made of the canvas's own pages and boards, the decision at the top in a sentence,
+   then each board at a size you can see with its note beside it at a size you can read. The canvas is the
+   Canvas switch in the bar, and c jumps to the same place on it. Flip Showing, or click the outline. */
+class Component extends DCLogic {
+  renderVals() {
+
+    const theme = this.state.theme || this.props.theme || 'Dark'
+    const view = this.state.view || this.props.view || VIEWS[0]
+    const go = (k, v) => () => this.setState({ [k]: v })
+    const flips = (key, cur, opts) => opts.map(o => ({ label: o, cls: o === cur ? 'flip on' : 'flip', go: go(key, o) }))
+    const t = { auto: theme === 'Auto' ? 'on' : '', light: theme === 'Light' ? 'on' : '', dark: theme === 'Dark' ? 'on' : '',
+                toAuto: go('theme', 'Auto'), toLight: go('theme', 'Light'), toDark: go('theme', 'Dark') }
+    const base = { ui: 'ui ' + (theme === 'Light' ? 'light' : 'dark'), t,
+                   themeFlips: flips('theme', theme, ['Auto', 'Light', 'Dark']), viewFlips: flips('view', view, VIEWS) }
+    const atA = view === 'At A'
+    return { ...base, atToday: !atA, atA,
+             itToday: atA ? 'it' : 'it on', itA: atA ? 'it on' : 'it',
+             goToday: go('view', 'At Today'), goA: go('view', 'At A') }
+  }
+}
+</script>
+</body>
+</html>

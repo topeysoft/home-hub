@@ -196,7 +196,7 @@ describe('every device, in every state', () => {
     const busy: Partial<Record<Kind, ArtState>> = {
       camera: { live: true }, doorbell: { live: true }, thermostat: { cooling: true },
       speaker: { playing: true }, tv: { playing: true }, lock: { locked: false },
-      plug: { on: true }, fan: { on: true }, blind: { position: 1 }, vacuum: { on: true },
+      plug: { on: true }, fan: { on: true }, blind: { position: 1 }, vacuum: { on: true }, charger: { on: true },
     }
     for (const kind of KINDS) {
       const idle = LIGHT_KINDS.includes(kind) ? { on: false } : { on: false, live: false, locked: true, position: 0 }
