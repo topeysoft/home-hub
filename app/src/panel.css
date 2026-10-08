@@ -131,8 +131,8 @@
 }
 /* A card that is a picture with a sheet over its foot -- the player, the printer -- is one thing in
    light: the picture stays dark and the sheet is the same light glass, so two of them side by side
-   read as a pair. The printer's sheet was drawn dark for a dark page, and the player's art wore a
-   darkening ramp down to its foot that came through its glass as a dark rim. */
+   read as a pair. The printer's sheet was drawn dark for a dark page. (The player's dark rim was its
+   ::after outweighing glass's; it now wears the rim every card does, further down.) */
 :root[data-shade='light'] .print-sheet {
   border-color: transparent;
   background: var(--glass-sweep, none), var(--glass, var(--surface));
@@ -141,9 +141,6 @@
 }
 :root[data-shade='light'] .print-chip {
   color: var(--ink-lit);
-}
-:root[data-shade='light'] [data-face='glass'] .bento .tile.media::after {
-  background: none;
 }
 /* A room whose picture is what is playing -- album art, blurred into a wash -- is a light card in
    light, like the rooms beside it: the art colors its top and fades into the card where the words
