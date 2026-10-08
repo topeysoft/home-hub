@@ -1,0 +1,113 @@
+{
+  "name": "What you just added",
+  "areas": [
+    "Adding things"
+  ],
+  "pages": [
+    {
+      "id": "ending",
+      "name": "When one add brings several things"
+    }
+  ],
+  "launch": {
+    "view": "canvas",
+    "page": "ending"
+  },
+  "artboards": [
+    {
+      "file": "Today.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "Today — Added., and Put them in rooms drops you in New devices",
+      "page": "ending"
+    },
+    {
+      "file": "OneAtATimeA.dc.html",
+      "x": 1560,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "A — one at a time",
+      "page": "ending"
+    },
+    {
+      "file": "AllAtOnceB.dc.html",
+      "x": 3120,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "B — all on one page",
+      "page": "ending"
+    },
+    {
+      "file": "GuessC.dc.html",
+      "x": 4680,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "C — the house guesses, you check",
+      "page": "ending"
+    },
+    {
+      "file": "JustAdded.dc.html",
+      "x": 1560,
+      "y": 1900,
+      "w": 1440,
+      "h": 900,
+      "title": "Whatever is picked — New devices opens on what was just added",
+      "page": "ending"
+    }
+  ],
+  "annotations": [
+    {
+      "id": "why",
+      "x": -620,
+      "y": 0,
+      "w": 500,
+      "page": "ending",
+      "text": "WHY THIS EXISTS\n\nReported 8 October, adding an Ecobee over HomeKit. It said Added. and offered Put them in rooms. That opened New devices: the whole list, oldest first, with nothing marking what had just arrived and nothing saying what it was called. The thermostat and its sensor were not there at all until a refresh, and then they were at the bottom. The expectation was plain: say which room, right there.\n\nThe decision already exists. design/adding/ settled that EVERY route asks which room at the end, while somebody is still standing next to the thing, and that New devices is for what arrives unwatched. Its ending draws one thing. An add that brings two was never drawn, and the sign-in route -- which every pairing through a thing's own app takes -- sends anything that ends in an account entry to New devices, because an account can bring six lamps.\n\nTHE QUESTION is how beat four asks the rooms of a few things at once. A thermostat and its sensor are two things on purpose: the sensor exists to read ANOTHER room, so it needs its own room. They are said together, as what one add brought, and placed separately.\n\nThe empty list until a refresh is a bug, not a design question, and is fixed on its own (#18)."
+    },
+    {
+      "id": "today",
+      "x": 0,
+      "y": 960,
+      "w": 700,
+      "page": "ending",
+      "text": "TODAY -- DRAWN FROM THE SHIPPED PANEL\n\nThe end of the sign-in route, photographed on the mock brain with a HomeKit pairing staged into it at 1440 x 900: Added., the name of the entry, the promise that its devices arrive over the next minute, and Done or Put them in rooms. app/src/Adding.vue, beat four, the got.many branch -- SignIn.vue emits many on every create_entry without looking at what came in.\n\nThe note on the right is the board's: where the second button goes, and what is not there when it does."
+    },
+    {
+      "id": "a",
+      "x": 1560,
+      "y": 960,
+      "w": 700,
+      "page": "ending",
+      "text": "A -- ONE AT A TIME\n\nThe ending that ships for one thing, once per thing. It's in, what it brought in a sentence, a count, then the thermostat on its own: which room, what to call it, Next. Then the sensor. Leave the rest for later sends what is left to New devices.\n\nFOR: no new screen at all -- the shipped beat four with a counter. Each thing gets the full ending, name included, and a household never sees more than one question.\n\nAGAINST: two things is two screens, and an account with five lamps is five. The sensor's room is the one fact that matters about it and it is a screen away from the thermostat it came with, so the two read as unrelated."
+    },
+    {
+      "id": "b",
+      "x": 3120,
+      "y": 960,
+      "w": 700,
+      "page": "ending",
+      "text": "B -- ALL ON ONE PAGE\n\nEvery new thing is a row: its name, editable, and its rooms as chips beneath. Came with My ecobee heads them. One Done.\n\nFOR: everything one add brought is in sight at once and placed in one go, and the sentence can say what each is. It is the shape New devices already has, at the size of one add, so nothing about it is new to a household that has met New devices.\n\nAGAINST: eight rooms of chips under every row is a lot of chips; two rows fit, four nearly fill the sheet, and past that it has to hand over to New devices anyway. Every row asks, even the ones whose names already say where they are."
+    },
+    {
+      "id": "c",
+      "x": 4680,
+      "y": 960,
+      "w": 700,
+      "page": "ending",
+      "text": "C -- THE HOUSE GUESSES, YOU CHECK\n\nB, with the house's own reasoning first. hub/suggest.py already reads a room's name inside a device's name: an Ecobee sensor called Bedroom is placed in the Bedroom, said in one line with Change beside it. Only what nothing places is asked -- here, the thermostat, which is called My ecobee.\n\nFOR: the shortest ending for the common case. A household that named its sensors in the Ecobee app does not name them again, and the one real question is the only thing on screen. It is the suggestion New devices already shows, used at the moment it is most likely to be right.\n\nAGAINST: a guess placed without a tap is a small thing done on a person's behalf. It is undoable from the row and said in plain words, but it is the one direction where the house moves something before being told. When nothing is guessable -- Hue lamp 1, 2, 3 -- it is B."
+    },
+    {
+      "id": "shared",
+      "x": 1560,
+      "y": 2860,
+      "w": 700,
+      "page": "ending",
+      "text": "WHATEVER IS PICKED\n\nThe sign-in route stops sending a small add to New devices: it waits for what came in, as the code and press routes already do (adding.ts, whatArrived), and puts it on this screen. Past what fits on one screen -- four things -- New devices takes over, and opens on what was just added, grouped under what brought it, with the rows that were already waiting below and quieter. Until the things arrive it says Arriving rather than showing a list without them."
+    }
+  ]
+}
