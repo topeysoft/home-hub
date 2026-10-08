@@ -1,0 +1,81 @@
+{
+  "name": "A second screen for a house that has a hub",
+  "areas": ["Wall screens", "First run"],
+  "pages": [
+    { "id": "join", "name": "Joining a house" },
+    { "id": "after", "name": "After it joins, in any direction" }
+  ],
+  "artboards": [
+    { "file": "Today.dc.html", "x": 0, "y": 0, "w": 1440, "h": 900, "title": "Today — the wall builds a second house; the tablet knows only an address", "page": "join" },
+    { "file": "AskA.dc.html", "x": 1560, "y": 0, "w": 1440, "h": 900, "title": "A — it asks, with the house it found", "page": "join" },
+    { "file": "JoinB.dc.html", "x": 0, "y": 1300, "w": 1440, "h": 900, "title": "B — it joins the house it finds; the passcode is the only question", "page": "join" },
+    { "file": "WhereC.dc.html", "x": 1560, "y": 1300, "w": 1440, "h": 900, "title": "C — B, then it asks which room it hangs in", "page": "join" },
+    { "file": "After.dc.html", "x": 0, "y": 0, "w": 1440, "h": 900, "title": "After — the hub out of reach, a new hub, and the screens on The hub", "page": "after" }
+  ],
+  "annotations": [
+    {
+      "id": "why",
+      "page": "join",
+      "x": -620,
+      "y": 0,
+      "w": 500,
+      "text": "WHY THIS EXISTS\n\nA household with a hub in the closet (a Pi 5, or better a NUC) and a wall screen in the hallway wants the wall to be the house's screen, not a second house. The wall unit can run everything itself, and today it does: firstboot.sh installs the whole hub whenever a screen is plugged in, and wall.sh opens localhost.\n\nOne home engine per house. Every other unit is a screen for it, and lends the hub what it has that the hub does not: a microphone, a presence sensor, a light sensor, a Thread radio, Bluetooth ears. Speech and everything heavy runs on the hub, which is the large tier by design.\n\nThis page is about the one moment that decides which a unit is: the first time it is switched on. The next page draws what follows, which is the same whichever direction is picked here."
+    },
+    {
+      "id": "behind",
+      "page": "join",
+      "x": -620,
+      "y": 760,
+      "w": 500,
+      "text": "WHAT HAPPENS BEHIND EVERY DIRECTION\n\nThe wall LOOKS BEFORE IT BUILDS. On first boot it searches the Wi-Fi for _home-hub._tcp before starting the home engine, and checks each answer with /phones/me, as the tablet's Finder already does. The question on screen is asked only after that search.\n\nJoined, it runs almost nothing: the startup splash, cage and Chromium pointed at the hub, and a small helper that reports its sensors over MQTT the way the puck does. No home engine, no brain, no drivers -- so it can never read the house and try to provision anything.\n\nIt announces itself as a screen (_home-hub-screen._tcp, hallway-screen.local), never as hub, which ends the hub-2 clash. It is found again by the hub's id, not its name, so a rename or a new IP is not a lost house.\n\nIt holds its own long-lived pass (a new kind beside code, wall and setup in phones.py) on disk, not only in a browser cookie, and it cannot let other phones in: a shared screen is not a person.\n\nIts own system follows the hub's version, so a household has one thing to keep up to date."
+    },
+    {
+      "id": "today",
+      "page": "join",
+      "x": 0,
+      "y": 940,
+      "w": 1440,
+      "text": "TODAY. Left: a wall unit switched on for the first time, in a house whose hub is already running. It offers to set the house up from scratch, and underneath it a second home engine is starting. Right: the tablet, the one screen that is already just a screen, when the hub stops answering. Neither can say which house it belongs to, and the hub has no list of its screens."
+    },
+    {
+      "id": "a",
+      "page": "join",
+      "x": 1560,
+      "y": 940,
+      "w": 1440,
+      "text": "A — IT ASKS. First run's own welcome, with the house it found as the answer it expects: Maple Court, set up by Jordan, six rooms, one button. Starting a new house is still there, one line below. With two houses on the Wi-Fi (a flat over the garage) it lists both and neither is preferred. With none it is today's welcome, plus one line saying why.\n\nFOR: nothing happens that the person did not choose, and the screen they see first is the one first run already has.\n\nAGAINST: it asks a question most people cannot answer -- 'use this screen with it' presumes they know what a hub is. A wrong tap on the small line still builds a second house."
+    },
+    {
+      "id": "b",
+      "page": "join",
+      "x": 0,
+      "y": 2240,
+      "w": 1440,
+      "text": "B — IT JOINS. Finding the house IS the answer. The screen says whose it is and asks the one thing a new screen has always had to give: the house passcode, or a yes from a phone or another screen (both exist today, in phones.py). A house with no passcode opens straight away. Starting a separate house is a link at the bottom for the rare unit that is meant to be one.\n\nFOR: the fewest decisions, and the only question is one the household already knows the answer to. This is closest to how a second speaker joins a speaker system.\n\nAGAINST: the screen opens wherever the panel opens, and its room is set later on The hub, so the sensor counts for nothing until somebody does."
+    },
+    {
+      "id": "c",
+      "page": "join",
+      "x": 1560,
+      "y": 2240,
+      "w": 1440,
+      "text": "C — B, THEN THE ROOM. Joins exactly as B does, then asks the one question a screen in a house actually needs: which room. The rooms are the house's own, with what is in each, and the one that already has a screen says so. The room decides the page it opens on and where its presence counts.\n\nThe room comes after the passcode, never before it, so a device on the Wi-Fi without the passcode never sees the house's rooms.\n\nFOR: the screen is useful the moment it opens, and the question is about the house, not about hubs.\n\nAGAINST: one more screen before it works, and a tablet propped on a counter has no room to give (Somewhere new, or skip, answers it)."
+    },
+    {
+      "id": "pick",
+      "page": "join",
+      "x": 3120,
+      "y": 0,
+      "w": 500,
+      "text": "THE QUESTION\n\nA, B or C -- or something else, described.\n\nMy lean is C: B's 'the find is the answer', and the room, because a screen that knows its room is what makes the wall feel like part of the house rather than a browser on a wall."
+    },
+    {
+      "id": "after-note",
+      "page": "after",
+      "x": 0,
+      "y": 940,
+      "w": 1440,
+      "text": "AFTER IT JOINS — the same whichever of A, B or C is picked, drawn so the whole of it can be judged, not offered as a choice yet. Flip the chips.\n\nTHE HUB OUT OF REACH. The house as it last was, hushed, and one card: which hub, since when, that it comes back by itself, and what to check. Never the browser's words. This screen's own Restart stays on This screen, because restarting the glass is not restarting the house (docs/restart.md).\n\nA NEW HUB. The upgrade path: the house started on the wall, then a NUC was bought and the backup brought over with first run's 'Moving from another hub?'. The new hub tells the old one it now holds this house (same house id), and the wall offers to step down to a screen. Reverse is 'Make this the hub' on This screen, the same backup and restore.\n\nSCREENS, ON THE HUB. Each screen with its room and how it is; tap one to rename it, move it to another room, or forget it. Below them, what the screens lend the house, in plain words.\n\nNOT DRAWN, ON PURPOSE: a screen that keeps a standby copy of the house running in case the hub dies. Two home engines driving the same lights is the bug this collection exists to remove. If a spare is wanted later, it is a copy of the nightly backup that takes over only when asked."
+    }
+  ]
+}
