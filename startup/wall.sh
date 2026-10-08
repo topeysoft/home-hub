@@ -37,6 +37,17 @@ scale() {
     s = l / 1440; if (t / 900 < s) s = t / 900; if (s <= 0) s = 1; printf "%.4f", s }'
 }
 
+# A wall is touched, not pointed at, but cage draws an arrow whenever a mouse is plugged in -- one used once to set
+# the unit up is enough. The panel hides the browser's own pointer; this hides cage's, with a theme in which every
+# cursor is a single transparent pixel (an Xcursor file: header, one table entry, one 1x1 image).
+hidden_cursor() {
+  local dir="${XDG_RUNTIME_DIR:-$HOME}/elyir-cursor/hidden/cursors" name
+  mkdir -p "$dir"
+  printf 'Xcur\x10\0\0\0\0\0\x01\0\x01\0\0\0\x02\0\xfd\xff\x18\0\0\0\x1c\0\0\0\x24\0\0\0\x02\0\xfd\xff\x18\0\0\0\x01\0\0\0\x01\0\0\0\x01\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0' > "$dir/default"
+  for name in left_ptr arrow pointer hand1 hand2 text xterm grab grabbing not-allowed wait progress; do ln -sf default "$dir/$name"; done
+  export XCURSOR_PATH="${dir%/hidden/cursors}" XCURSOR_THEME=hidden XCURSOR_SIZE=24
+}
+
 browser() {
   local b
   for b in chromium chromium-browser; do command -v "$b" >/dev/null 2>&1 && { echo "$b"; return; }; done
@@ -53,6 +64,7 @@ case "${1:-}" in
       plymouth quit --retain-splash || true
     fi ;;
   run)
+    hidden_cursor
     # cage runs this script again inside itself, so the display can be scaled before the browser starts.
     exec cage -- "$0" browse "${ELYIR_SCALE:-$(scale)}" ;;
   browse)

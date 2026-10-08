@@ -9049,6 +9049,12 @@ select.input {
     rgba(12, 13, 16, 0.88)
   );
 }
+/* On glass the ::after above is every card's rim (the masked 1.4px edge near the top of this sheet), and this
+   media rule outweighs that one, so it painted the TV card's rim with its dark gradient: invisible on the dark
+   look, two dark lines down the card on the light one. Glass gets the rim it gives every other card. */
+[data-face='glass'] .bento .tile.media::after {
+  background: var(--glass-rim);
+}
 .bento .tile.media .media-art {
   position: absolute;
   inset: 0;
@@ -13997,4 +14003,20 @@ html[data-wall-keys] .shell {
 .shell[data-held] .say-orb .orb-cool,
 .shell[data-held] .say-orb .orb-warm {
   animation-play-state: paused;
+}
+
+/* The wall is touched, not pointed at: a mouse plugged in for setting it up shows no arrow on the panel. */
+html[data-wall],
+html[data-wall] * {
+  cursor: none !important;
+}
+
+/* Whatever is scrolling on the wall drops its frost until it stops (App.vue): glass moving under a finger is the
+   one thing the wall's GPU cannot redraw at 60 fps, and in motion the difference cannot be seen. */
+html[data-wall] [data-moving] *,
+html[data-wall] [data-moving] *::before,
+html[data-wall] [data-moving] *::after {
+  /* the standard property only: with the -webkit- one beside it the build's minifier keeps just the prefixed
+     copy, which this Chromium ignores, and the rule ships empty */
+  backdrop-filter: none !important;
 }

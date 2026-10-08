@@ -40,3 +40,28 @@ test('a phone or tablet is never held', async ({ page }) => {
   await expect(page.locator('.shell[data-held]')).toHaveCount(0)
   await expect.poll(() => skyMoves(page)).toBe(true)
 })
+
+test('on the wall, a strip drops its frost while it scrolls and gets it back when it stops', async ({ page }) => {
+  await page.goto('/?wall=1&at=22:30')
+  const [before, during, after] = await page.locator('.bento').evaluate(async (el) => {
+    const frosted = () => [...el.querySelectorAll('*')].filter((n) => getComputedStyle(n).backdropFilter !== 'none').length
+    const first = frosted()
+    let mid = -1
+    el.addEventListener('scroll', () => { if (mid < 0) mid = frosted() }, { once: true })
+    const ended = new Promise((r) => el.addEventListener('scrollend', r, { once: true }))
+    el.scrollBy({ left: 600 })
+    await ended
+    await new Promise((r) => requestAnimationFrame(r))
+    return [first, mid, frosted()]
+  })
+  expect(before).toBeGreaterThan(0)
+  expect(during).toBe(0)
+  expect(after).toBe(before)
+})
+
+test('the wall is touched, not pointed at: no pointer arrow', async ({ page }) => {
+  await page.goto('/?wall=1&at=22:30')
+  expect(await page.locator('.bento').evaluate((el) => getComputedStyle(el).cursor)).toBe('none')
+  await page.goto('/?at=22:30')
+  expect(await page.locator('.bento').evaluate((el) => getComputedStyle(el).cursor)).not.toBe('none')
+})

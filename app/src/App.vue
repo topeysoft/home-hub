@@ -80,6 +80,31 @@ const ambient = computed(() => store.sky.elevation < -8 ? 'night' : store.sky.el
 const params = new URLSearchParams(location.search)
 // The wall unit has no keyboard of its own, so the panel brings one there and nowhere else (design/keyboard/, C).
 const wall = onWall()
+if (wall) {
+  document.documentElement.dataset.wall = ''
+  /* Frosted cards under a moving finger are more blur than the wall's GPU can redraw: a Pi 5 dropped about half the
+     frames of a swipe, and 5% with no frost. So whatever is scrolling loses its frost while it moves and gets it back
+     when it stops -- in motion the difference cannot be seen, still it is the same glass. */
+  // Taken off as the finger lands on a strip that can scroll, so the first frames of a swipe are already light;
+  // a tap that never scrolled has it back on lift-off.
+  const scroller = (el: EventTarget | null) => {
+    for (let n = el instanceof Element ? el : null; n; n = n.parentElement)
+      if (n instanceof HTMLElement && n.scrollWidth > n.clientWidth + 1 && /auto|scroll/.test(getComputedStyle(n).overflowX)) return n
+    return null
+  }
+  let held: HTMLElement | null = null, scrolled = false
+  document.addEventListener('pointerdown', (e) => {
+    if (e.pointerType !== 'touch') return
+    held = scroller(e.target); scrolled = false
+    if (held) held.dataset.moving = ''
+  }, { capture: true, passive: true })
+  document.addEventListener('pointerup', () => { if (held && !scrolled) delete held.dataset.moving; held = null }, { capture: true, passive: true })
+  document.addEventListener('scroll', (e) => {
+    if (!(e.target instanceof HTMLElement)) return
+    scrolled = true; e.target.dataset.moving = ''
+  }, { capture: true, passive: true })
+  document.addEventListener('scrollend', (e) => { if (e.target instanceof HTMLElement) delete e.target.dataset.moving }, { capture: true, passive: true })
+}
 const toneParam = params.get('tone'), layoutParam = params.get('layout')
 
 /* The house's feel, which is what the Look page actually writes: one of three,
