@@ -1182,6 +1182,7 @@ async def forget_device(device_id: str):
     if not dev: raise HTTPException(404, "unknown device")
     name = dev.name
     entries: list[str] = []
+    kept_by = ""
     try:
         if dev.hw:
             rows = await hub.ha.send("config/device_registry/list") or []
@@ -1207,8 +1208,18 @@ async def forget_device(device_id: str):
             else:
                 entries = list((row or {}).get("config_entries") or [])
                 if not entries: raise RuntimeError("nothing owns it")
-                for entry in entries:
-                    await hub.ha.send("config/device_registry/remove_config_entry_from_device", device_id=dev.hw, config_entry_id=entry)
+                try:
+                    for entry in entries:
+                        await hub.ha.send("config/device_registry/remove_config_entry_from_device", device_id=dev.hw, config_entry_id=entry)
+                except Exception as e:
+                    # Some accounts never let one thing go (Nest has no way to), and the only door left
+                    # took everything else on the account with it: a thermostat taken off the wall
+                    # could not leave without the cameras. Switched off in the registry, it leaves
+                    # every screen, routine and command, and the account keeps it until the maker's
+                    # own app lets it go. Reported 7 October.
+                    log.info("%s will not leave %s on its own (%s); switching it off instead", device_id, entries, e)
+                    await hub.ha.send("config/device_registry/update", device_id=dev.hw, disabled_by="user")
+                    kept_by = await _account_named(entries)
         else:
             await hub.ha.send("config/entity_registry/remove", entity_id=dev.id)
     except HTTPException:
@@ -1218,7 +1229,7 @@ async def forget_device(device_id: str):
         raise HTTPException(502, f"{name} cannot be removed on its own. "
                                  f"It goes when {await _account_named(entries)} is removed, from What this house has.")
     hub.log.add("home", dev.id, dev.room_id, "forgotten", source="user", detail={"name": name})
-    return {"ok": True}
+    return {"ok": True, "kept_by": kept_by} if kept_by else {"ok": True}
 
 
 async def _account_named(entries: list[str]) -> str:
