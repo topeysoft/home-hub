@@ -39,13 +39,15 @@ scale() {
 
 # A wall is touched, not pointed at, but cage draws an arrow whenever a mouse is plugged in -- one used once to set
 # the unit up is enough. The panel hides the browser's own pointer; this hides cage's, with a theme in which every
-# cursor is a single transparent pixel (an Xcursor file: header, one table entry, one 1x1 image).
+# cursor is a single transparent pixel (an Xcursor file: header, one table entry, one 1x1 image). It has to be the
+# theme called "default": cage asks for that one by name and ignores XCURSOR_THEME, and only XCURSOR_PATH says
+# where to look.
 hidden_cursor() {
-  local dir="${XDG_RUNTIME_DIR:-$HOME}/elyir-cursor/hidden/cursors" name
+  local dir="${XDG_RUNTIME_DIR:-$HOME}/elyir-cursor/default/cursors" name
   mkdir -p "$dir"
   printf 'Xcur\x10\0\0\0\0\0\x01\0\x01\0\0\0\x02\0\xfd\xff\x18\0\0\0\x1c\0\0\0\x24\0\0\0\x02\0\xfd\xff\x18\0\0\0\x01\0\0\0\x01\0\0\0\x01\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0' > "$dir/default"
   for name in left_ptr arrow pointer hand1 hand2 text xterm grab grabbing not-allowed wait progress; do ln -sf default "$dir/$name"; done
-  export XCURSOR_PATH="${dir%/hidden/cursors}" XCURSOR_THEME=hidden XCURSOR_SIZE=24
+  export XCURSOR_PATH="${dir%/default/cursors}" XCURSOR_THEME=default XCURSOR_SIZE=24
 }
 
 browser() {
