@@ -145,6 +145,15 @@
 :root[data-shade='light'] [data-face='glass'] .bento .tile.media::after {
   background: none;
 }
+/* A room whose picture is what is playing -- album art, blurred into a wash -- is a light card in
+   light, like the rooms beside it: the art colors its top and fades into the card where the words
+   are. A camera's frame is a photograph and stays dark (the list above). */
+:root[data-shade='light'] .room-cell.shot:has(> .room-cell-art) .room-cell-veil {
+  background: linear-gradient(rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.6) 46%, rgba(255, 255, 255, 0.92) 100%);
+}
+:root[data-shade='light'] .room-cell.shot:has(> .room-cell-art) :is(.room-cell-chip, .room-cell-knob, .room-cell-pill) {
+  background: rgba(var(--wash-rgb), 0.08);
+}
 /* the resting clock is dark type on a light sky: a dark halo behind it only smudges it */
 :root[data-shade='light'] .idle {
   text-shadow: 0 1px 30px rgba(255, 255, 255, 0.55);
@@ -159,7 +168,7 @@
     .viewer,
     .rig-still,
     .finder,
-    .room-cell.shot,
+    .room-cell.shot:not(:has(> .room-cell-art)),
     .shell:not([data-face='glass']) .bento .tile.media,
     .room-share-card,
     .ask-pane .opened-panel
@@ -9880,11 +9889,11 @@ select.input {
   background: rgba(255, 236, 200, 0.9);
 }
 /* lamplight drawn in cream reads on a dark card and vanishes on a pale one */
-:root[data-shade='light'] .room-cell.lit:not(.shot) .room-cell-mark,
-:root[data-shade='light'] .room-cell:not(.shot) .room-cell-lamp svg {
+:root[data-shade='light'] .room-cell.lit:not(.shot:not(:has(> .room-cell-art))) .room-cell-mark,
+:root[data-shade='light'] .room-cell:not(.shot:not(:has(> .room-cell-art))) .room-cell-lamp svg {
   color: var(--lamp-text);
 }
-:root[data-shade='light'] .room-cell:not(.shot) .room-cell-bar i {
+:root[data-shade='light'] .room-cell:not(.shot:not(:has(> .room-cell-art))) .room-cell-bar i {
   background: var(--lamp);
 }
 
