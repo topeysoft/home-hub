@@ -5,10 +5,17 @@
    Its shape follows the field: digits get a keypad, the command box gets letters with the house's completions
    above them, anything else gets letters. Keys.vue draws it; these are the parts a test can hold. */
 
+import { isScreen } from './screen'
+
 export type Shape = 'pad' | 'letters' | 'command'
 
-// The wall says so when it opens the panel (startup/wall.sh), and nothing else does.
-export const onWall = (search = location.search) => new URLSearchParams(search).get('wall') === '1'
+/* Worked out, not told: a wall screen (?screen=1, which the panel remembers) in a browser that has no keyboard of its
+   own -- Chromium on Linux, which is the wall unit, and not Android or ChromeOS, which bring their own. The tablet
+   kiosk is a screen too and keeps Android's; a laptop on Linux is not a screen. ?wall=1 forces it, for previews. */
+export function onWall(search = location.search, ua = navigator.userAgent, screen = isScreen(search)): boolean {
+  if (new URLSearchParams(search).get('wall') === '1') return true
+  return screen && /\bLinux\b/.test(ua) && !/Android|CrOS/.test(ua)
+}
 
 const TEXT = new Set(['text', 'search', 'password', 'email', 'url', 'tel', 'number', ''])
 export function typable(el: Element | null): el is HTMLInputElement | HTMLTextAreaElement {

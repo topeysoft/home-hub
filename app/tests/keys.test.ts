@@ -15,11 +15,24 @@ const input = (attrs: Record<string, string> = {}, value = '') => {
 }
 
 describe('only on the wall', () => {
-  it('is mounted when the wall opens the panel saying so, and nowhere else', () => {
-    expect(onWall('?wall=1')).toBe(true)
-    expect(onWall('?wall=1&room=kitchen')).toBe(true)
-    expect(onWall('')).toBe(false)
-    expect(onWall('?setup=1')).toBe(false)
+  const LINUX = 'Mozilla/5.0 (X11; Linux aarch64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36'
+  const ANDROID = 'Mozilla/5.0 (Linux; Android 14; SM-X200) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36'
+  const CROS = 'Mozilla/5.0 (X11; CrOS x86_64 14541.0.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36'
+  const IPAD = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Safari/605.1.15'
+  it('is worked out: a wall screen in Chromium on Linux, which has no keyboard of its own', () => {
+    expect(onWall('', LINUX, true)).toBe(true)
+  })
+  it('not on a screen that brings its own keyboard: the Android kiosk, a Chromebook, an iPad', () => {
+    expect(onWall('', ANDROID, true)).toBe(false)
+    expect(onWall('', CROS, true)).toBe(false)
+    expect(onWall('', IPAD, true)).toBe(false)
+  })
+  it('not on a laptop that runs Linux but is not a wall screen', () => {
+    expect(onWall('', LINUX, false)).toBe(false)
+  })
+  it('?wall=1 forces it, for previews', () => {
+    expect(onWall('?wall=1', IPAD, false)).toBe(true)
+    expect(onWall('?setup=1', IPAD, false)).toBe(false)
   })
 })
 

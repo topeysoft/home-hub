@@ -264,7 +264,7 @@ Do not reopen these, and do not propose around them.
   are shared frame for frame; a product brings where the dot lands and when it is ready. `startup/`,
   pinned to the board by `startup/startup.test.mjs`.
 - **The wall brings its own keyboard, shaped to the field** (7 October, `design/keyboard/`, C). The wall unit's
-  Linux has none, so the panel draws one there and only there (`?wall=1`, which `startup/wall.sh` passes); phones
+  Linux has none, so the panel draws one there and only there (worked out, not passed in: a wall screen in Chromium on Linux, `onWall` in `keys.ts`; `?wall=1` only forces it for previews); phones
   and tablets keep theirs. Docked along the bottom on the panel's glass, the page moving up just far enough: a
   keypad for digits, letters otherwise, and for the command box letters with the house's own completions above
   them -- every one a sentence the grammar runs, never a guess. `app/src/Keys.vue`, `keys.ts`,

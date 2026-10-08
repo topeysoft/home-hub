@@ -68,6 +68,19 @@ if screen_here && [ "${HUB_ROLE:-}" != hub ]; then
     # Its own name on the network, never the hub's. avahi makes a second one screen-2.
     hostnamectl set-hostname screen 2>/dev/null || echo screen > /etc/hostname
     sed -i "s/127\.0\.1\.1.*/127.0.1.1\tscreen/" /etc/hosts 2>/dev/null || true
+    # A unit that was a hub before stops being one: nothing may bring its house back (the watchdog does,
+    # every few minutes), and nothing may announce it as a hub, or another screen could join it.
+    if systemctl list-unit-files 'home-hub-*' >/dev/null 2>&1; then
+      # shellcheck disable=SC2046
+      systemctl disable --now $(systemctl list-unit-files 'home-hub-*.timer' 'home-hub-*.path' --no-legend 2>/dev/null | awk '{print $1}') >/dev/null 2>&1 || true
+    fi
+    if [ -f "$DIR/driver-layer/docker-compose.yml" ] && command -v docker >/dev/null 2>&1; then
+      (cd "$DIR/driver-layer" && docker compose down >/dev/null 2>&1) || true
+    fi
+    if [ -f "${HUB_AVAHI:-/etc/avahi/services}/home-hub.service" ]; then
+      rm -f "${HUB_AVAHI:-/etc/avahi/services}/home-hub.service"
+      systemctl reload-or-restart avahi-daemon >/dev/null 2>&1 || true
+    fi
     set_conf HUB_ROLE screen
     set_conf ELYIR_READY_URL "$HUB/alive"
     set_conf ELYIR_PANEL_URL "$HUB/?screen=1"
