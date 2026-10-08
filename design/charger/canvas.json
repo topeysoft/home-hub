@@ -99,7 +99,7 @@
    "y": 1400,
    "w": 500,
    "page": "charger",
-   "text": "TO PICK\n\nA, B or C, or something else, described in words. A with C's line is a real option: a card to check, and a line on Home while it charges. B is the floor whichever is picked: an add that succeeds and leads nowhere should never say only Added."
+   "text": "DECIDED 8 OCTOBER 2026 -- A, WITH C'S LINE\n\nA card in the garage that says Charging, Plugged in or Ready, with the power while it charges and nothing to tap; and while the car charges, a line in Home's band and the garage's: The car is charging, with the power.\n\nB stays the floor for anything else that arrives with only readings: an add that succeeds and leads nowhere should never say only Added."
   }
  ],
  "reading": [
@@ -113,5 +113,9 @@
   "BandC.dc.html",
   "c",
   "pick"
- ]
+ ],
+ "decided": {
+  "on": "2026-10-08",
+  "chose": "A, with C's line"
+ }
 }
