@@ -136,7 +136,7 @@
     <div class="name">Ceiling light</div><div class="val">On, 35%</div><div class="lvl"><i></i></div></div>
   <div class="card strip glass"><div class="sw"></div></div>
   <div class="orb"></div>
-  <div class="family">Temi and Ade are home <b>Family</b><span class="av"><i style="background:#8a7560">T</i><i style="background:#6a5448">S</i><i style="background:#5f7f72">A</i><i style="background:rgba(255,255,255,.14)">+</i></span></div>`
+  <div class="family">Jordan and Alex are home <b>Family</b><span class="av"><i style="background:#8a7560">T</i><i style="background:#6a5448">S</i><i style="background:#5f7f72">A</i><i style="background:rgba(255,255,255,.14)">+</i></span></div>`
 
   /* Today's sky, simplified from Sky.vue to what a board needs to compare against: the
      hour's three bands, stars after dark, the low sun at dusk, and the ground. */

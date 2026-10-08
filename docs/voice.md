@@ -187,7 +187,7 @@ Lite) and talk Wyoming, so they plug into shape 2 as they are, and a phone or a 
 
 The wake word is the part to be careful about. On-device wake words (microWakeWord on the ESP32, openWakeWord on
 the hub) mean nothing leaves the room until the word is heard, which is the only acceptable arrangement; and the word
-should be the house's own name from setup ("Hey, Nadine's house") only if the model can be trained for it cheaply,
+should be the house's own name from setup ("Hey, Robin's house") only if the model can be trained for it cheaply,
 otherwise one of the stock words. Pairing a satellite is the same conversation as pairing a radio device: *Add a device →
 a voice box → plug it in; the hub finds it*. Its room is chosen on the New devices screen like anything else, and that
 room becomes the default for "lights off" said there, exactly as `room` does for the command box today.

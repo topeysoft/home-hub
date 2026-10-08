@@ -100,7 +100,7 @@ async function finish() {
 }
 const firstRoom = computed(() => (store.rooms.find(r => r.id !== 'unassigned' && r.devices.some(d => d.capability === 'light')) ?? store.rooms.find(r => r.id !== 'unassigned'))?.name ?? 'Kitchen')
 const firstName = computed(() => (status.value?.owner || name.value || '').split(' ')[0])
-const readyLine = computed(() => {   // "Nadine's house is ready." or "Home is ready, Nadine."; never the name twice
+const readyLine = computed(() => {   // "Robin's house is ready." or "Home is ready, Robin."; never the name twice
   const h = store.homeName || 'Home', f = firstName.value
   return f && !h.toLowerCase().includes(f.toLowerCase()) ? `${h} is ready, ${f}.` : `${h} is ready.`
 })
@@ -183,7 +183,7 @@ async function saveCode() {
         <p class="setup-step">{{ step }}</p>
         <h1 class="display">First, a couple of names.</h1>
         <p class="setup-lede">Yours, so the house can greet you, and one for the house itself.</p>
-        <label class="field"><span class="field-label">Your name</span><input class="input" v-model="name" autocomplete="given-name" autocapitalize="words" placeholder="Nadine" @keydown.enter="saveOwner" /></label>
+        <label class="field"><span class="field-label">Your name</span><input class="input" v-model="name" autocomplete="given-name" autocapitalize="words" placeholder="Robin" @keydown.enter="saveOwner" /></label>
         <label class="field"><span class="field-label">A name for the house</span><input class="input" v-model="home" autocapitalize="words" :placeholder="name.trim() ? `${name.trim().split(' ')[0]}'s house` : 'Home'" @keydown.enter="saveOwner" /></label>
         <p class="error" v-if="error">{{ error }}</p>
         <div class="setup-actions"><button class="button big" :class="{ busy }" @click="saveOwner">Continue</button></div>

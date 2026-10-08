@@ -9,7 +9,7 @@
  * nothing they could act on, because from out here the way in does not exist (docs/away.md, piece 2).
  *
  * For a phone the house knows it is also a wait, not a dead end (design/away/, NamedC-out): Sam at the
- * airport asks, Temi picks Anywhere for it on People, and this screen opens by itself -- it asks again
+ * airport asks, Jordan picks Anywhere for it on People, and this screen opens by itself -- it asks again
  * every few seconds, and the moment the answer is yes the house loads. Anyone else has nothing to wait for,
  * so nothing is asked again. There is nothing to tap either way.
  */
