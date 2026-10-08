@@ -129,6 +129,22 @@
 :root[data-shade='light'] .house-veil {
   background: oklch(0.4 0.04 265 / 0.22);
 }
+/* A card that is a picture with a sheet over its foot -- the player, the printer -- is one thing in
+   light: the picture stays dark and the sheet is the same light glass, so two of them side by side
+   read as a pair. The printer's sheet was drawn dark for a dark page, and the player's art wore a
+   darkening ramp down to its foot that came through its glass as a dark rim. */
+:root[data-shade='light'] .print-sheet {
+  border-color: transparent;
+  background: var(--glass-sweep, none), var(--glass, var(--surface));
+  backdrop-filter: blur(var(--glass-blur, 26px)) saturate(var(--glass-sat, 1.4)) brightness(var(--glass-br, 1.03));
+  box-shadow: var(--glass-inner, none), var(--glass-drop, none);
+}
+:root[data-shade='light'] .print-chip {
+  color: var(--ink-lit);
+}
+:root[data-shade='light'] [data-face='glass'] .bento .tile.media::after {
+  background: none;
+}
 /* the resting clock is dark type on a light sky: a dark halo behind it only smudges it */
 :root[data-shade='light'] .idle {
   text-shadow: 0 1px 30px rgba(255, 255, 255, 0.55);
@@ -143,7 +159,6 @@
     .viewer,
     .rig-still,
     .finder,
-    .print-card,
     .room-cell.shot,
     .shell:not([data-face='glass']) .bento .tile.media,
     .room-share-card,
