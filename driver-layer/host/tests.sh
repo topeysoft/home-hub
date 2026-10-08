@@ -443,22 +443,32 @@ finding() {
 #!/usr/bin/env bash
 printf '%s\n' "$ANNOUNCED"
 SH
+  # A hub's front door answers only the names it was installed with (driver-layer/caddy/Caddyfile):
+  # HUBS is the list of them; anything else gets Caddy's empty page.
   cat > "$bin/curl" <<'SH'
 #!/usr/bin/env bash
 for a in "$@"; do case "$a" in http://*) url=$a ;; esac; done
-case " $HUBS " in *" ${url%/phones/me} "*) echo '{"locked": true, "paired": false, "home": "Maple Court"}' ;; *) exit 22 ;; esac
+case " $HUBS " in *" ${url%/phones/me} "*) echo '{"locked": true, "paired": false, "home": "Maple Court"}' ;; *) exit 0 ;; esac
 SH
-  printf '#!/usr/bin/env bash\necho "$MINE"\n' > "$bin/hostname"
+  printf '#!/usr/bin/env bash\n[ "$1" = -I ] && echo "$MINE" || echo "$NAME"\n' > "$bin/hostname"
   chmod +x "$bin"/*
-  find_hub() { PATH="$bin:$PATH" FIND_FOR=0 "$HERE/../../startup/find-hub.sh"; }
+  find_hub() { PATH="$bin:$PATH" FIND_FOR=0 NAME="${NAME:-screen}" "$HERE/../../startup/find-hub.sh"; }
 
   local hub='=;eth0;IPv4;hub;_home-hub._tcp;local;hub.local;192.168.1.20;80;"path=/"'
-  is "a hub that answers is found, by its name" "$(ANNOUNCED="$hub" HUBS="http://192.168.1.20" MINE="192.168.1.30" find_hub)" "http://hub.local"
+  is "a hub that answers is found, by its name" "$(ANNOUNCED="$hub" HUBS="http://hub.local http://192.168.1.20" MINE="192.168.1.30" find_hub)" "http://hub.local"
+  is "...asked by its name, because its front door has forgotten the address the router gave it since" \
+    "$(ANNOUNCED="$hub" HUBS="http://hub.local" MINE="192.168.1.30" find_hub)" "http://hub.local"
   ANNOUNCED="" HUBS="" MINE="192.168.1.30" find_hub >/dev/null; is "no hub, and it says so" "$?" "1"
   ANNOUNCED="$hub" HUBS="" MINE="192.168.1.30" find_hub >/dev/null; is "something announcing itself that does not answer like a hub is not one" "$?" "1"
-  is "its own announcement is not another hub" "$(ANNOUNCED="$hub" HUBS="http://192.168.1.20" MINE="192.168.1.20" find_hub)" ""
+  is "its own announcement is not another hub" "$(ANNOUNCED="$hub" HUBS="http://hub.local" MINE="192.168.1.20" find_hub)" ""
+  local self='=;lo;IPv4;hub-2;_home-hub._tcp;local;hub-2.local;127.0.0.1;80;"path=/"'
+  is "...nor is its own name, on loopback" "$(ANNOUNCED="$self" HUBS="http://hub-2.local" MINE="192.168.1.30" NAME=hub-2 find_hub)" ""
+  # A unit installed as a hub once is still called hub, and avahi calls it hub-2: the real hub.local is not it.
+  is "a unit that was once called hub still finds the real one" "$(ANNOUNCED="$hub" HUBS="http://hub.local" MINE="192.168.1.30" NAME=hub find_hub)" "http://hub.local"
   local odd='=;eth0;IPv4;hub;_home-hub._tcp;local;hub.local;192.168.1.20;8300;"path=/"'
-  is "a hub on another port keeps its port" "$(ANNOUNCED="$odd" HUBS="http://192.168.1.20:8300" MINE="" find_hub)" "http://hub.local:8300"
+  is "a hub on another port keeps its port" "$(ANNOUNCED="$odd" HUBS="http://hub.local:8300" MINE="" find_hub)" "http://hub.local:8300"
+  local bare='=;eth0;IPv4;hub;_home-hub._tcp;local;;192.168.1.20;80;"path=/"'
+  is "an announcement with no name is asked by its address" "$(ANNOUNCED="$bare" HUBS="http://192.168.1.20" MINE="" find_hub)" "http://192.168.1.20"
   rm -rf "$root"
 }
 

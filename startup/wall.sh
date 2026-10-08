@@ -73,6 +73,10 @@ case "${1:-}" in
     # The scale is set on the display, not in the browser: Chromium on Wayland draws a forced scale under 1 into a
     # corner of the screen, while a scaled output is simply a bigger screen to it.
     for out in $(wlr-randr 2>/dev/null | awk '/^[^ ]/ { print $1 }'); do wlr-randr --output "$out" --scale "$2" || true; done
+    # Chromium locks its profile under this machine's name and refuses to start, exit 21, when the name has changed
+    # since -- which first boot does, to hub or to screen. Only this service runs a browser as this user, one at a
+    # time, so a lock found here is always left over.
+    rm -f "${XDG_CONFIG_HOME:-$HOME/.config}"/chromium/Singleton{Lock,Cookie,Socket}
     # A desktop browser ignores the panel's user-scalable=no, so a stray two-finger touch would zoom
     # the wall and a sideways swipe would go back a page; both are switched off here instead.
     exec "$(browser)" --kiosk --noerrdialogs --disable-infobars --no-first-run \
