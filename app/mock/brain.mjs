@@ -983,6 +983,18 @@ const bridgeRows = process.env.BRIDGES === 'none' ? [] : [
     res.writeHead(200, { 'Content-Type': 'image/svg+xml' })
     return res.end(svg ?? FAKE_QR)
   }
+  /* The wall keyboard's completions (design/keyboard/, C), the brain's way: the house's own sentences, typed words first. */
+  if (p === '/say/complete') {
+    const typed = (url.searchParams.get('text') || '').toLowerCase().replace(/\s+/g, ' ').trim(), here = url.searchParams.get('room')
+    const all = [...rooms].sort((a, b) => (b.id === here) - (a.id === here)).flatMap((r) => {
+      const n = r.name.toLowerCase(), out = []
+      if (r.devices.some((d) => d.capability === 'light')) out.push(`${n} lights off`, `${n} lights on`, `dim the ${n} lights`)
+      if (r.devices.some((d) => d.capability === 'media' && /tv|roku|chromecast|apple tv/i.test(d.name))) out.push(`movie in the ${n}`, `${n} tv off`)
+      return out
+    }).concat('is anything on?')
+    const hit = (s) => !typed ? 0 : s.startsWith(typed) ? 1 : new RegExp('\\b' + typed.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).test(s) ? 2 : -1
+    return json(res, { sentences: all.map((s, i) => [hit(s), i, s]).filter(([h]) => h >= 0).sort((a, b) => a[0] - b[0] || a[1] - b[1]).map(([, , s]) => s).slice(0, 6) })
+  }
   if (p === '/say' && req.method === 'POST') { let b = ''; req.on('data', c => (b += c)); return req.on('end', () => { let t = ''; try { t = JSON.parse(b).text || '' } catch {}
     if (/^(is|are|what|who|how)\b/i.test(t)) return json(res, { kind: 'answer', text: 'Front door is locked.', said: t })
     /* a look for the roofline, said (design/roofline/SaidC.dc.html): the brain's grammar is fixed, and this

@@ -828,6 +828,13 @@ export type Spoken = { url: string; text: string }
 type Answered = { spoken?: string; speak?: Spoken }
 export const say = (text: string, room?: string | null, spoken = false) =>
   post<Said>('/say', { text, room: room ?? undefined, ...(spoken ? { spoken: true } : {}) })
+/* What the sentence being typed could finish as, in the house's words: the wall keyboard's row above its letters
+   (design/keyboard/, C). Read-only; every sentence is one the grammar runs. */
+export async function complete(text: string, room?: string | null): Promise<string[]> {
+  const q = new URLSearchParams({ text, ...(room ? { room } : {}) })
+  const r = await request(`/say/complete?${q}`); if (!r.ok) return []
+  return (await r.json()).sentences ?? []
+}
 /* Names and rooms for things under New devices: proposed by the house, then the assistant; nothing moves until Use is tapped. */
 export type Suggestion = { id: string; name: string; room: string; why: string; source: 'house' | 'assistant' }
 export async function getSuggestions(): Promise<{ items: Suggestion[]; assistant: boolean }> {

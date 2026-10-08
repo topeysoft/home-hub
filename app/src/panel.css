@@ -131,8 +131,8 @@
 }
 /* A card that is a picture with a sheet over its foot -- the player, the printer -- is one thing in
    light: the picture stays dark and the sheet is the same light glass, so two of them side by side
-   read as a pair. The printer's sheet was drawn dark for a dark page, and the player's art wore a
-   darkening ramp down to its foot that came through its glass as a dark rim. */
+   read as a pair. The printer's sheet was drawn dark for a dark page. (The player's dark rim was its
+   ::after outweighing glass's; it now wears the rim every card does, further down.) */
 :root[data-shade='light'] .print-sheet {
   border-color: transparent;
   background: var(--glass-sweep, none), var(--glass, var(--surface));
@@ -141,9 +141,6 @@
 }
 :root[data-shade='light'] .print-chip {
   color: var(--ink-lit);
-}
-:root[data-shade='light'] [data-face='glass'] .bento .tile.media::after {
-  background: none;
 }
 /* A room whose picture is what is playing -- album art, blurred into a wash -- is a light card in
    light, like the rooms beside it: the art colors its top and fades into the card where the words
@@ -5005,6 +5002,12 @@ select.input {
   font-size: 24px;
   max-width: 260px;
 }
+/* The house's passcode is typed on a wall somebody may be standing behind, so it shows as dots. Masked by
+   the stylesheet rather than type=password, which would have phones offer to save it and suggest a password
+   of letters for a code of digits. A device's sticker code is not a secret and stays readable. */
+.code-input.secret {
+  -webkit-text-security: disc;
+}
 .sheet.code {
   width: min(100%, 440px);
 }
@@ -9145,6 +9148,12 @@ select.input {
     rgba(12, 13, 16, 0.5) 56%,
     rgba(12, 13, 16, 0.88)
   );
+}
+/* On glass the ::after above is every card's rim (the masked 1.4px edge near the top of this sheet), and this
+   media rule outweighs that one, so it painted the TV card's rim with its dark gradient: invisible on the dark
+   look, two dark lines down the card on the light one. Glass gets the rim it gives every other card. */
+[data-face='glass'] .bento .tile.media::after {
+  background: var(--glass-rim);
 }
 .bento .tile.media .media-art {
   position: absolute;
@@ -13971,3 +13980,143 @@ button.reading[data-held] {
 .tile.plain.charger.on .tile-state,
 .tile.plain.charger.on .tile-icon { color: var(--live); }
 .nudge.charging .nudge-icon { background: var(--live); color: #0b2216; }
+
+/* ---------- the wall's keyboard (design/keyboard/, C) ----------
+   Keys.vue, mounted only on the wall unit, which has no keyboard of its own. Docked along the bottom on the panel's
+   glass; the page moves up by --keys-lift so the field stays in view. Sized off the screen's height so a key is a
+   finger at arm's length on a 10-inch wall and still fits a smaller test screen. */
+html[data-wall-keys] .shell {
+  translate: 0 calc(var(--keys-lift, 0px) * -1);
+  transition: translate 0.28s var(--ease);
+}
+.wallkeys {
+  --wk-gap: 10px;
+  --wk-h: clamp(44px, 6.9vh, 72px);
+  --wk-w: min(92px, calc((100vw - 48px - 9 * var(--wk-gap)) / 10));
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 200;
+  padding: 18px 0 22px;
+  background: rgba(var(--surface-rgb), 0.82);
+  backdrop-filter: var(--frost);
+  -webkit-backdrop-filter: var(--frost);
+  border-top: 1px solid var(--edge);
+  border-radius: var(--r-lg) var(--r-lg) 0 0;
+  box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.35);
+  touch-action: none;
+  user-select: none;
+}
+.wallkeys-rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--wk-gap);
+}
+.wallkeys-row {
+  display: flex;
+  justify-content: center;
+  gap: var(--wk-gap);
+}
+.wallkey {
+  flex: 0 0 var(--wk-w);
+  height: var(--wk-h);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--r-sm);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: var(--surface-hi);
+  color: var(--ink);
+  font: inherit;
+  font-size: calc(var(--wk-h) * 0.38);
+}
+.wallkey:active {
+  background: var(--surface-press);
+}
+.wallkey.mod {
+  background: rgba(255, 255, 255, 0.045);
+  color: var(--ink-2);
+  font-size: calc(var(--wk-h) * 0.27);
+}
+.wallkey.mod.on {
+  background: var(--surface-press);
+  color: var(--ink);
+}
+.wallkey.wide {
+  flex-basis: calc(var(--wk-w) * 1.5 + var(--wk-gap) / 2);
+}
+.wallkey.space {
+  flex-basis: calc(var(--wk-w) * 6 + var(--wk-gap) * 5);
+}
+.wallkey.go {
+  background: var(--ink);
+  color: var(--bg);
+  border: 0;
+  font-weight: 600;
+  font-size: calc(var(--wk-h) * 0.29);
+}
+.wallkey.wider {
+  flex-basis: calc(var(--wk-w) * 2.5 + var(--wk-gap));
+}
+.wallkey svg {
+  width: calc(var(--wk-h) * 0.42);
+  height: calc(var(--wk-h) * 0.42);
+}
+.wallkeys-rows.pad .wallkey {
+  flex-basis: min(150px, 28vw);
+}
+.wallkeys-chips {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: var(--wk-gap);
+  margin: 0 24px 14px;
+}
+.wallkeys-chip {
+  height: calc(var(--wk-h) * 0.7);
+  padding: 0 18px;
+  border-radius: 999px;
+  border: 1px solid rgba(var(--lamp-rgb), 0.35);
+  background: rgba(var(--lamp-rgb), 0.14);
+  color: var(--ink);
+  font: inherit;
+  font-size: calc(var(--wk-h) * 0.27);
+}
+.wallkeys-chip.quiet {
+  border-color: var(--edge);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--ink-2);
+}
+.wallkeys-enter-active,
+.wallkeys-leave-active {
+  transition: transform 0.28s var(--ease);
+}
+.wallkeys-enter-from,
+.wallkeys-leave-to {
+  transform: translateY(100%);
+}
+
+/* The wall awake: nothing loops behind the frosted cards (Sky.vue, held). The sky's drift and the command orb's
+   blooms rest until the wall does; at rest there is little glass and everything moves again. */
+.shell[data-held] .sky-bloom,
+.shell[data-held] .say-orb .orb-cool,
+.shell[data-held] .say-orb .orb-warm {
+  animation-play-state: paused;
+}
+
+/* The wall is touched, not pointed at: a mouse plugged in for setting it up shows no arrow on the panel. */
+html[data-wall],
+html[data-wall] * {
+  cursor: none !important;
+}
+
+/* Whatever is scrolling on the wall drops its frost until it stops (App.vue): glass moving under a finger is the
+   one thing the wall's GPU cannot redraw at 60 fps, and in motion the difference cannot be seen. */
+html[data-wall] [data-moving] *,
+html[data-wall] [data-moving] *::before,
+html[data-wall] [data-moving] *::after {
+  /* the standard property only: with the -webkit- one beside it the build's minifier keeps just the prefixed
+     copy, which this Chromium ignores, and the rule ships empty */
+  backdrop-filter: none !important;
+}

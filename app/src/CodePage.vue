@@ -33,8 +33,8 @@ async function save(clear = false) {
 <template>
   <div class="page">
     <p class="page-lede">Lights, scenes and locks never need it. Adding phones and devices, renaming, moving rooms and Advanced do. Pick 4 to 8 digits.</p>
-    <label class="field"><span class="field-label">Passcode</span><input class="input code-input" v-model="pin" inputmode="numeric" pattern="[0-9]*" maxlength="8" autocomplete="off" @keydown.enter="save()" /></label>
-    <label class="field"><span class="field-label">Type it again</span><input class="input code-input" v-model="again" inputmode="numeric" pattern="[0-9]*" maxlength="8" autocomplete="off" @keydown.enter="save()" /></label>
+    <label class="field"><span class="field-label">Passcode</span><input class="input code-input secret" v-model="pin" inputmode="numeric" pattern="[0-9]*" maxlength="8" autocomplete="off" @keydown.enter="save()" /></label>
+    <label class="field"><span class="field-label">Type it again</span><input class="input code-input secret" v-model="again" inputmode="numeric" pattern="[0-9]*" maxlength="8" autocomplete="off" @keydown.enter="save()" /></label>
     <p class="error" v-if="error">{{ error }}</p>
     <div class="flow-actions">
       <button class="button" :class="{ busy }" @click="save()">{{ has() ? 'Change it' : 'Set a passcode' }}</button>

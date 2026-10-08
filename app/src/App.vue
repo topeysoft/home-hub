@@ -14,6 +14,8 @@ import MovePage from './MovePage.vue'
 import ScreenRoom from './ScreenRoom.vue'
 import { homeRoom, isScreen, needsRoom, screenRoom } from './screen'
 import CodePrompt from './CodePrompt.vue'
+import Keys from './Keys.vue'
+import { onWall } from './keys'
 import { lock } from './code'
 import Sky from './Sky.vue'
 import ArtDefs from './ArtDefs.vue'
@@ -81,6 +83,33 @@ const ambient = computed(() => store.sky.elevation < -8 ? 'night' : store.sky.el
    ?tone= and ?layout= override it for this tab only, the way ?at= and ?wx= do,
    so previewing a look never changes what the rest of the house is showing. */
 const params = new URLSearchParams(location.search)
+// The wall unit has no keyboard of its own, so the panel brings one there and nowhere else (design/keyboard/, C).
+const wall = onWall()
+if (wall) {
+  document.documentElement.dataset.wall = ''
+  /* Frosted cards under a moving finger are more blur than the wall's GPU can redraw: a Pi 5 dropped about half the
+     frames of a swipe, and 5% with no frost. So whatever is scrolling loses its frost while it moves and gets it back
+     when it stops -- in motion the difference cannot be seen, still it is the same glass. */
+  // Taken off as the finger lands on a strip that can scroll, so the first frames of a swipe are already light;
+  // a tap that never scrolled has it back on lift-off.
+  const scroller = (el: EventTarget | null) => {
+    for (let n = el instanceof Element ? el : null; n; n = n.parentElement)
+      if (n instanceof HTMLElement && n.scrollWidth > n.clientWidth + 1 && /auto|scroll/.test(getComputedStyle(n).overflowX)) return n
+    return null
+  }
+  let held: HTMLElement | null = null, scrolled = false
+  document.addEventListener('pointerdown', (e) => {
+    if (e.pointerType !== 'touch') return
+    held = scroller(e.target); scrolled = false
+    if (held) held.dataset.moving = ''
+  }, { capture: true, passive: true })
+  document.addEventListener('pointerup', () => { if (held && !scrolled) delete held.dataset.moving; held = null }, { capture: true, passive: true })
+  document.addEventListener('scroll', (e) => {
+    if (!(e.target instanceof HTMLElement)) return
+    scrolled = true; e.target.dataset.moving = ''
+  }, { capture: true, passive: true })
+  document.addEventListener('scrollend', (e) => { if (e.target instanceof HTMLElement) delete e.target.dataset.moving }, { capture: true, passive: true })
+}
 const toneParam = params.get('tone'), layoutParam = params.get('layout')
 
 /* The house's feel, which is what the Look page actually writes: one of three,
@@ -240,8 +269,8 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="shell" :data-ambient="ambient" :data-nav="nav" :data-face="face" :data-layout="layout" :data-flat="face === 'glass' && flat ? '' : null" :style="[tone, glass, openTint]" :class="{ resting: idle, 'in-setup': setup || shut, 'opened-shell': !!store.opened || !!store.printer || store.outside || panel || asking }">
-    <Sky :quiet="!idle && !setup" />
+  <div class="shell" :data-held="wall && !idle ? '' : null" :data-ambient="ambient" :data-nav="nav" :data-face="face" :data-layout="layout" :data-flat="face === 'glass' && flat ? '' : null" :style="[tone, glass, openTint]" :class="{ resting: idle, 'in-setup': setup || shut, 'opened-shell': !!store.opened || !!store.printer || store.outside || panel || asking }">
+    <Sky :quiet="!idle && !setup" :held="wall && !idle" />
     <!-- glass lays its blooms on the sky the canvas just painted, under the veil -->
     <div class="sky-bloom" v-if="face === 'glass'"></div>
     <ArtDefs />
@@ -369,6 +398,7 @@ onUnmounted(() => {
     <Transition name="sheet"><YardSheet v-if="store.yard && store.roofline?.exists && store.roofline.yard" /></Transition>
     <Transition name="sheet"><StripSheet v-if="store.strip && stripSheetOpen(store.strip.state, store.sheet, store.stripAsked, store.stripPutDown) && !(store.bridge && store.bridge.state !== 'none')" /></Transition>
     <Transition name="sheet"><CodePrompt v-if="lock.prompt" /></Transition>
+    <Keys v-if="wall" />
 
     <Transition name="toast">
       <div class="toast" :class="store.toast.kind" v-if="store.toast" :key="store.toast.id" role="status">

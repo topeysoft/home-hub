@@ -12,9 +12,9 @@ THEME=/usr/share/plymouth/themes/elyir
 log() { printf '[startup] %s\n' "$*"; }
 [ "$(id -u)" = 0 ] || { echo "run as root" >&2; exit 1; }
 
-log "packages: the splash, a one-window compositor and a browser"
+log "packages: the splash, a one-window compositor, its display scaling and a browser"
 export DEBIAN_FRONTEND=noninteractive
-apt-get install -y --no-install-recommends plymouth cage curl >/dev/null
+apt-get install -y --no-install-recommends plymouth cage wlr-randr curl >/dev/null
 apt-get install -y --no-install-recommends chromium >/dev/null 2>&1 \
   || apt-get install -y --no-install-recommends chromium-browser >/dev/null
 

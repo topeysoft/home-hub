@@ -1,0 +1,39 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>Every field, every way</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="kb.css">
+<style>
+  /* The four boards side by side on each of the three fields; each thumbnail is the full board at 0.3. */
+  html, body { width: 1640px; height: 1300px; background: #15161a; }
+  body { padding: 40px; box-sizing: border-box; color: #f1eee8; }
+  h1 { margin: 0 0 28px; font-size: 30px; font-weight: 500; }
+  .grid { display: grid; grid-template-columns: 200px repeat(3, 432px); gap: 22px 20px; }
+  .head { font-size: 17px; color: #b9b5ad; }
+  .name { font-size: 20px; font-weight: 500; padding-top: 4px; }
+  .name span { display: block; margin-top: 6px; font-size: 14px; color: #9a968e; line-height: 1.35; font-weight: 400; }
+  .thumb { width: 432px; height: 270px; overflow: hidden; border-radius: 6px; outline: 1px solid #2c2e34; position: relative; }
+  .thumb .wall { transform: scale(.3); transform-origin: 0 0; }
+</style>
+</head>
+<body>
+<h1>The wall's keyboard: every field, every way</h1>
+<div class="grid" id="g"></div>
+<script src="kb.js"></script>
+<script>
+  const rows = [['today', 'Today', 'Nothing comes up'], ['A', 'A · Docked', 'One full keyboard along the bottom'],
+    ['B', 'B · Beside the field', 'Small, next to what it types into'], ['C', 'C · Shaped to the field', 'Docked, in the shape the field wants']]
+  const g = document.getElementById('g')
+  const cell = (cls, html) => { const d = document.createElement('div'); d.className = cls; d.innerHTML = html; g.append(d); return d }
+  cell('head', '')
+  for (const f of Object.values(Keyboard.FIELDS)) cell('head', f.label)
+  for (const [dir, name, why] of rows) {
+    cell('name', `${name}<span>${why}</span>`)
+    for (const f of Object.keys(Keyboard.FIELDS)) {
+      const t = cell('thumb', ''), w = document.createElement('div')
+      w.className = 'wall'; w.dataset.dir = dir; w.dataset.field = f; t.append(w); Keyboard.mount(w)
+    }
+  }
+</script>
+</body>
+</html>

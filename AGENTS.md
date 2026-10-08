@@ -263,6 +263,12 @@ Do not reopen these, and do not propose around them.
   card, no progress, no words but the name -- one sentence only if a start is slow. The name and the lamp
   are shared frame for frame; a product brings where the dot lands and when it is ready. `startup/`,
   pinned to the board by `startup/startup.test.mjs`.
+- **The wall brings its own keyboard, shaped to the field** (7 October, `design/keyboard/`, C). The wall unit's
+  Linux has none, so the panel draws one there and only there (`?wall=1`, which `startup/wall.sh` passes); phones
+  and tablets keep theirs. Docked along the bottom on the panel's glass, the page moving up just far enough: a
+  keypad for digits, letters otherwise, and for the command box letters with the house's own completions above
+  them -- every one a sentence the grammar runs, never a guess. `app/src/Keys.vue`, `keys.ts`,
+  `Commands.complete`; pinned by `app/tests/keys.test.ts` and `app/e2e/keyboard.touch.spec.ts`.
 
 - **The Brilliant work lives in a repository of its own, and public code never reaches into it**
   (5 October 2026). This repository is public and every hub clones it whole. The bridge puck here (`puck/`) is
