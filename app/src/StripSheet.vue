@@ -449,7 +449,7 @@ onUnmounted(() => window.removeEventListener('keydown', key, true))
    component (AGENTS.md §4). NetworkSheet.vue does the same for the same reason. */
 .stage {
   position: relative; padding: 46px 22px 40px; margin-bottom: 18px;
-  border-radius: var(--r-lg); background: rgba(255, 255, 255, .03);
+  border-radius: var(--r-lg); background: rgba(var(--wash-rgb), .03);
   border: 1px solid var(--edge); overflow: hidden;
 }
 .ends {
@@ -480,7 +480,7 @@ onUnmounted(() => window.removeEventListener('keydown', key, true))
 .two { display: flex; flex-direction: column; gap: 9px; padding: 8px 0 6px; }
 .two i {
   display: block; height: 18px; border-radius: 4px;
-  background: repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.13) 0 4px, transparent 4px 7px);
+  background: repeating-linear-gradient(90deg, rgba(var(--wash-rgb), 0.13) 0 4px, transparent 4px 7px);
 }
 .two i.long { width: 88%; }
 .two i.short { width: 62%; }

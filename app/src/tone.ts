@@ -22,6 +22,7 @@
  */
 
 import { clamp, ground, mix, oklch, palette, rgb, wxOf } from './sky'
+import type { Shade } from './shade'
 
 export type ToneName = 'warm' | 'cool' | 'pastel' | 'follow'
 
@@ -90,14 +91,17 @@ export type ToneVars = Record<string, string>
  * Returned as a plain object so the shell can bind it as a style and every card
  * inherits; nothing has to know the sky to be colored by it.
  */
-export function toneVars(elevation: number, condition: string, name: ToneName = 'follow'): ToneVars {
-  const field = oklch(ground(elevation, condition))
+export function toneVars(elevation: number, condition: string, name: ToneName = 'follow', shade: Shade = 'dark'): ToneVars {
+  const field = oklch(ground(elevation, condition, shade))
   const day = elevation > 3                                   // the sun is up, not merely lightening the horizon
   const tone = toneOf(name, day)
 
   // a colorful sky needs quieter cards; a near-gray one can take the full chroma
   const C = tone.C * (1 - 0.35 * Math.min(field.C / 0.09, 1))
-  const L = clamp(field.L + tone.dL, 0.16, 0.92)
+  /* A light sky is already most of the way to white, so a card cannot hold the usual distance above
+     it. It is paper instead: near white, carrying a whisper of its tone, and set apart from the sky by
+     its edge and its shadow rather than by lightness. */
+  const L = shade === 'light' ? clamp(Math.max(field.L + tone.dL * 0.4, 0.93), 0, 0.975) : clamp(field.L + tone.dL, 0.16, 0.92)
   const light = L > INK_FLIPS_AT
 
   const vars: ToneVars = {
@@ -145,7 +149,7 @@ export function toneVars(elevation: number, condition: string, name: ToneName = 
      1440px puts one arcmin at about .6px per metre of distance -- a .16-alpha
      wash and a 4px arc were a smudge at 3m while a lamp's own color, which fills
      its card, read instantly. See design/nightfall, page 3. */
-  const aL = clamp(field.L + 0.30, 0.16, 0.92)
+  const aL = shade === 'light' ? 0.82 : clamp(field.L + 0.30, 0.16, 0.92)
   for (const [act, hue] of Object.entries(ACT_HUES))
     vars[`--card-${act}`] = `linear-gradient(155deg, oklch(${(aL + 0.055).toFixed(3)} ${ACT_C} ${hue}),`
       + ` oklch(${aL.toFixed(3)} ${ACT_C} ${hue + 6}))`
@@ -245,7 +249,8 @@ const LEANS: Record<Exclude<ToneName, 'follow'>, Lean> = {
 }
 const PANE_ALPHA: [number, number, number] = [0.34, 0.12, 0.24]
 
-export function glassVars(elevation: number, condition: string, name: ToneName = 'follow'): ToneVars {
+export function glassVars(elevation: number, condition: string, name: ToneName = 'follow', shade: Shade = 'dark'): ToneVars {
+  if (shade === 'light') return lightGlass(elevation, condition, name)
   const field = oklch(ground(elevation, condition))
   const [top, band, horizon] = palette(elevation, wxOf(condition))   // the sky's own three bands, weathered
 
@@ -383,6 +388,48 @@ export function glassVars(elevation: number, condition: string, name: ToneName =
        thing here to a weak GPU -- a 650ms rail swipe holds every frame under
        paper and drops about a quarter of them under glass. Both faces paint the
        same 13 frosted surfaces; the whole difference is the radius. */
+    '--glass-blur': '26px',
+    '--pane-blur': '30px',
+  }
+}
+
+/*
+ * Glass over the light sky (design/appearance/, B): frosted white, the panel's own material turned
+ * to day. None of the arithmetic above carries over. It is written for a field that runs from black
+ * to a noon that tops out at L .49, and its whole job is keeping light ink readable through a pane;
+ * here the field never falls below L .74 and the ink is dark. So a pane is simply milk, a little
+ * thicker toward its foot where the text sits, and its shadow is the sky's own hue, deepened, rather
+ * than the gray a white card would cast on a gray page.
+ *
+ * Same keys as glassVars, so panel.css cannot tell which one it is reading.
+ */
+function lightGlass(elevation: number, condition: string, name: ToneName): ToneVars {
+  const [, band, horizon] = palette(elevation, wxOf(condition), 'light')
+  const field = oklch(band)
+  const lean = name === 'follow' ? null : LEANS[name]
+  const H = (lean?.H ?? field.H).toFixed(0)
+  const C = (lean?.C ?? 0.01) * 0.6
+  const milk = (L: number, a: number) => `oklch(${L} ${C.toFixed(3)} ${H} / ${a})`
+  const shadow = (a: number) => `oklch(0.36 0.05 ${H} / ${a})`
+  return {
+    '--glass': `linear-gradient(148deg, ${milk(0.995, 0.72)}, ${milk(0.99, 0.54)} 46%, ${milk(0.995, 0.64)})`,
+    '--glass-sweep': 'linear-gradient(112deg, transparent 26%, rgba(255,255,255,.28) 45%, rgba(255,255,255,.04) 56%, transparent 64%)',
+    '--glass-rim': `linear-gradient(158deg, rgba(255,255,255,.95), rgba(255,255,255,.4) 34%, ${shadow(0.08)} 62%, rgba(255,255,255,.7))`,
+    '--glass-inner': 'inset 0 -46px 56px -48px rgba(255,255,255,.55)',
+    '--glass-drop': `0 18px 40px -24px ${shadow(0.38)}, 0 2px 8px ${shadow(0.08)}`,
+    '--glass-sat': '1.4',
+    '--glass-br': '1.03',
+    /* the blooms, kept as character and taken to a whisper: on a light field the violet they lean
+       on reads as a stain at the strength that reads as depth on a dark one */
+    '--glass-field': `radial-gradient(58% 54% at 30% 64%, ${rgb(mix(band, [196, 180, 250], 0.4), 0.22)}, transparent 68%),`
+      + ` radial-gradient(44% 42% at 74% 12%, ${rgb(mix(band, horizon, 0.5), 0.2)}, transparent 70%)`,
+    '--pane': `linear-gradient(168deg, ${milk(0.99, 0.74)}, ${milk(0.985, 0.86)} 44%, ${milk(0.99, 0.92)})`,
+    '--pane-ink-2': '#57546a',
+    '--pane-muted': '#6e6a78',
+    '--pane-edge': `inset 0 1.4px 0 rgba(255,255,255,.95), 0 -18px 40px -14px ${shadow(0.16)}`,
+    '--glass-scrim': `oklch(0.97 0.01 ${H} / 0.5)`,
+    '--glass-flat': `linear-gradient(148deg, ${milk(0.985, 1)}, ${milk(0.97, 1)} 46%, ${milk(0.98, 1)})`,
+    '--pane-flat': `linear-gradient(168deg, ${milk(0.985, 1)}, ${milk(0.975, 1)} 44%, ${milk(0.98, 1)})`,
     '--glass-blur': '26px',
     '--pane-blur': '30px',
   }
