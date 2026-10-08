@@ -1,16 +1,69 @@
 {
   "name": "A second screen for a house that has a hub",
-  "areas": ["Wall screens", "First run"],
+  "areas": [
+    "Wall screens",
+    "First run"
+  ],
   "pages": [
-    { "id": "join", "name": "Joining a house" },
-    { "id": "after", "name": "After it joins, in any direction" }
+    {
+      "id": "join",
+      "name": "Joining a house"
+    },
+    {
+      "id": "join-lost",
+      "name": "Joining a house: not chosen"
+    },
+    {
+      "id": "after",
+      "name": "After it joins, in any direction"
+    }
   ],
   "artboards": [
-    { "file": "Today.dc.html", "x": 0, "y": 0, "w": 1440, "h": 900, "title": "Today — the wall builds a second house; the tablet knows only an address", "page": "join" },
-    { "file": "AskA.dc.html", "x": 1560, "y": 0, "w": 1440, "h": 900, "title": "A — it asks, with the house it found", "page": "join" },
-    { "file": "JoinB.dc.html", "x": 0, "y": 1300, "w": 1440, "h": 900, "title": "B — it joins the house it finds; the passcode is the only question", "page": "join" },
-    { "file": "WhereC.dc.html", "x": 1560, "y": 1300, "w": 1440, "h": 900, "title": "C — B, then it asks which room it hangs in", "page": "join" },
-    { "file": "After.dc.html", "x": 0, "y": 0, "w": 1440, "h": 900, "title": "After — the hub out of reach, a new hub, and the screens on The hub", "page": "after" }
+    {
+      "file": "Today.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "Today — the wall builds a second house; the tablet knows only an address",
+      "page": "join"
+    },
+    {
+      "file": "AskA.dc.html",
+      "x": 1560,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "A — it asks, with the house it found",
+      "page": "join-lost"
+    },
+    {
+      "file": "JoinB.dc.html",
+      "x": 0,
+      "y": 1300,
+      "w": 1440,
+      "h": 900,
+      "title": "B — it joins the house it finds; the passcode is the only question",
+      "page": "join-lost"
+    },
+    {
+      "file": "WhereC.dc.html",
+      "x": 1560,
+      "y": 1300,
+      "w": 1440,
+      "h": 900,
+      "title": "C — B, then it asks which room it hangs in",
+      "page": "join"
+    },
+    {
+      "file": "After.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "After — the hub out of reach, a new hub, and the screens on The hub",
+      "page": "after"
+    }
   ],
   "annotations": [
     {
@@ -39,7 +92,7 @@
     },
     {
       "id": "a",
-      "page": "join",
+      "page": "join-lost",
       "x": 1560,
       "y": 940,
       "w": 1440,
@@ -47,7 +100,7 @@
     },
     {
       "id": "b",
-      "page": "join",
+      "page": "join-lost",
       "x": 0,
       "y": 2240,
       "w": 1440,
@@ -67,7 +120,7 @@
       "x": 3120,
       "y": 0,
       "w": 500,
-      "text": "THE QUESTION\n\nA, B or C -- or something else, described.\n\nMy lean is C: B's 'the find is the answer', and the room, because a screen that knows its room is what makes the wall feel like part of the house rather than a browser on a wall."
+      "text": "DECIDED 7 OCTOBER 2026\n\nC. The screen joins the house it finds -- the passcode, or a yes from another screen -- then asks which room it is in. A and B are kept on their own page with their cases."
     },
     {
       "id": "after-note",
@@ -77,5 +130,10 @@
       "w": 1440,
       "text": "AFTER IT JOINS — the same whichever of A, B or C is picked, drawn so the whole of it can be judged, not offered as a choice yet. Flip the chips.\n\nTHE HUB OUT OF REACH. The house as it last was, hushed, and one card: which hub, since when, that it comes back by itself, and what to check. Never the browser's words. This screen's own Restart stays on This screen, because restarting the glass is not restarting the house (docs/restart.md).\n\nA NEW HUB. The upgrade path: the house started on the wall, then a NUC was bought and the backup brought over with first run's 'Moving from another hub?'. The new hub tells the old one it now holds this house (same house id), and the wall offers to step down to a screen. Reverse is 'Make this the hub' on This screen, the same backup and restore.\n\nSCREENS, ON THE HUB. Each screen with its room and how it is; tap one to rename it, move it to another room, or forget it. Below them, what the screens lend the house, in plain words.\n\nNOT DRAWN, ON PURPOSE: a screen that keeps a standby copy of the house running in case the hub dies. Two home engines driving the same lights is the bug this collection exists to remove. If a spare is wanted later, it is a copy of the nightly backup that takes over only when asked."
     }
-  ]
+  ],
+  "decided": {
+    "on": "2026-10-07",
+    "chose": "C",
+    "board": "WhereC.dc.html"
+  }
 }
