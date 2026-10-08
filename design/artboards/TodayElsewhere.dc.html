@@ -1,0 +1,63 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; background: #0c0d10; color: #f1eee8;
+      font-family: "Instrument Sans", -apple-system, "SF Pro Text", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      --ink: #f1eee8; --ink-2: #b9b5ad; --muted: #7f7d77; --edge: rgba(255,255,255,.1);
+      --danger-rgb: 224,138,138; --danger: rgb(var(--danger-rgb));
+    }
+    .abs { position: absolute; }
+    .cap { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .shot { position: absolute; top: 112px; width: 656px; height: 410px; border-radius: 10px; overflow: hidden;
+            border: 1px solid var(--edge); box-shadow: 0 30px 70px -34px rgba(0,0,0,.95); }
+    .shot img { width: 656px; height: 410px; display: block; }
+    .lbl { position: absolute; top: 84px; font-size: 13px; color: var(--ink-2); }
+    .lbl b { color: var(--ink); font-weight: 500; }
+    .pin { position: absolute; width: 26px; height: 26px; border-radius: 50%; background: var(--danger); color: #1d0c0c;
+           font-size: 13px; font-weight: 600; display: grid; place-items: center;
+           box-shadow: 0 0 0 4px rgba(var(--danger-rgb),.25), 0 6px 14px rgba(0,0,0,.5); }
+    .col { position: absolute; top: 556px; width: 656px; display: grid; gap: 16px; }
+    .find { display: grid; grid-template-columns: 26px 1fr; gap: 14px; font-size: 14.5px; line-height: 1.55; color: var(--ink-2); }
+    .find .n { width: 26px; height: 26px; border-radius: 50%; border: 1.5px solid rgba(var(--danger-rgb),.7); color: var(--danger);
+               font-size: 13px; font-weight: 600; display: grid; place-items: center; }
+    .find b { color: var(--ink); font-weight: 500; }
+    .mono { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: .9em; color: var(--ink); }
+  </style>
+</helmet>
+<div class="abs" style="inset: 0; overflow: hidden;">
+  <div class="abs" style="left: 48px; right: 48px; top: 34px; display: flex; align-items: baseline; gap: 24px;">
+    <span class="cap" style="white-space: nowrap;">Today &mdash; a board waiting in another checkout</span>
+    <span style="font-size: 13.5px; color: var(--muted);">The viewer as built on 5 October, run from this checkout, the afternoon a session asked for a pick on &ldquo;boards/bridge-light&rdquo;.</span>
+  </div>
+
+  <span class="lbl" style="left: 48px;"><b>The front page</b> &middot; 41 collections, all of them this checkout&rsquo;s</span>
+  <span class="lbl" style="left: 736px;"><b>Searching</b> &middot; &ldquo;bridge light&rdquo;</span>
+  <div class="shot" style="left: 48px;"><img src="shots/today2-contents.jpg" alt=""></div>
+  <div class="shot" style="left: 736px;"><img src="shots/today2-nothing.jpg" alt=""></div>
+
+  <span class="pin" style="left: 560px; top: 150px;">1</span>
+  <span class="pin" style="left: 1010px; top: 150px;">2</span>
+
+  <div class="col" style="left: 48px;">
+    <div class="find"><span class="n">1</span><span><b>Nothing here says anything is waiting.</b> Five other checkouts sit beside this one, each on its own branch. One holds a new collection with four boards and a note headed <span class="mono">TO PICK</span>; one has changed three files in <span class="mono">printers</span>. The front page shows neither, because it only reads the <span class="mono">design/</span> it was started in.</span></div>
+    <div class="find"><span class="n">3</span><span><b>The way in was typed by hand.</b> A second viewer on another port, <span class="mono">--design ../home-hub-a/design</span>, which nobody would know to do from the message &ldquo;approve a board on boards/bridge-light&rdquo;.</span></div>
+  </div>
+  <div class="col" style="left: 736px;">
+    <div class="find"><span class="n">2</span><span><b>Search answers, wrongly.</b> 16 places in 8 collections, every word somewhere: the puck&rsquo;s light, a strip&rsquo;s light, other bridges. It reads like a result, and the one asked about is not in it &mdash; it is on <span class="mono">puck-split-repos</span>, seven commits ahead of <span class="mono">development</span>.</span></div>
+    <div class="find"><span class="n">4</span><span><b>A branch name goes stale within the hour.</b> The request named the work on <span class="mono">puck-without-mesh</span>; by the time it was looked for, that checkout had moved to <span class="mono">puck-split-repos</span>. The checkout&rsquo;s folder stays put; what it is on has to be read when the page is drawn.</span></div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

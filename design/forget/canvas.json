@@ -1,4 +1,6 @@
 {
+  "name": "Removing a thing",
+  "areas": ["Adding things"],
   "artboards": [
     {
       "file": "Today.dc.html",

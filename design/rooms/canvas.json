@@ -1,4 +1,6 @@
 {
+  "name": "The Rooms tab",
+  "areas": ["Wall screens"],
   "artboards": [
     {
       "file": "Today.dc.html",

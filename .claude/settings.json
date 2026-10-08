@@ -1,0 +1,15 @@
+{
+  "hooks": {
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "f=\"$CLAUDE_PROJECT_DIR/tools/wip-snapshot.sh\"; [ -x \"$f\" ] && \"$f\" || true",
+            "timeout": 30
+          }
+        ]
+      }
+    ]
+  }
+}
