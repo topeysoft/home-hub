@@ -20,7 +20,8 @@ RestartSec=2
 User=elyir-wall
 PAMName=elyir-wall
 TTYPath=/dev/tty1
-TTYReset=yes
+# No TTYReset: systemd 257 (Trixie) asks the terminal a question while resetting it, and a console
+# held by the splash never answers, so the unit waited forever before running anything.
 TTYVHangup=yes
 TTYVTDisallocate=yes
 StandardInput=tty-fail
