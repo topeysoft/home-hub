@@ -17,7 +17,10 @@ import { clamp, lerp, mix, palette, rgb, starAlpha, wxOf, type RGB, type Wx } fr
 
 /* quiet: the interface is up, so the sun and moon stay softer and the moon keeps to the open sky above the stage,
    clear of the rail and the headline; at rest and during setup they have the whole screen */
-const props = defineProps<{ quiet?: boolean }>()
+/* held: the wall is awake, with its frosted cards over this canvas. A moving sky makes every pane re-blur each
+   frame, more than the wall's GPU can do (measured on a Pi 5: the GPU 98% busy and 15 frames a second; held, 38%
+   and 60). So it is drawn once and again only when the hour or the weather changes, and moves at rest. */
+const props = defineProps<{ quiet?: boolean; held?: boolean }>()
 
 const canvas = ref<HTMLCanvasElement | null>(null)
 
@@ -293,9 +296,13 @@ function frame(ts: number) {
 }
 onMounted(() => {
   resize()
-  ro = new ResizeObserver(resize); ro.observe(canvas.value!)
+  ro = new ResizeObserver(() => { resize(); if (props.held) draw(performance.now() / 1000, 0) }); ro.observe(canvas.value!)
   if (reduced.matches) { draw(0, 0); watch(() => store.sky, () => draw(0, 0), { deep: true }); return }
-  raf = requestAnimationFrame(frame)
+  watch(() => props.held, (held) => {
+    if (held) { cancelAnimationFrame(raf); raf = 0; draw(performance.now() / 1000, 0) }
+    else if (!raf) raf = requestAnimationFrame(frame)
+  }, { immediate: true })
+  watch(() => store.sky, () => { if (props.held) draw(performance.now() / 1000, 0) }, { deep: true })
 })
 onUnmounted(() => { cancelAnimationFrame(raf); ro?.disconnect() })
 </script>

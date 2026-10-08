@@ -13990,3 +13990,11 @@ html[data-wall-keys] .shell {
 .wallkeys-leave-to {
   transform: translateY(100%);
 }
+
+/* The wall awake: nothing loops behind the frosted cards (Sky.vue, held). The sky's drift and the command orb's
+   blooms rest until the wall does; at rest there is little glass and everything moves again. */
+.shell[data-held] .sky-bloom,
+.shell[data-held] .say-orb .orb-cool,
+.shell[data-held] .say-orb .orb-warm {
+  animation-play-state: paused;
+}
