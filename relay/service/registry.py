@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 """Which houses the relay will carry, and under what name.
 
-A house claims a name -- temi, for temi.elyir.app -- and is handed a secret once, in the answer to the
+A house claims a name -- jordan, for jordan.elyir.app -- and is handed a secret once, in the answer to the
 claim. That secret is the house's whole credential: it goes in the hub's frpc.toml, frps passes it here
 on every login, and this decides whether to carry the house at all. Only its hash is kept, so the file
 this writes could leak without letting anyone dial in as a house.
@@ -89,7 +89,7 @@ def problem(label: str) -> str | None:
 
 
 def clean(text: str) -> str:
-    """What somebody typed, as the name it would become: Temi's House -> temis-house."""
+    """What somebody typed, as the name it would become: Jordan's House -> jordans-house."""
     t = re.sub(r"['’]", "", text.strip().lower())
     t = re.sub(r"[^a-z0-9]+", "-", t).strip("-")
     return t[:30].strip("-")

@@ -50,13 +50,13 @@ it, and `terraform apply`. The wildcard and the CAA pair land at the same time a
 
 ```sh
 # the house claims its name (the panel will do this; until then, from anywhere):
-curl -s https://api.elyir.app/houses -H 'content-type: application/json' -d '{"name":"temi"}'
-#   -> {"name":"temi","address":"temi.elyir.app","secret":"...", ...}   the secret is shown once
-ssh root@<relay> docker exec relay-service python cli.py grant temi 2027-10-01 "Temi, by hand"
+curl -s https://api.elyir.app/houses -H 'content-type: application/json' -d '{"name":"jordan"}'
+#   -> {"name":"jordan","address":"jordan.elyir.app","secret":"...", ...}   the secret is shown once
+ssh root@<relay> docker exec relay-service python cli.py grant jordan 2027-10-01 "Jordan, by hand"
 ssh root@<relay> docker exec relay-service python cli.py list
 ```
 
-The hub then needs `HUB_AWAY_HOUSE=temi` and `HUB_RELAY_SECRET=<the secret>` in its `.env`
+The hub then needs `HUB_AWAY_HOUSE=jordan` and `HUB_RELAY_SECRET=<the secret>` in its `.env`
 (`driver-layer/.env.example`). A name claimed and not granted is let go after a day. `cli.py` also
 stops a house (it keeps its name), rotates a lost secret, and releases a name.
 

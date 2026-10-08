@@ -2778,7 +2778,7 @@ def address_look(name: str):
 
 @app.post("/address")
 def address_claim(body: dict, request: Request):
-    """{"name": "temi"}: take that address for this house. For the screens that keep the house, like a restart."""
+    """{"name": "jordan"}: take that address for this house. For the screens that keep the house, like a restart."""
     if not _may_restart(request): raise HTTPException(403, "The house's web address is chosen on the wall screen, or on a phone that joined with the passcode.")
     try: return hub.address.claim(str(body.get("name") or ""), _who(request))
     except LookupError as e: raise HTTPException(409, e.args[0])

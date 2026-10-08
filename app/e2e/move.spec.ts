@@ -11,7 +11,7 @@
 import { expect, test, type Page } from '@playwright/test'
 
 const ME = { locked: true, paired: true, home: 'Maple Court', away: false, lan: '192-168-86-53.maple-court.home.elyir.app', address: 'https://maple-court.elyir.app',
-  phone: { id: 'p1', name: "Temi's iPhone", kind: 'phone', joined: 0, expires: null, remote: false, last_seen: null, how: 'code', me: true, moved: false } }
+  phone: { id: 'p1', name: "Jordan's iPhone", kind: 'phone', joined: 0, expires: null, remote: false, last_seen: null, how: 'code', me: true, moved: false } }
 
 async function withAddress(page: Page, me: object = ME) {
   await page.route('**/phones/me', r => r.fulfill({ json: me }))

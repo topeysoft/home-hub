@@ -159,7 +159,7 @@ class StreamTests(ApiTest):
 
     def test_a_phone_that_belongs_to_the_house_is(self):
         self.lock_the_house("4821")
-        _, token = self.hub.phones.with_code("Temi's phone")
+        _, token = self.hub.phones.with_code("Jordan's phone")
         self.client.cookies.set(COOKIE, token)
         with self.client.websocket_connect("/stream") as ws:
             self.assertEqual(json.loads(ws.receive_text())["type"], "status")
@@ -167,7 +167,7 @@ class StreamTests(ApiTest):
 
     def test_from_outside_only_a_phone_the_house_has_let_out(self):
         self.lock_the_house("4821")
-        p, token = self.hub.phones.with_code("Temi's phone")
+        p, token = self.hub.phones.with_code("Jordan's phone")
         self.client.cookies.set(COOKIE, token)
         with self.assertRaises(WebSocketDisconnect) as caught:
             with self.client.websocket_connect("/stream", headers={"X-Hub-Via": "relay"}) as ws:
@@ -212,13 +212,13 @@ class CameraLiveViewTests(ApiTest):
     def test_nobody_outside_without_being_let_out(self):
         self.assertEqual(self.refused(**{"X-Hub-Via": "relay"}), 4403)
         self.lock_the_house("4821")
-        _, token = self.hub.phones.with_code("Temi's phone")
+        _, token = self.hub.phones.with_code("Jordan's phone")
         self.client.cookies.set(COOKIE, token)
         self.assertEqual(self.refused(**{"X-Hub-Via": "relay"}), 4403)
 
     def test_the_houses_own_phone_at_home_is_let_in(self):
         self.lock_the_house("4821")
-        _, token = self.hub.phones.with_code("Temi's phone")
+        _, token = self.hub.phones.with_code("Jordan's phone")
         self.client.cookies.set(COOKIE, token)
         self.assertEqual(self.connect()["code"], "unknown")
 

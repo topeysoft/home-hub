@@ -4,7 +4,7 @@
  * When the house last saw a phone, as a phone row says it on People (design/away/, the note beside NamedC).
  *
  * Every new browser, profile or address a person opens the house in is a new phone, so a house collects rows
- * with the same name -- the maker's had five called Temi's screen -- and the one in use looked exactly like the
+ * with the same name -- the maker's had five called Jordan's screen -- and the one in use looked exactly like the
  * four left behind. When each was last seen is the one fact that tells them apart. The brain writes last_seen at
  * most every five minutes (hub/phones.py), so anything inside that is "just now".
  */

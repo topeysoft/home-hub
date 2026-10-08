@@ -128,10 +128,10 @@ function pressEvent() {
    thirteen-room house looks like of an evening -- and the shape the Rooms tab's arrangement is
    hardest to get right at, since it is mostly index. design/rooms/Long.dc.html. */
 for (let i = 0; i < Number(process.env.QUIET || 0); i++)
-  rooms.splice(rooms.length - 1, 0, { id: `q${i}`, name: ['Theater', 'Basement', 'Main Workshop', 'Frontyard', 'Nadine\u2019s Room', 'Pod', 'Ace\u2019s Room', 'Loft', 'Porch', 'Attic', 'Landing', 'Utility'][i] ?? `Room ${i}`,
+  rooms.splice(rooms.length - 1, 0, { id: `q${i}`, name: ['Theater', 'Basement', 'Main Workshop', 'Frontyard', 'Robin\u2019s Room', 'Pod', 'Ace\u2019s Room', 'Loft', 'Porch', 'Attic', 'Landing', 'Utility'][i] ?? `Room ${i}`,
     intent: 'unknown', set_by: null, hold_until: null, devices: [dev(`qd${i}`, 'Lamp', `q${i}`, 'light', 'off')] })
 
-const home = { name: "Temi's house", temp_unit: '°F', rooms }
+const home = { name: "Jordan's house", temp_unit: '°F', rooms }
 
 /* The words on a row's way out, in the shape brain/hub/things.py writes them: the panel draws these
    and invents none of them, so the mock has to speak the same sentences or the page reads wrong here
@@ -140,7 +140,7 @@ const out = (t, act, tail) => ({ do: 'Remove', act, to: t.id,
   ask: `Remove ${t.name} from the house? ${tail}`, yes: `Yes, remove ${t.name}`, no: 'Keep it' })
 const status = { driver: process.env.ENGINE === 'down' ? 'down' : 'ready', reason: process.env.ENGINE === 'down' ? "The hub's engine is not answering yet." : '',
   version: 'v0.3.0',   // the build this mock is: the panel reloads itself when a status answers with another (store.ts, newBuild)
-  setup_done: process.env.FRESH !== '1', owner: 'Temi', home: "Temi's house", location: true, rooms: 8, devices: 30, locked: process.env.LOCKED === '1',
+  setup_done: process.env.FRESH !== '1', owner: 'Jordan', home: "Jordan's house", location: true, rooms: 8, devices: 30, locked: process.env.LOCKED === '1',
   drivers: [
     { id: 'mqtt', name: 'Device messages', state: 'ready', text: 'Working', port: 1883 },
     { id: 'zigbee', name: 'Zigbee radio', state: 'ready', text: 'Plugged in', port: 8080 },
@@ -195,7 +195,7 @@ if (process.env.WHATSNEW === '1') {
 // who the house knows and who is in, for the household strip; PEOPLE=0 is a house with nobody set up
 const presence = process.env.PEOPLE === '0'
   ? { somebody: null, since: null, source: null, people: [], alarm: null }
-  : { somebody: true, since: Date.now() - 3600e3, source: 'people', people: [{ name: 'Temi', home: true }, { name: 'Sam', home: false }, { name: 'Ade', home: true }], alarm: null }
+  : { somebody: true, since: Date.now() - 3600e3, source: 'people', people: [{ name: 'Jordan', home: true }, { name: 'Sam', home: false }, { name: 'Alex', home: true }], alarm: null }
 /* What is coming, the way a real hub shapes it (brain/hub/forecast.py). Built from the hour the
    panel is actually running in, so ?at= previews land in the middle of it rather than behind it:
    the afternoon warms, it rains from four until six, and it clears. FORECAST=0 takes it away, which
@@ -228,7 +228,7 @@ const forecastDays = () => {
   const shape = [[0, 84, 61, 'rainy'], [1, 88, 64, 'sunny'], [2, 77, 59, 'partlycloudy'], [3, 79, 60, 'cloudy'], [4, 81, 62, 'sunny']]
   return shape.map(([d, hi, lo, c]) => ({ at: new Date(midnight.getTime() + d * 86400e3).toISOString(), condition: c, high: hi, low: lo, rain: c === 'rainy' ? 70 : 10 }))
 }
-const ambient = { location: { name: 'Holts Summit, MO', lat: 38.6355985, lon: -92.1176322 }, weather: { id: 'w', condition: process.env.WX || 'partlycloudy', temperature: 78, unit: '°F', humidity: 48, wind_speed: 6, wind_unit: 'mph' },
+const ambient = { location: { name: 'Cedar Falls, IA', lat: 42.53, lon: -92.45 }, weather: { id: 'w', condition: process.env.WX || 'partlycloudy', temperature: 78, unit: '°F', humidity: 48, wind_speed: 6, wind_unit: 'mph' },
   forecast: process.env.FORECAST === '0' ? null : { hourly: forecastHours(), daily: forecastDays() },
   look: { feel: process.env.FEEL || 'nightfall', tone: process.env.TONE || 'follow', face: process.env.FACE || 'glass', layout: process.env.LAYOUT || 'auto', nav: process.env.NAV || 'auto' } }   // the default a fresh house gets; FEEL=calm LAYOUT=rail TONE=pastel NAV=top FACE=paper start it somewhere else
 const scenes = { movie: [['light', 'off', {}], ['media', 'on', {}]], guests: [['light', 'on', {}]], asleep: [['light', 'off', {}], ['media', 'off', {}], ['lock', 'lock', {}]], empty: [['light', 'off', {}], ['media', 'pause', {}]], away: [['light', 'off', {}], ['media', 'off', {}], ['switch', 'off', {}], ['lock', 'lock', {}]] }
@@ -317,7 +317,7 @@ const quietOnes = [
   { id: 'l4', name: 'Front door', where: 'Hall · a lock' },
   { id: 'l5', name: 'Dimmer', where: 'Living room · a light' },
   { id: 'l6', name: 'Home Theater Light', where: 'Den · a light' },
-  { id: 'l7', name: 'Holts Summit Alarm Siren', where: 'Hall · a plug' },
+  { id: 'l7', name: 'Cedar Falls Alarm Siren', where: 'Hall · a plug' },
   { id: 'l8', name: 'Porch light', where: 'Porch · a light' },
   { id: 'l9', name: 'Garage sensor', where: 'Garage · a plug' },
 ]
@@ -411,8 +411,8 @@ function shareState() {
 const mockAddress = { house: null, claimedAt: 0, want: 'on' }
 const phones = { phones: [
   { id: 'w', name: 'This wall', kind: 'wall', joined: now - 86400 * 30, expires: null, remote: false, last_seen: now, how: 'setup', me: true },
-  { id: 'p1', name: "Temi's iPhone", kind: 'phone', joined: now - 86400 * 20, expires: null, remote: false, last_seen: now - 3600, how: 'code', me: false },
-  { id: 'p2', name: "Nadine's Android phone", kind: 'phone', joined: now - 3600, expires: now + 86400 * 2, remote: false, last_seen: now - 600, how: 'wall', me: false },
+  { id: 'p1', name: "Jordan's iPhone", kind: 'phone', joined: now - 86400 * 20, expires: null, remote: false, last_seen: now - 3600, how: 'code', me: false },
+  { id: 'p2', name: "Robin's Android phone", kind: 'phone', joined: now - 3600, expires: now + 86400 * 2, remote: false, last_seen: now - 600, how: 'wall', me: false },
 ], asks: process.env.ASK ? [{ id: 'a1', name: "Sam's iPhone", kind: 'phone', asked: now - 30 }] : [] }
 
 /* ---------- a bridge being set up ----------
@@ -704,12 +704,12 @@ const bridgeRows = process.env.BRIDGES === 'none' ? [] : [
   if (p.startsWith('/happened/changes')) return json(res, {
     coded_since: Date.now() / 1000 - 16 * 86400, coded_when: 'Sep 4', more: false,
     rows: [
-      { who: "Temi's iPhone", named: true, kind: 'home', subject: 'hallway', when: '4:02pm', ts: 0, text: 'renamed Hallway to Landing.' },
+      { who: "Jordan's iPhone", named: true, kind: 'home', subject: 'hallway', when: '4:02pm', ts: 0, text: 'renamed Hallway to Landing.' },
       { who: 'Someone', named: false, kind: 'draft', subject: 'r1', when: 'Wednesday', ts: 0, text: 'approved a suggested routine.' },
       { who: 'Someone', named: false, kind: 'phone', subject: 'p1', when: 'Tuesday', ts: 0, text: "added Ada's iPad, for good." },
       { who: "Ada's iPad", named: true, kind: 'phone', subject: 'p3', when: 'Tuesday', ts: 0, text: 'asked to be added to the house.' },
-      { who: "Temi's iPhone", named: true, kind: 'home', subject: 'e1', when: 'Tuesday', ts: 0, text: 'removed the Nest. Everything it brought went with it.' },
-      { who: "Temi's iPhone", named: true, kind: 'home', subject: 'l1', when: 'Tuesday', ts: 0, text: 'now treats Ceiling light as a light.' },
+      { who: "Jordan's iPhone", named: true, kind: 'home', subject: 'e1', when: 'Tuesday', ts: 0, text: 'removed the Nest. Everything it brought went with it.' },
+      { who: "Jordan's iPhone", named: true, kind: 'home', subject: 'l1', when: 'Tuesday', ts: 0, text: 'now treats Ceiling light as a light.' },
       { who: "Ada's iPad", named: true, kind: 'share', subject: 'device', when: 'Monday', ts: 0, text: 'shared Kitchen lights with other apps.' },
       { who: 'The hub', named: false, kind: 'bridge', subject: 'c8ebba', when: 'Monday', ts: 0, text: 'recognized the bridge c8ebba.' },
       { who: 'The hub', named: false, kind: 'home', subject: 'driver', when: 'Sep 13', ts: 0, text: 'signed in to Messages.' },
@@ -844,25 +844,25 @@ const bridgeRows = process.env.BRIDGES === 'none' ? [] : [
   /* The house's own address (brain/hub/address.py). Offered unless OUTSIDE=closed; OUTSIDE=named starts the house
      with one; `palace` is another house's, so the taken line and its three suggestions can be seen. */
   if (p === '/address' && req.method === 'GET') {
-    if (process.env.OUTSIDE === 'named' && !mockAddress.house) Object.assign(mockAddress, { house: 'temi', claimedAt: Date.now() - 60000 })
+    if (process.env.OUTSIDE === 'named' && !mockAddress.house) Object.assign(mockAddress, { house: 'jordan', claimedAt: Date.now() - 60000 })
     const offer = process.env.OUTSIDE === 'closed' ? { open: false, price: null, pay: null } : process.env.OUTSIDE === 'hand' ? { open: true, price: null, pay: null, by_hand: true } : { open: true, price: '$3 a month', pay: 'https://pay.example/start' }
-    if (!mockAddress.house) return json(res, { offer, guess: 'temi', house: null })
+    if (!mockAddress.house) return json(res, { offer, guess: 'jordan', house: null })
     const carried = Date.now() - mockAddress.claimedAt > 6000
-    return json(res, { offer, guess: 'temi', house: mockAddress.house, address: `${mockAddress.house}.elyir.app`, want: mockAddress.want, on: carried, waiting: false, carried, held_until: null, entitled_until: carried ? Date.UTC(2027, 9, 1) / 1000 : null })
+    return json(res, { offer, guess: 'jordan', house: mockAddress.house, address: `${mockAddress.house}.elyir.app`, want: mockAddress.want, on: carried, waiting: false, carried, held_until: null, entitled_until: carried ? Date.UTC(2027, 9, 1) / 1000 : null })
   }
   if (p.startsWith('/address/names/')) {
     const n = decodeURIComponent(p.slice('/address/names/'.length))
-    return json(res, n === 'palace' ? { name: n, free: false, why: 'taken', suggestions: ['palace-house', 'palace-holts', 'palace-adeyeri'] } : { name: n, free: true, address: `${n}.elyir.app` })
+    return json(res, n === 'palace' ? { name: n, free: false, why: 'taken', suggestions: ['palace-house', 'palace-cedar', 'palace-lee'] } : { name: n, free: true, address: `${n}.elyir.app` })
   }
   if (p === '/address' && req.method === 'POST') { let b = ''; req.on('data', c => (b += c)); return req.on('end', () => {
     let name = ''; try { name = JSON.parse(b).name || '' } catch {}
     if (name === 'palace') { res.writeHead(409, { 'Content-Type': 'application/json' }); return res.end(JSON.stringify({ detail: { why: 'taken', suggestions: ['palace-house'] } })) }
     Object.assign(mockAddress, { house: name, claimedAt: Date.now(), want: 'on' })
-    json(res, { offer: { open: true, price: '$3 a month', pay: 'https://pay.example/start' }, guess: 'temi', house: name, address: `${name}.elyir.app`, want: 'on', carried: false })
+    json(res, { offer: { open: true, price: '$3 a month', pay: 'https://pay.example/start' }, guess: 'jordan', house: name, address: `${name}.elyir.app`, want: 'on', carried: false })
   }) }
-  if ((p === '/address/on' || p === '/address/off') && req.method === 'POST') { mockAddress.want = p.endsWith('on') ? 'on' : 'off'; return json(res, { offer: { open: true, price: '$3 a month', pay: null }, guess: 'temi', house: mockAddress.house, address: `${mockAddress.house}.elyir.app`, want: mockAddress.want, carried: true, on: mockAddress.want === 'on', entitled_until: Date.UTC(2027, 9, 1) / 1000 }) }
+  if ((p === '/address/on' || p === '/address/off') && req.method === 'POST') { mockAddress.want = p.endsWith('on') ? 'on' : 'off'; return json(res, { offer: { open: true, price: '$3 a month', pay: null }, guess: 'jordan', house: mockAddress.house, address: `${mockAddress.house}.elyir.app`, want: mockAddress.want, carried: true, on: mockAddress.want === 'on', entitled_until: Date.UTC(2027, 9, 1) / 1000 }) }
   /* The house's own address and a phone that has not moved to it yet (design/away/, C). ADDRESS=1 gives the house
-     one; the phone reading /phones/me is then Temi's iPhone, so the band line and the Home only | Anywhere choice show. */
+     one; the phone reading /phones/me is then Jordan's iPhone, so the band line and the Home only | Anywhere choice show. */
   if (p === '/phones/me') return json(res, process.env.ADDRESS
     ? { locked: !!process.env.LOCKED, paired: true, home: 'Maple Court', phone: { ...phones.phones[1], me: true, moved: !!process.env.MOVED }, away: false,
         lan: '192-168-86-53.maple-court.home.elyir.app', address: 'https://maple-court.elyir.app' }

@@ -31,7 +31,7 @@ class SirenGuessTests(unittest.TestCase):
     something loud."""
 
     def test_a_switch_that_names_itself_loud_is_an_alarm(self):
-        for words in ("Holts Summit Alarm Siren", "Garage siren", "Klaxon", "Outdoor strobe", "Burglar alarm"):
+        for words in ("Cedar Falls Alarm Siren", "Garage siren", "Klaxon", "Outdoor strobe", "Burglar alarm"):
             with self.subTest(words=words):
                 self.assertEqual(guessed_kind("switch", None, words), "alarm")
 

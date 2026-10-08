@@ -371,22 +371,22 @@ echo "1.1.1.1 via 192.168.86.1 dev eth0 src $(cat "$FAKE/lan" 2>/dev/null || ech
 I
   chmod +x "$bin/docker" "$bin/ip"
   local secret token; secret="$(printf 's%.0s' $(seq 43))"; token="$(printf 'a%.0s' $(seq 64))"
-  good() { printf 'HUB_AWAY_HOUSE=temi\nHUB_RELAY_SECRET=%s\nHUB_RELAY_TOKEN=%s\nHUB_RELAY_ADDR=relay.elyir.app\nHUB_AWAY_ZONE=elyir.app\n' "$secret" "$token" > "$data/away.env"; }
+  good() { printf 'HUB_AWAY_HOUSE=jordan\nHUB_RELAY_SECRET=%s\nHUB_RELAY_TOKEN=%s\nHUB_RELAY_ADDR=relay.elyir.app\nHUB_AWAY_ZONE=elyir.app\n' "$secret" "$token" > "$data/away.env"; }
   run() { printf '{"at": 1, "want": "%s"}' "$1" > "$data/away.request"; rm -f "$fake/docker"
           PATH="$bin:$PATH" FAKE="$fake" HOME_HUB_DIR="$dir" "$HERE/away.sh" >/dev/null 2>&1; }
   env_() { grep -m1 "^$1=" "$dl/.env" | cut -d= -f2-; }
 
   printf 'TZ=UTC\nCOMPOSE_PROFILES=zigbee,voice\n' > "$dl/.env"
   good; run on
-  is "on writes the house's name" "$(env_ HUB_AWAY_HOUSE)" temi
+  is "on writes the house's name" "$(env_ HUB_AWAY_HOUSE)" jordan
   is "...and its secret" "$(env_ HUB_RELAY_SECRET)" "$secret"
   is "...and turns the away door on" "$(env_ HUB_AWAY)" on
   is "...adding away beside the radios and the voice" "$(env_ COMPOSE_PROFILES)" "zigbee,voice,away"
   is "...and brings caddy, frpc and lan-cert up" "$(cat "$fake/docker")" "compose up -d caddy frpc lan-cert"
-  is "...naming the house at home from the address it really has" "$(env_ HUB_LAN_NAME)" "192-168-86-53.temi.home.elyir.app"
+  is "...naming the house at home from the address it really has" "$(env_ HUB_LAN_NAME)" "192-168-86-53.jordan.home.elyir.app"
   [ -f "$data/away.request" ] && no "...and takes the request away" "it is still there" || ok "...and takes the request away"
   python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); print(d["on"], d["house"])' "$data/away.json" > "$fake/said" 2>&1
-  is "...and says what it did" "$(cat "$fake/said")" "True temi"
+  is "...and says what it did" "$(cat "$fake/said")" "True jordan"
 
   run on
   is "on twice is still one away" "$(env_ COMPOSE_PROFILES)" "zigbee,voice,away"
@@ -394,7 +394,7 @@ I
   run off
   is "off turns the door off" "$(env_ HUB_AWAY)" off
   is "...takes away out and leaves the rest" "$(env_ COMPOSE_PROFILES)" "zigbee,voice"
-  is "...keeps the name for when it comes back" "$(env_ HUB_AWAY_HOUSE)" temi
+  is "...keeps the name for when it comes back" "$(env_ HUB_AWAY_HOUSE)" jordan
   is "...and stops frpc and lan-cert" "$(head -1 "$fake/docker")" "compose --profile away rm -sf frpc lan-cert"
 
   good; run on; : > "$data/away.env"; run forget
@@ -411,7 +411,7 @@ I
   is "the last profile going leaves none rather than nothing" "$(env_ COMPOSE_PROFILES)" none
 
   local before
-  for bad in 'HUB_AWAY_HOUSE=temi|evil' 'HUB_AWAY_HOUSE=Temi' 'HUB_AWAY_HOUSE=-temi' "HUB_RELAY_SECRET=x" 'HUB_RELAY_SECRET=abc$(reboot)defghijklmnop' \
+  for bad in 'HUB_AWAY_HOUSE=jordan|evil' 'HUB_AWAY_HOUSE=Jordan' 'HUB_AWAY_HOUSE=-jordan' "HUB_RELAY_SECRET=x" 'HUB_RELAY_SECRET=abc$(reboot)defghijklmnop' \
              'HUB_RELAY_ADDR=relay.elyir.app;rm' 'HUB_AWAY_ZONE=elyir.app;HUB_IMG_BRAIN=evil/brain'; do
     printf 'TZ=UTC\nCOMPOSE_PROFILES=none\n' > "$dl/.env"; before="$(cat "$dl/.env")"
     good; key="${bad%%=*}"; grep -v "^$key=" "$data/away.env" > "$fake/v"; printf '%b\n' "$bad" >> "$fake/v"; mv "$fake/v" "$data/away.env"

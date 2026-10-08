@@ -19,10 +19,10 @@ describe('the code', () => {
 
 describe('where a house is', () => {
   it('is its own name in the app\'s zone, and the mock on a developer\'s machine', () => {
-    expect(originOf('temi', { hostname: 'houses.elyir.app', protocol: 'https:' })).toBe('https://temi.elyir.app')
-    expect(originOf('temi', { hostname: 'localhost', protocol: 'http:' })).toBe('http://localhost:8399')
-    expect(labelOf('https://Temi.elyir.app/')).toBe('temi')
-    expect(labelOf('temi.elyir.app')).toBe('temi')
+    expect(originOf('jordan', { hostname: 'houses.elyir.app', protocol: 'https:' })).toBe('https://jordan.elyir.app')
+    expect(originOf('jordan', { hostname: 'localhost', protocol: 'http:' })).toBe('http://localhost:8399')
+    expect(labelOf('https://Jordan.elyir.app/')).toBe('jordan')
+    expect(labelOf('jordan.elyir.app')).toBe('jordan')
   })
 })
 

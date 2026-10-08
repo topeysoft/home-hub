@@ -194,7 +194,7 @@ EVENING_WORDS = {"every": "Every evening", "occasion": "Only for occasions", "ne
 UNTIL = "23:00"
 # DUSK IS THE HOUSE'S OWN, a little after sunset, so the roof does not light in daylight: the sun four
 # degrees under the horizon, about twenty minutes after it sets. The boards drew 6:41 PM on Oct 24 in
-# Holts Summit, Missouri, and this gives within a few minutes of it.
+# Cedar Falls, Missouri, and this gives within a few minutes of it.
 DUSK = -4.0
 
 # What a light's room has to be called for the light to count as outside. Matched against the

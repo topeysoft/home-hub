@@ -45,7 +45,7 @@ Once the house has a code, only its own phones get in. A phone gets in one of th
 
 - **The screen that set the code during setup** is paired on the spot: it is the wall.
 - **Type the code on the phone.** The owner's way in. Wrong codes count against the address as anywhere else.
-- **Ask, and be allowed.** A new phone opens the hub and sees *Join Nadine's house*: it gives a name ("Sam" becomes
+- **Ask, and be allowed.** A new phone opens the hub and sees *Join Robin's house*: it gives a name ("Sam" becomes
   *Sam's iPhone*), taps *Ask to join*, and waits. Every screen that is already in shows a card: *Sam's iPhone wants to
   join the house · Allow · Not now*. Allow asks *For today / For the weekend / Keep*, then the code. A phone knocking
   wakes the wall from its clock so the card is seen.
@@ -94,7 +94,7 @@ the raw bytes into that house's tunnel. It never decrypts. What it can see is wo
 frame, not a code.**
 
 **The listener split, which is the part to get right.** Traffic that arrives through the tunnel must land on a
-listener of its own. If it shared Caddy's ordinary `:443`, a request routed by SNI `nadine.elyir.app` could carry
+listener of its own. If it shared Caddy's ordinary `:443`, a request routed by SNI `robin.elyir.app` could carry
 `Host: hub.local` after the handshake and fall into the local site block — which is the front door propped open from
 the internet. So `frpc` forwards into a Caddy site on `:9443` that `bind`s to loopback and is unreachable from the
 LAN, and **everything arriving there is away traffic whatever Host it claims**.
@@ -135,7 +135,7 @@ so the relay is never in the path at home. At home with the internet down the na
 relay being down is the same as being away with no signal: the house itself is untouched.
 
 **The name is `elyir.app`**, bought 12 September 2026, its DNS run from Cloudflare, and a house is a subdomain of
-it: `nadine.elyir.app`. Three things follow from the choice of domain rather than from anything in this design.
+it: `robin.elyir.app`. Three things follow from the choice of domain rather than from anything in this design.
 
 - **`.app` is on the HSTS preload list at the top level, with `includeSubDomains`.** Every browser shipping that list
   refuses plain http to anything under `elyir.app` — and, the part that decides the order below, an HSTS host whose
@@ -375,7 +375,7 @@ page came. And nothing re-runs `away.sh` when the hub's LAN address changes.
 ## What was verified
 
 *12 September 2026, by standing the whole shape up in miniature rather than reading about it: a test CA, a leaf for
-`nadine.homehub.test`, an origin holding the only copy of the key, `frps` in one container and `frpc` in another.*
+`robin.homehub.test`, an origin holding the only copy of the key, `frps` in one container and `frpc` in another.*
 
 - **The relay does not terminate TLS.** The certificate served to the client through the relay was the origin's own,
   to the byte — the same SHA-256 fingerprint — and the client verified the chain against the hub's own CA. The origin
@@ -384,7 +384,7 @@ page came. And nothing re-runs `away.sh` when the hub's LAN address changes.
 - **Routing is by name and nothing else.** A connection offering an unknown SNI, or no SNI at all, gets no certificate
   and no connection: the hub is not reachable except by the name registered for it. A port scan of the relay finds
   nothing to talk to.
-- **And the reason step 1 exists.** The origin saw `Host: nadine.homehub.test:9444` — the client's own Host header,
+- **And the reason step 1 exists.** The origin saw `Host: robin.homehub.test:9444` — the client's own Host header,
   carried through untouched after SNI had already chosen the hub. SNI picks the house; the Host header is still
   whatever the request claims. That is exactly the bypass the listener split was built for, confirmed in the small.
 
@@ -415,7 +415,7 @@ door under test was the `:9443` site as it is actually written.*
   box in step 3 is sized for a few thousand houses rather than one. The reasoning, the tiers and what may never be
   sold are `docs/service.md`.
 - ~~**The alias that covers home**~~ **Closed, 1 October 2026: the address in the name.** A small maker-run DNS server
-  answers names that spell the hub's LAN address -- `192-168-86-59.temi.home.elyir.app` is `192.168.86.59` -- the way
+  answers names that spell the hub's LAN address -- `192-168-86-59.jordan.home.elyir.app` is `192.168.86.59` -- the way
   Plex's `plex.direct` does. Terraform delegates the one subzone to it once and **no house ever causes a DNS write**,
   which is the rule the zone was built on. The hub's certificate for that name is proved over DNS-01, with the
   challenge answered by the same server for the house that signed the request, so still no house holds a Cloudflare

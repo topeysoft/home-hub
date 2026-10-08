@@ -18,7 +18,7 @@ REAL_FFMPEG = sounds.FFMPEG   # the fake rain.mp3 below is junk bytes: most test
 
 def make():
     hub = FakeHub(); hub.ha, hub.env = FakeHA(), {"HUB_IP": "192.168.1.9"}
-    hub.speaker = Device("media_player.nadines_room_speaker", "Nadine's Room speaker", "den", "media", "idle")
+    hub.speaker = Device("media_player.robins_room_speaker", "Robin's Room speaker", "den", "media", "idle")
     hub.home.rooms["den"].devices.append(hub.speaker); hub.home.devices[hub.speaker.id] = hub.speaker
     hub.sounds = sounds.Sounds(hub)
     return hub
