@@ -4230,6 +4230,12 @@ select.input {
   --ink-2: var(--act-ink-2, #cfcbc3);
   --muted: var(--act-ink-2, #cfcbc3);
   --surface-hi: var(--act-chip, rgba(255, 255, 255, 0.16));
+  /* --bg too, because a chosen chip is --ink on --bg: once this card is pale enough to flip its ink
+     dark, a --bg left at the page's dark made "Cool" dark on dark. And `color` itself, which this card
+     only inherited -- already computed from the page's ink -- so its name stayed light on a pale card
+     (reported 9 October, a phone in dark mode by day). */
+  --bg: var(--act-bg, #0c0d10);
+  color: var(--ink);
 }
 /* A holding thermostat has to say so here too. `.tile.on .tile-icon` up at the
    top of this file paints every lit tile's badge in --lamp, and the rule this
