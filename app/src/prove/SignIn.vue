@@ -6,7 +6,7 @@
 import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 import { getCatalog, startFlow, getFlow, submitFlow, cancelFlow, setCredentials, type CatalogItem, type Step, type Field } from '../api'
 import { notify } from '../store'
-import { type Act, type Caught, type Working } from '../adding'
+import { everyDevice, whatArrived, type Act, type Caught, type Working } from '../adding'
 import Icon from '../Icon.vue'
 import { parseKeyFile, keyFileWarning } from '../keyfile'
 
@@ -28,6 +28,7 @@ const props = defineProps<{ on?: string | null }>()
 const emit = defineEmits<{ working: [Working], caught: [Caught], wrong: [string, boolean?], acts: [Act[]], head: [string] }>()
 
 const step = ref<Step | null>(null)
+const before = everyDevice()
 const values = reactive<Record<string, any>>({})
 const busy = ref(false), q = ref(''), catalog = ref<CatalogItem[] | null>(null), error = ref('')
 const warn = ref(''), hints = ref<Record<string, string>>({}), fileName = ref('')
@@ -45,8 +46,15 @@ function show(s: Step) {
   for (const f of s.fields ?? []) values[f.name] = f.kind === 'section' ? Object.fromEntries((f.fields ?? []).map(g => [g.name, blank(g)])) : blank(f)
   if (s.title) emit('head', s.title)
   if (s.type === 'progress') { emit('working', { text: s.progress || 'Asking them for your devices…' }); pollSoon() }
-  if (s.type === 'create_entry') emit('caught', { many: true, name: s.entry_title || s.kind, what: undefined })
+  if (s.type === 'create_entry') arrived(s.entry_title || s.kind)
   if (s.type === 'abort') { emit('head', 'It wasn’t added.'); emit('wrong', `${s.reason}${s.hint ? ' ' + s.hint : ''}`, !!s.retry) }
+}
+/* An entry is not a device, but what it brought can be seen arriving, and a thermostat paired over HomeKit
+   is one or two things somebody is standing next to -- so it is placed here, like anything else added by
+   hand (design/arrived/). Only an add too big for one screen goes on to New devices. */
+async function arrived(from: string) {
+  emit('working', { text: `Bringing in what ${from} has…` })
+  emit('caught', await whatArrived(before, 6, from))
 }
 /* what goes back to the house: filled-in fields, numbers as numbers, a section as its own object */
 function answers(fields: Field[], vals: Record<string, any>): Record<string, unknown> {

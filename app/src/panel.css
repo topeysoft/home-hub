@@ -12471,6 +12471,79 @@ button.reading[data-held] {
   font-size: 14.5px;
   color: var(--ink);
 }
+/* New devices opened from the end of an add: what it brought first, what was waiting below and quieter
+   (design/arrived/JustAdded.dc.html) */
+.sort-group {
+  list-style: none;
+  margin: 6px 0 2px;
+  font-size: 12.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.sort-group.before {
+  margin-top: 22px;
+}
+.sort-row.before {
+  opacity: 0.6;
+}
+.sort-arriving {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 14px;
+  font-size: 15px;
+  color: var(--ink-2);
+}
+/* beat four for a few things at once (design/arrived/GuessC.dc.html): what one add brought, a row a thing */
+.arrived-from {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 18px 0 10px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.arrived-row {
+  margin-bottom: 12px;
+  padding: 16px 18px;
+  border-radius: var(--r-lg);
+  border: 1px solid var(--edge);
+  background: rgba(var(--wash-rgb), 0.035);
+}
+.arrived-row .label {
+  margin: 16px 0 10px;
+}
+.arrived-top {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.arrived-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--r-md);
+  background: var(--surface-hi);
+  display: grid;
+  place-items: center;
+  color: var(--ink-2);
+  flex: none;
+}
+.arrived-name {
+  flex: 1;
+  min-width: 0;
+}
+.arrived-name b {
+  display: block;
+  font-weight: 500;
+  font-size: 17px;
+}
+.arrived-name small {
+  display: block;
+  margin-top: 1px;
+  font-size: 13.5px;
+  color: var(--muted);
+}
 .press-rooms .chip-btn.ghost {
   color: var(--muted);
 }

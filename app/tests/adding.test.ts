@@ -2,7 +2,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { describe, expect, it, beforeEach } from 'vitest'
 import { readFileSync, readdirSync } from 'node:fs'
-import { SHOUTS_FOR, asThing, doors, kindOf, stripSheetOpen, stripWaiting, waitingBand } from '../src/adding'
+import type { Device } from '../src/api'
+import { SHOUTS_FOR, asThing, caughtFrom, doors, kindOf, stripSheetOpen, stripWaiting, waitingBand } from '../src/adding'
 import { store } from '../src/store'
 
 /* The vocabulary of adding, pinned. Five screens used to say the same thing five ways -- six words
@@ -68,6 +69,8 @@ describe('the word list', () => {
     'Try the next one', 'No, none of them', 'Look again', 'I can reach the code',
     'It came with a QR code', 'No code on the back?', 'Continue', 'Add it',
     'Open their page', 'I’ve done that', 'Put them in rooms',
+    // the undo on a row the house placed by its name, at the end of an add that brought several things (design/arrived/, C)
+    'Change',
     'Copy',   // not a beat: it copies the address in the box beside it
     // the bridge's own two answers, which are answers and not ways out
     'Not mine', 'Leave it on', 'No, dark', 'Leave it here',
@@ -362,5 +365,28 @@ describe('the line in the band', () => {
       .toMatchObject({ title: 'Found 2 new things nearby', sub: 'a Hue bridge, OBI1, a 3D printer' })
     expect(waitingBand([], knock(SHOUTS_FOR + 1), now, [{ name: 'OBI1' }])[0])
       .toMatchObject({ title: '2 things waiting to be set up', sub: 'OBI1, a light strip' })
+  })
+})
+
+/* design/arrived/, C, chosen 8 October: what one add brought, counted in things rather than entities. */
+describe('what arrived', () => {
+  const d = (id: string, capability: string, hw: string, hw_name: string): Device =>
+    ({ id, name: `${hw_name} ${capability}`, room_id: 'unassigned', capability, state: 'on', attrs: {}, hw, hw_name })
+
+  it('is one thing to place and name when its parts share one piece of hardware', () => {
+    const c = caughtFrom([d('climate.eco', 'climate', 'eco', 'My ecobee'), d('sensor.eco_h', 'sensor.humidity', 'eco', 'My ecobee')], 'My ecobee')
+    expect(c).toMatchObject({ device_id: 'climate.eco', name: 'My ecobee', what: 'a thermostat', unit: true })
+    expect(c.many).toBeUndefined()
+  })
+
+  it('is several things, said as what they are, when a thermostat brings a sensor for another room', () => {
+    const c = caughtFrom([d('climate.eco', 'climate', 'eco', 'My ecobee'),
+                          d('sensor.bed_t', 'sensor.temperature', 'bed', 'Bedroom'), d('binary_sensor.bed_o', 'motion', 'bed', 'Bedroom')], 'My ecobee')
+    expect(c).toMatchObject({ many: true, from: 'My ecobee', what: 'a thermostat, and a temperature sensor' })
+    expect(c.ids).toEqual(['climate.eco', 'sensor.bed_t', 'binary_sensor.bed_o'])
+  })
+
+  it('is nothing to place when nothing has turned up yet', () => {
+    expect(caughtFrom([], 'Kitchen lights')).toEqual({ many: true, from: 'Kitchen lights' })
   })
 })

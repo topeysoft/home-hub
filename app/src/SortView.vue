@@ -25,7 +25,22 @@ import { blinkWord, canBlink, known, nowWord } from './telling'
 const props = defineProps<{ room: Room; editing?: boolean }>()
 defineEmits<{ back: [] }>()
 const rooms = computed(() => store.rooms.filter(r => r.id !== 'unassigned'))
-const rows = computed(() => unitsOf(props.room.devices))
+/* What an add just brought comes first, under what brought it, with what was already waiting below
+   (design/arrived/JustAdded.dc.html). Only when this was opened from the end of an add. */
+const fresh = computed(() => new Set(props.editing ? [] : store.justAdded?.ids ?? []))
+const isFresh = (r: UnitRow) => r.parts.some(d => fresh.value.has(d.id))
+const rows = computed(() => {
+  const all = unitsOf(props.room.devices)
+  return fresh.value.size ? [...all.filter(isFresh), ...all.filter(r => !isFresh(r))] : all
+})
+const groupOf = (i: number) => {
+  if (!fresh.value.size) return ''
+  const r = rows.value[i], prev = rows.value[i - 1]
+  if (i === 0 && isFresh(r)) return store.justAdded?.from ? `Just added · came with ${store.justAdded.from}` : 'Just added'
+  if (!isFresh(r) && (i === 0 || isFresh(prev))) return 'Waiting from before'
+  return ''
+}
+const arriving = computed(() => !props.editing && !!store.justAdded && !rows.value.some(isFresh) && Date.now() - store.justAdded.at < 90_000)
 const here = computed(() => props.editing ? props.room.id : '')
 const names = ref<Record<string, string>>({})
 const busy = ref<Record<string, string>>({})
@@ -131,7 +146,7 @@ watch(() => props.room.devices.map(d => `${d.id}:${d.state}`).join(), () => {
 }, { immediate: true })
 let tick: number | undefined
 onMounted(() => { tick = window.setInterval(() => (now.value = Date.now()), 1000) })
-onUnmounted(() => clearInterval(tick))
+onUnmounted(() => { clearInterval(tick); store.justAdded = null })
 /* what a pressed thing turned out to be, in its own words rather than its address: the lead part says
    what it is, and a motion sensor among the parts is said with it */
 function what(u: UnitRow) {
@@ -247,8 +262,11 @@ watch(() => props.room.devices.length, (n, was) => { if (n > (was ?? 0)) think()
         <button class="button small" v-if="placeable > 1" :class="{ busy: applying }" @click="useAll">Place all {{ placeable }}</button>
       </div>
 
+      <p class="sort-arriving" v-if="arriving"><span class="pulse-dot"></span>Arriving{{ store.justAdded?.from ? ` from ${store.justAdded.from}` : '' }}…</p>
       <ul class="sort" v-if="room.devices.length">
-        <li v-for="u in rows" :key="u.key" class="sort-row" :class="{ busy: busy[u.key], unit: isUnit(u), pressed: live === u.key }">
+        <template v-for="(u, i) in rows" :key="u.key">
+        <li class="sort-group" v-if="groupOf(i)" :class="{ before: !isFresh(u) }">{{ groupOf(i) }}</li>
+        <li class="sort-row" :class="{ busy: busy[u.key], unit: isUnit(u), pressed: live === u.key, before: fresh.size > 0 && !isFresh(u) }">
           <span class="sort-icon"><Icon :name="iconFor(u.lead)" :size="20" /></span>
           <div class="sort-main">
             <!-- on the pressed card the name is asked below, in words, so the header shows it and does not ask twice -->
@@ -306,6 +324,7 @@ watch(() => props.room.devices.length, (n, was) => { if (n > (was ?? 0)) think()
             <button class="button small" @click="use(u)">Use</button>
           </div>
         </li>
+        </template>
       </ul>
       <div v-else class="empty-room">
         <p class="empty">{{ editing ? 'Nothing left in this room.' : 'Everything has a room.' }}</p>
