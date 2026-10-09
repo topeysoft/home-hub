@@ -104,9 +104,16 @@ function setMode(m: string) { if (!dead.value && m !== mode.value) perform(props
    the state line uses, so a thermostat set to cool but currently holding draws no arc and says
    Holding. */
 const doingNow = computed(() => off.value || dead.value ? '' : a.value.hvac_action ?? mode.value)
+/* Where it was set and where the room is, as fractions of the ring, over the same span the pane's ring
+   uses -- so the card and the pane it opens into draw the same gap. A range (Auto) has no one setting. */
+const span = computed(() => unit.value.includes('F') ? [a.value.min_temp ?? 50, a.value.max_temp ?? 90] : [a.value.min_temp ?? 10, a.value.max_temp ?? 32])
+const onRing = (t: unknown) => { const n = Number(t); return t == null || !Number.isFinite(n) ? undefined : (n - span.value[0]) / (span.value[1] - span.value[0]) }
 const artState = computed(() => ({
+  on: !off.value && !dead.value,
   cooling: doingNow.value === 'cooling' || doingNow.value === 'cool',
   heating: doingNow.value === 'heating' || doingNow.value === 'heat',
+  set: off.value || dead.value || range.value ? undefined : onRing(shown.value),
+  now: onRing(sensing.value ? a.value.sense_temp ?? a.value.current_temperature : a.value.current_temperature),
 }))
 
 /* And the CARD, off the same answer. It used to be `:class="[mode, ...]"` -- what

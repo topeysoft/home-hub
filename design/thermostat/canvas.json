@@ -15,6 +15,10 @@
     {
       "id": "face",
       "name": "The dial on the card"
+    },
+    {
+      "id": "face-rejected",
+      "name": "The dial on the card: not chosen"
     }
   ],
   "launch": {
@@ -82,26 +86,26 @@
       "y": 0,
       "w": 1440,
       "h": 900,
-      "title": "A — the pane’s ring, on the card",
+      "title": "A, chosen 9 October — the pane’s ring, on the card",
       "page": "face"
     },
     {
       "file": "FaceNumberB.dc.html",
-      "x": 3120,
+      "x": 0,
       "y": 0,
       "w": 1440,
       "h": 900,
       "title": "B — just the number, and where it stands",
-      "page": "face"
+      "page": "face-rejected"
     },
     {
       "file": "FaceWellC.dc.html",
-      "x": 4680,
+      "x": 1560,
       "y": 0,
       "w": 1440,
       "h": 900,
       "title": "C — a well, not a device",
-      "page": "face"
+      "page": "face-rejected"
     }
   ],
   "annotations": [
@@ -183,23 +187,31 @@
       "y": 960,
       "w": 700,
       "page": "face",
-      "text": "A -- THE PANE'S RING, ON THE CARD\n\nThe 270-degree ring from the thermostat's pane (ClimatePane.vue): a track open at the foot, the gap between the room and the setting in the action's color, a handle where it was set. Off is the track alone, around the room's temperature.\n\nFOR: it is already the panel's mark for a thermostat, so the card and the pane it opens into become one object at two sizes. Nobody's hardware. It keeps the one thing the disc did well -- reading at a glance as a thermostat -- and it says which way the house is going without color alone. The number takes the card's ink, so the shade problem is gone by construction.\n\nAGAINST: a ring around a number is a lot of line for a 253 px card, and the step buttons beside it compete with the handle as things to touch; on the card the ring is a picture of a control, not one."
+      "text": "A -- THE PANE'S RING, ON THE CARD\n\nCHOSEN, 9 OCTOBER. The ring is art.ts's thermostat now, everywhere it is drawn -- the card's face, a room card's corner, the generated device sheet -- so no screen keeps the Nest. The card hands it where the house was set and where the room is, so the gap and the handle are true; a corner drawing with no readings shows a plain ring with the handle at the top. It is drawn in the card's own ink, which retires --ink-lit for the reading and the bug #20 fixed.\n\nThe 270-degree ring from the thermostat's pane (ClimatePane.vue): a track open at the foot, the gap between the room and the setting in the action's color, a handle where it was set. Off is the track alone, around the room's temperature.\n\nFOR: it is already the panel's mark for a thermostat, so the card and the pane it opens into become one object at two sizes. Nobody's hardware. It keeps the one thing the disc did well -- reading at a glance as a thermostat -- and it says which way the house is going without color alone. The number takes the card's ink, so the shade problem is gone by construction.\n\nAGAINST: a ring around a number is a lot of line for a 253 px card, and the step buttons beside it compete with the handle as things to touch; on the card the ring is a picture of a control, not one."
     },
     {
       "id": "face-b",
-      "x": 3120,
+      "x": 0,
       "y": 960,
       "w": 700,
-      "page": "face",
-      "text": "B -- JUST THE NUMBER, AND WHERE IT STANDS\n\nNo dial. The setting, large, and a short scale under it: a dot where it was set, a mark where the room is, the gap in the action's color.\n\nFOR: the quietest and the most legible -- the number gets the whole width, and nothing on the card pretends to be turnable. It reads like the weather card beside it. It is the cheapest to keep right in every shade and at every size, including the third-width card, which already shows a bare number.\n\nAGAINST: it stops looking like a thermostat. Among a lamp, a speaker and a camera drawn as objects, this is the one card that is only text, and the scale is small enough at the wall's distance to read as decoration."
+      "page": "face-rejected",
+      "text": "B -- JUST THE NUMBER, AND WHERE IT STANDS\n\nNOT CHOSEN, 9 October. A was picked.\n\nNo dial. The setting, large, and a short scale under it: a dot where it was set, a mark where the room is, the gap in the action's color.\n\nFOR: the quietest and the most legible -- the number gets the whole width, and nothing on the card pretends to be turnable. It reads like the weather card beside it. It is the cheapest to keep right in every shade and at every size, including the third-width card, which already shows a bare number.\n\nAGAINST: it stops looking like a thermostat. Among a lamp, a speaker and a camera drawn as objects, this is the one card that is only text, and the scale is small enough at the wall's distance to read as decoration."
     },
     {
       "id": "face-c",
-      "x": 4680,
+      "x": 1560,
       "y": 960,
       "w": 700,
+      "page": "face-rejected",
+      "text": "C -- A WELL, NOT A DEVICE\n\nNOT CHOSEN, 9 October. A was picked.\n\nThe round shape, kept; the hardware, gone. A soft inset in the card's own material, lighter or darker with the card, no bezel, no glass, no tick. Which way the house is going is left to the card's color, as it already is.\n\nFOR: the smallest change from today. The card keeps the composition people know -- a round thing in the middle with a button either side -- and loses only what made it a Nest. The number takes the card's ink.\n\nAGAINST: a plain circle says less than anything else on this page. It no longer tells you it is a thermostat by itself, and it carries no information the number does not; it is there because the old one was there."
+    },
+    {
+      "id": "face-decided",
+      "x": -620,
+      "y": 1240,
+      "w": 500,
       "page": "face",
-      "text": "C -- A WELL, NOT A DEVICE\n\nThe round shape, kept; the hardware, gone. A soft inset in the card's own material, lighter or darker with the card, no bezel, no glass, no tick. Which way the house is going is left to the card's color, as it already is.\n\nFOR: the smallest change from today. The card keeps the composition people know -- a round thing in the middle with a button either side -- and loses only what made it a Nest. The number takes the card's ink.\n\nAGAINST: a plain circle says less than anything else on this page. It no longer tells you it is a thermostat by itself, and it carries no information the number does not; it is there because the old one was there."
+      "text": "DECIDED 9 OCTOBER 2026\n\nA: the pane's ring, on the card. B and C are on the page after this one with their cases intact."
     }
   ],
   "decided": {
