@@ -1510,6 +1510,7 @@ input:focus-visible {
   .tiles > .tile.climate[data-size='third'] .clim-big {
     font-family: var(--sans);
     font-weight: 400;
+    color: var(--ink); /* no dial drawn at a third, so the reading is on the card and takes the card's ink */
     font-size: 44px;
     letter-spacing: -0.03em;
     line-height: 1;
@@ -8405,6 +8406,17 @@ select.input {
   max-width: 100%;
   max-height: 100%;
 }
+/* The reading sits ON the drawn dial, which art.ts paints dark in either shade, so it takes the dial's ink
+   wherever the dial is drawn -- not only in the bento, where this was first fixed. A phone's room card in
+   light mode drew a near-black number on the disc (reported 9 October). */
+.clim-face .clim-big,
+.clim-face .clim-dash {
+  color: var(--ink-lit);
+}
+.clim-face .clim-unit {
+  color: var(--ink-lit);
+  opacity: 0.66;
+}
 .face-render {
   position: absolute;
   inset: 0;
@@ -9319,12 +9331,8 @@ select.input {
      painted at a distance from the sky and flips to dark type by late morning.
      Left on the card's answer this came out near-black on a near-black disc at
      noon, with the card around it perfectly legible. Same shape as the glass
-     face redeclaring --card-ink: the surface moved, so what sits on it moves. */
-  color: var(--ink-lit);
-}
-.bento .tile.climate .clim-unit {
-  color: var(--ink-lit);
-  opacity: 0.66;
+     face redeclaring --card-ink: the surface moved, so what sits on it moves.
+     The color itself is .clim-face's, above, for every layout the dial is drawn in. */
 }
 .bento .tile.climate .clim-doing {
   grid-column: 1 / -1;

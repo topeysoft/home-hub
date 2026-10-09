@@ -92,3 +92,22 @@ test('the steps appear exactly while the dial can afford them', async ({ page })
     expect(c.size, `dial at ${height}px tall`).toBeGreaterThan(95)
   }
 })
+
+/* The reading on the dial is light in both shades, wherever the dial is drawn (reported 9 October).
+   art.ts paints the face dark at every hour, so the number on it must never take the page's ink: in
+   light mode that is near-black, and a phone's room card -- not inside the bento, where this was first
+   fixed -- drew a dark number on the dark disc. A third-width card draws no dial and keeps the card's. */
+const lightness = (rgb: string) => { const [r, g, b] = rgb.match(/\d+/g)!.map(Number); return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255 }
+for (const [where, size, url] of [
+  ['a phone\'s room card', { width: 390, height: 844 }, '/?room=living&at=13:00'],
+  ['the wall', { width: 1440, height: 900 }, '/?layout=wall&nav=top&at=13:00'],
+] as const) for (const shade of ['light', 'dark']) {
+  test(`the reading on the dial stays light, on ${where}, in ${shade} mode`, async ({ page }) => {
+    await page.setViewportSize(size)
+    await page.goto(`${url}&shade=${shade}`, { waitUntil: 'networkidle' })
+    const tile = page.locator('.tile.climate').first()
+    await expect(tile.locator('.clim-face .face-render')).toBeVisible()
+    const ink = await tile.locator('.clim-big').evaluate(e => getComputedStyle(e).color)
+    expect(lightness(ink), `the number is ${ink} on a dark dial`).toBeGreaterThan(0.75)
+  })
+}
