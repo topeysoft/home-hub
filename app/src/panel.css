@@ -125,6 +125,12 @@
 :root[data-shade='light'] .sheet-back {
   background: oklch(0.4 0.04 265 / 0.28);
 }
+/* A sheet, and what the command box says above itself, were drawn as dark glass for a dark page;
+   with the ink turned dark they hid their own words. */
+:root[data-shade='light'] :is(.sheet, .bottombar .say-hint, .bottombar .say-note, .bottombar .say-answer, .bottombar .drafts) {
+  background: rgba(var(--surface-rgb), 0.94);
+  box-shadow: 0 40px 100px -30px rgba(var(--wash-rgb), 0.35);
+}
 :root[data-shade='light'] .house-veil {
   background: oklch(0.4 0.04 265 / 0.22);
 }
