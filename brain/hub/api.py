@@ -510,7 +510,12 @@ class Hub:
         if part and before: old_attrs, old = dict(before.attrs), before.state
         else: old_attrs, old = (self.home._keep_attrs(before.capability, old_state.get("attributes", {})) if before else None), old_state.get("state")
         dev = self.home.apply_state(d["entity_id"], d.get("new_state"))
-        if not dev: return
+        if not dev:
+            # A thing's first reading. The registry's own event set off a rebuild a second ago, and when the
+            # reading lands after it the thing was not in the house yet and this state had nowhere to go: a
+            # newly paired thermostat stayed off the wall until somebody refreshed (reported 8 October).
+            if d.get("new_state") and not d.get("old_state"): self.rebuild_soon()
+            return
         # Cameras and media players re-announce the same state constantly; only real changes go in the log.
         if old != dev.state or old_attrs != dev.attrs:
             self.log.add("state", dev.id, old, dev.state, source="device", detail=dev.attrs)
