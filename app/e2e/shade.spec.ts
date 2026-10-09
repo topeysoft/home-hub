@@ -55,3 +55,15 @@ test('light is drawn for a light field: dark ink, no veil, a sky that is not dar
   expect(seen.veil).toBe('none')
   expect(seen.sky).toBeGreaterThan(0.55)       // midnight, and still a light sky
 })
+
+test('a sheet in light is a light surface, so its dark words read', async ({ page }) => {
+  await page.goto('/?shade=light&sheet=why&room=living&at=13:09', { waitUntil: 'networkidle' })
+  await page.waitForTimeout(400)
+  const seen = await page.evaluate(() => {
+    const lum = (c: string) => { const [r, g, b] = c.match(/[\d.]+/g)!.map(Number); return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255 }
+    const sheet = document.querySelector('.sheet')!
+    return { ground: lum(getComputedStyle(sheet).backgroundColor), ink: lum(getComputedStyle(sheet.querySelector('h2, h3, p')!).color) }
+  })
+  expect(seen.ink).toBeLessThan(0.2)
+  expect(seen.ground).toBeGreaterThan(0.75)
+})
