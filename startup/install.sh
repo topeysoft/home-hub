@@ -48,6 +48,19 @@ session  required pam_unix.so
 session  required pam_systemd.so
 PAM
 install -m 0644 "$HERE/elyir-wall.service" /etc/systemd/system/elyir-wall.service
+
+log "the hub, reachable even when its name stops answering"
+"$DIR/driver-layer/host/wifi-awake.sh" || true
+install -m 0644 "$HERE/elyir-keep-hub.service" "$HERE/elyir-keep-hub.timer" /etc/systemd/system/
+# avahi would otherwise say this screen is also at Docker's internal address, which nothing else can reach.
+AVAHI_CONF=/etc/avahi/avahi-daemon.conf
+if [ -f "$AVAHI_CONF" ] && ! grep -q '^deny-interfaces=' "$AVAHI_CONF"; then
+  sed -i 's/^#\?deny-interfaces=.*/deny-interfaces=docker0/' "$AVAHI_CONF"
+  grep -q '^deny-interfaces=' "$AVAHI_CONF" || sed -i '/^\[server\]/a deny-interfaces=docker0' "$AVAHI_CONF"
+  systemctl try-restart avahi-daemon >/dev/null 2>&1 || true
+fi
+
 systemctl daemon-reload
 systemctl enable elyir-wall.service >/dev/null
+systemctl enable --now elyir-keep-hub.timer >/dev/null 2>&1 || true
 log "done; it shows from the next boot"

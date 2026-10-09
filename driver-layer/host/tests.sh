@@ -473,6 +473,60 @@ SH
 }
 
 
+# A screen opens the hub by its name, and the name is found by asking the whole Wi-Fi. When the Wi-Fi
+# stops hearing the answers the hub is still right there, so the address it last had is kept in the
+# hosts file, refreshed whenever the name answers and the thing answering is a hub.
+keeping() {
+  group "a screen keeps the hub's address for when its name stops answering"
+  local root bin hosts; root=$(mktemp -d); bin="$root/bin"; hosts="$root/hosts"; mkdir -p "$bin"
+  printf '#!/usr/bin/env bash\n[ -n "${ANSWER:-}" ] && printf "%%s\\t%%s\\n" "$3" "$ANSWER"\nexit 0\n' > "$bin/avahi-resolve"
+  printf '#!/usr/bin/env bash\necho "$*" >> "%s/curled"\n[ "${ALIVE:-yes}" = yes ]\n' "$root" > "$bin/curl"
+  chmod +x "$bin"/*
+  keep() { PATH="$bin:$PATH" HUB_HOSTS="$hosts" ELYIR_PANEL_URL="${URL:-http://hub.local/?screen=1}" "$HERE/../../startup/keep-hub.sh" >/dev/null; }
+  kept() { grep 'keep-hub' "$hosts" | cut -f1,2 | tr '\t' ' '; }
+  printf '127.0.0.1\tlocalhost\n127.0.1.1\tscreen\n' > "$hosts"
+
+  ANSWER=192.168.1.20 keep
+  is "the name answers: its address is written down" "$(kept)" "192.168.1.20 hub.local"
+  is "...beside what was already there" "$(head -2 "$hosts" | cut -f2 | tr '\n' ' ')" "localhost screen "
+  is "...after asking the hub at that address, by its name" "$(tail -1 "$root/curled")" "-fsS -m 3 -o /dev/null --resolve hub.local:80:192.168.1.20 http://hub.local:80/alive"
+  ANSWER="" keep
+  is "the name stops answering: the address last seen is kept" "$(kept)" "192.168.1.20 hub.local"
+  ANSWER=192.168.1.44 keep
+  is "the hub moved: the new address replaces the old, once" "$(kept)" "192.168.1.44 hub.local"
+  ANSWER=192.168.1.99 ALIVE=no keep
+  is "something answering the name that is not a hub is not believed" "$(kept)" "192.168.1.44 hub.local"
+  rm -f "$root/curled"; ANSWER=192.168.1.20 URL="http://192.168.1.20/?screen=1" keep
+  is "a screen opening an address has nothing to keep" "$([ -f "$root/curled" ] && echo asked || echo left)" "left"
+  ANSWER=192.168.1.20 URL="http://localhost/?screen=1" keep
+  is "...nor does a hub's own screen" "$([ -f "$root/curled" ] && echo asked || echo left)" "left"
+  ANSWER=192.168.1.21 URL="http://hub-2.local:8300/?screen=1" keep
+  is "a hub on another name and port is asked on that port" "$(tail -1 "$root/curled" | cut -d" " -f7)" "hub-2.local:8300:192.168.1.21"
+  rm -rf "$root"
+}
+
+# Wi-Fi that dozes misses what is said to everyone, including the key that unlocks it, and stays deaf
+# until it rejoins. Hubs and screens are on mains: the radio is told never to doze, now and from now on.
+awake() {
+  group "Wi-Fi stays awake on hubs and screens"
+  local root bin; root=$(mktemp -d); bin="$root/bin"; mkdir -p "$bin" "$root/nm" "$root/net/wlan0/wireless" "$root/net/eth0"
+  printf '#!/usr/bin/env bash\necho "iw $*" >> "%s/asked"\n[ "$3" = get ] && echo "Power save: $(cat "%s/ps")"\nexit 0\n' "$root" "$root" > "$bin/iw"
+  printf '#!/usr/bin/env bash\necho "nmcli $*" >> "%s/asked"\n' "$root" > "$bin/nmcli"
+  chmod +x "$bin"/*
+  wake() { rm -f "$root/asked"; PATH="$bin:$PATH" HUB_NM="$root/nm" HUB_NET="$root/net" "$HERE/wifi-awake.sh" >/dev/null; }
+  echo on > "$root/ps"; wake
+  is "NetworkManager is told for every connection" "$(grep '^wifi.powersave' "$root/nm/conf.d/home-hub-wifi.conf")" "wifi.powersave = 2"
+  is "...and rereads its settings" "$(grep -c 'nmcli general reload conf' "$root/asked")" "1"
+  is "the radio up now is woken without rejoining" "$(grep -c 'iw dev wlan0 set power_save off' "$root/asked")" "1"
+  is "...and a wired port is left alone" "$(grep -c eth0 "$root/asked")" "0"
+  echo off > "$root/ps"; wake
+  is "run again, nothing is rewritten or set twice" "$(grep -c 'reload\|set power_save' "$root/asked")" "0"
+  rm -rf "$root/nm"; wake
+  is "a box without NetworkManager gets no settings file" "$([ -e "$root/nm" ] && echo written || echo none)" "none"
+  rm -rf "$root"
+}
+
+
 # What first boot makes of a unit: the house's screen, or the house's hub. Never a second hub beside a
 # real one when the unit was told it is a screen (design/companion/, C). The checkout is fake: its
 # installers leave a file saying they ran, and find-hub.sh answers with $FOUND or nothing.
@@ -525,6 +579,6 @@ becoming() {
 for need in git openssl curl python3; do
   command -v "$need" >/dev/null 2>&1 || { echo "these tests need $need"; exit 2; }
 done
-signatures; holds; undo; radios; watchdog; away; finding; becoming
+signatures; holds; undo; radios; watchdog; away; finding; becoming; keeping; awake
 printf '\n%s passed, %s failed\n' "$PASS" "$FAIL"
 [ "$FAIL" -eq 0 ]

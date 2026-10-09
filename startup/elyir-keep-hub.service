@@ -1,0 +1,9 @@
+# Writes down where the house's hub is, for when its name stops answering. Installed by startup/install.sh.
+[Unit]
+Description=Keep the house's hub reachable from this screen
+After=network-online.target avahi-daemon.service
+
+[Service]
+Type=oneshot
+EnvironmentFile=-/etc/home-hub.conf
+ExecStart=/opt/home-hub/startup/keep-hub.sh
