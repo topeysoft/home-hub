@@ -1,0 +1,144 @@
+{
+  "name": "Choosing what stays on Home",
+  "areas": [
+    "Wall screens"
+  ],
+  "pages": [
+    {
+      "id": "home",
+      "name": "What stays on Home"
+    }
+  ],
+  "launch": {
+    "view": "canvas",
+    "page": "home"
+  },
+  "reading": [
+    "why",
+    "today",
+    "Today.dc.html",
+    "a",
+    "ArrangeA.dc.html",
+    "b",
+    "KeepB.dc.html",
+    "b-pane",
+    "KeepBPane.dc.html",
+    "c",
+    "LearnC.dc.html",
+    "shared",
+    "phone"
+  ],
+  "artboards": [
+    {
+      "file": "Today.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "Today — a weekday morning, and Home shows what is on",
+      "page": "home"
+    },
+    {
+      "file": "ArrangeA.dc.html",
+      "x": 1560,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "A — arrange Home by hand",
+      "page": "home"
+    },
+    {
+      "file": "KeepB.dc.html",
+      "x": 3120,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "B — keep a few, leave some out",
+      "page": "home"
+    },
+    {
+      "file": "KeepBPane.dc.html",
+      "x": 4680,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "B, where it is set — one row in the thing's own pane",
+      "page": "home"
+    },
+    {
+      "file": "LearnC.dc.html",
+      "x": 6240,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "C — the house learns what you reach for",
+      "page": "home"
+    }
+  ],
+  "annotations": [
+    {
+      "id": "why",
+      "x": -620,
+      "y": 0,
+      "w": 500,
+      "page": "home",
+      "text": "WHY THIS EXISTS\n\nAsked 9 October 2026: Home shows cards for whatever is on. Could a household choose what is on it instead, or both, with a good default for anyone who never chooses?\n\nThe row is already a mix. BentoRow.vue keeps the doorbell and the thermostat on Home whatever they are doing, because they are worth a glance. Everything else is there only while it is on. Two things follow from that rule that a household cannot fix.\n\nWHAT YOU REACH FOR IS NOT THERE WHEN IT IS OFF. The kitchen lights and the coffee maker are turned on every weekday morning, and that is exactly when Home cannot show them: they are off. They are three taps away (Rooms, then Kitchen, then the tap) every day.\n\nWHAT IS ALWAYS ON IS ALWAYS THERE. A plug that powers a printer or a router is on all day, so it takes a tall card on Home all day. Appliance features were taken out of the row for the same reason (store.ts, roomActive); a plain plug cannot be, because the house cannot tell an always-on plug from a lamp.\n\nTHE THREE DIRECTIONS are three amounts of control: A hands Home to the household, B lets it add and remove a few things, and C asks nothing and learns. All three are drawn at 7:10 on a weekday morning in the mock house, the moment the problem shows, on the wall's default Wall arrangement. What is new on each board is outlined in dashed amber."
+    },
+    {
+      "id": "today",
+      "x": 0,
+      "y": 960,
+      "w": 700,
+      "page": "home",
+      "text": "TODAY -- DRAWN FROM THE SHIPPED PANEL\n\nThe Wall arrangement at 1440 x 900, measured off app/src on the mock brain: the weather in the left third (.wall-loz at 244,393, 201 x 331), then the row from x 504, with the doorbell and thermostat stacked in one column (253 wide, 264 tall each), the first tall card, the morning's scenes, and the rest off the right edge. The house is quiet apart from the office plug and the walkway light, which is still on until sunrise at 7:12.\n\nThe order is BentoRow's: what is playing first (nothing is), then the glance column, then the first thing that is on, then the scenes. The first thing on is the office plug, so a plug that never changes gets the biggest card on the screen.\n\nAttention's banners (a passcode, things found nearby) are left off all five boards. They come first and unchanged in every arrangement (layout.ts), and none of the directions touches them."
+    },
+    {
+      "id": "a",
+      "x": 1560,
+      "y": 960,
+      "w": 700,
+      "page": "home",
+      "text": "A -- ARRANGE HOME BY HAND\n\nThe idea as it was asked. Arrange Home, in the menu, puts Home into a mode of its own. It cannot start from holding a card, which already opens that card's pane (hold.ts). The row is drawn smaller so all of it fits, every card gets a minus to take it off, they can be dragged into any order, and a last card adds anything in the house. What the household placed comes first, and after a line the house goes on adding what is on, so nothing that is switched on is ever out of sight. Go back to the house's own way undoes all of it.\n\nFOR: it is total. Anything can be first, anything can go, and what a household sees is exactly what it chose. It is what people know from a phone's home screen, so the gesture needs no teaching.\n\nAGAINST: it hands the household a job, and a layout someone made needs looking after. A lamp added next month is not in it. A wall is shared, so one person arranging it decides for everyone else who walks past. It is the most work to build: drag on a sideways row that also scrolls sideways, a mode with its own top bar, an add sheet, and a saved order per screen. And it is the shape of the thing this product is meant to spare people: a dashboard to maintain. The composed row (a speaker playing first and tall, the glance column, the scenes card) becomes a list in whatever order someone left it."
+    },
+    {
+      "id": "b",
+      "x": 3120,
+      "y": 960,
+      "w": 700,
+      "page": "home",
+      "text": "B -- KEEP A FEW, LEAVE SOME OUT  ·  RECOMMENDED\n\nThe row stays the house's, and the household can make two corrections to it, one thing at a time. Always: the kitchen lights and the coffee maker are on this screen's Home even when they are off, straight after the glance column, in the order they were kept, and they never move. Never: the office plug is not on Home at all, on any screen; it is still in the Office and still turns off with Everything off. Everything else is When it's on, which is what the row does today.\n\nA kept thing that is off is drawn off, the same card a lamp is when you have just turned it off, with a small pin in the corner so the person who kept it can see why it is there. Up to four can be kept on a screen, so the row cannot turn into a list again.\n\nFOR: a house nobody touches looks exactly like today. It fixes both problems at the place they are noticed, and it is the rule the row already has (the doorbell and the thermostat are kept) given to the household for any thing. Kept cards hold their place, which is the panel's own rule about not moving under the hand. It is small to build: one field per thing, read by BentoRow.\n\nAGAINST: it lives in each thing's pane, so somebody has to know to look there. For anything already on Home that is one hold away, since holding a card opens its pane; for something that is off, like the coffee maker before it is kept, it is its room first. The two halves have different reach: Always is this screen only, so the kitchen wall and a phone can differ, but Never is the whole house, because a plug that is noise on one screen is noise on all of them. That split has to be said in plain words, and it is said under the control."
+    },
+    {
+      "id": "b-pane",
+      "x": 4680,
+      "y": 960,
+      "w": 700,
+      "page": "home",
+      "text": "B, WHERE IT IS SET\n\nThe coffee maker's own pane, opened from its room. One new row, On Home, with three answers: Always, When it's on, Never. When it's on is selected for every thing in a house that has never been asked, so nothing changes until somebody changes it.\n\nThe line under the control changes with the answer and says what it means here: \"Stays on this screen's Home, even when it's off. Three more can be kept here.\" With Never: \"Not on Home on any screen. It stays in the Kitchen.\" When four are already kept, Always says which of them to let go of rather than going gray.\n\nNo settings page and no list of everything on Home. To change it, you go to the thing, which is also where you would look for anything else about it."
+    },
+    {
+      "id": "c",
+      "x": 6240,
+      "y": 960,
+      "w": 700,
+      "page": "home",
+      "text": "C -- THE HOUSE LEARNS WHAT YOU REACH FOR\n\nNothing to set. The brain already writes down every tap (the history behind What happened). After about two weeks of the same thing turned on at about the same hour on the same kind of day, it brings that thing forward on Home at that hour, drawn off, with Usually by 7:15 on it, and lets it go after. A plug that has been on for weeks with nobody touching it moves to the end of the row. Not these puts a pattern away for good.\n\nFOR: it is the only direction that asks nothing of anybody, which is the product's whole promise. It follows the day: the kitchen in the morning, the living room in the evening, the porch light when it gets dark. And it uses what the house already knows.\n\nAGAINST: things arrive and leave on their own, and that is the problem B solves, back again. The panel's rule is that nothing moves under the hand, and a card that appears because it is 7:05 is a card that moved. It is wrong for its first two weeks and wrong on holidays. When it guesses wrong, the household cannot see why, and Not these is the only answer it has. It is the most to build and the hardest to test, and \"the house noticed you\" is a sentence some people find uncomfortable on a shared wall.\n\nIt is not either-or with B. C could later suggest a keep (\"Keep the coffee maker on Home?\") instead of doing it, which is B with a hint, and is worth its own board if B is picked."
+    },
+    {
+      "id": "shared",
+      "x": 1560,
+      "y": 1760,
+      "w": 700,
+      "page": "home",
+      "text": "WHATEVER IS PICKED\n\n- A house that never chooses sees exactly today's row. The good default is the one already shipped.\n- The doorbell and thermostat column, the speaker that is playing, a print and the scenes card keep their places. Whatever the household adds goes after the glance column, never in front of it.\n- Something kept is still turned on and off by its card, with the same tap, and still says what it is when it is off.\n- What is taken off Home is never taken out of its room, out of Everything off, or out of a routine. Home is a view, not the house.\n- Nothing kept or left out moves while someone is looking. The `done` map in store.ts already holds a card that was just turned off; a kept card simply never leaves.\n- No Home Assistant word reaches the screen. It is \"On Home: Always, When it's on, Never\", not favorites, pins or dashboards."
+    },
+    {
+      "id": "phone",
+      "x": 3120,
+      "y": 1880,
+      "w": 700,
+      "page": "home",
+      "text": "NOT DRAWN: THE PHONE\n\nOn a phone, Home is the Stack: On right now is a set of chips, not a row of cards. Whichever direction wins, a phone's kept things would be chips of their own above On right now, drawn off when off, and Never takes a thing out of On right now there too. The phone is drawn once a direction is picked, at 390 x 844, rather than three times now."
+    }
+  ]
+}
