@@ -10,6 +10,7 @@ import { lock, CANCELED, failed } from './code'
 import { isPage } from './pages'
 import { sunPosition, sunGuess, moonPhase } from './sun'
 import { locale, setHouseLanguage } from './lang'
+import { linkWord, reach, reached, unreachedTap, watchReach } from './reach'
 import { hasCard, printerOn, printerPart, printersIn as inRoom } from './printers'
 
 /* The few soft sheets the panel has. Named rather than written out twice: the restart keeps the one
@@ -507,16 +508,24 @@ export function guessNow(d: Device, guess: { state?: string; attrs?: Record<stri
 /** Apply the expected result right away, ask the house, and step back if it refuses. */
 export async function perform(d: Device, action: string, data?: Record<string, unknown>, guess?: { state?: string; attrs?: Record<string, any> }) {
   const before = { state: d.state, attrs: { ...d.attrs } }, wasDone = done[d.id]
-  if (guess) guessNow(d, guess)
-  /* guessed, with the state: what this did is the card's own sentence once it is no longer on */
-  if (QUIETED[action]) markDone(d.id, QUIETED[action]); else if (WOKEN.has(action)) delete done[d.id]
-  store.pending[d.id] = true
+  /* Known to be cut off from the hub: guess nothing, because the guess is what flipped the card back
+     in front of somebody (design/out-of-reach/, C). It is still asked; it may get through. */
+  const guessing = !reach.out
+  if (guessing) {
+    if (guess) guessNow(d, guess)
+    /* guessed, with the state: what this did is the card's own sentence once it is no longer on */
+    if (QUIETED[action]) markDone(d.id, QUIETED[action]); else if (WOKEN.has(action)) delete done[d.id]
+    store.pending[d.id] = true
+  }
   try { await act(d.id, action, data) }
   catch (e: any) {
     d.state = before.state; d.attrs = before.attrs; delete store.pending[d.id]
     if (wasDone) done[d.id] = wasDone; else delete done[d.id]
+    /* never reached the hub: the card says so, and the band once it is more than one tap */
+    if (e?.unreached) { unreachedTap(d.id); return false }
     notify(`${shortName(d, roomOf(d))} isn’t answering`, 'error'); return false
   }
+  if (reach.misses) reached()
   window.setTimeout(() => delete store.pending[d.id], 5000)   // the stream normally clears it much sooner
   return true
 }
@@ -757,6 +766,8 @@ export function restartLink(up: boolean): boolean {
    countdown, not the card. Only the panel's own copies go. A bridge or strip still being set up is
    read back from the hub when it returns and reopens where it was, a phone asking to join asks again,
    and a restart still puts the person back on the page they asked from (`restarting.from`). */
+/** The corner's word and its dot, from the live connection and from whether fresh requests get through. */
+export const linkNow = () => linkWord(store.linkUp, store.linkLost, reach.out)
 export const hubAway = () => !!(store.restarting?.lost || store.updating?.lost || (store.restoring && store.linkLost))
 export function clearForAway() {
   store.sheet = null
@@ -1005,6 +1016,7 @@ export async function start() {
   clearInterval(foundPoll); foundPoll = window.setInterval(refreshFound, 60000)
   refreshBridge()
   refreshStrip()
+  watchReach()
   stop = connect({ device: applyDevice, home: applyHome, intent: applyIntent, drafts: d => { store.drafts = d; eventsSoon() }, presence: p => { store.presence = p; eventsSoon() }, phones: () => loadPhones(true), share: () => { store.shareTick++; loadShare() }, signals: t => { store.signalTry = t; if (store.signals) loadSignals() }, roofline: r => { if (!ROOF_PARAM) store.roofline = r }, printers: applyPrinters, ambient: a => { store.ambient = a; updateSky() }, status: s => {
     const was = store.status?.driver, version = store.status?.version
     store.status = s
@@ -1020,6 +1032,7 @@ export async function start() {
     else if (store.updating && u && !u.requested) endUpdate()
     if (s.driver === 'ready' && was !== 'ready') { load() }   // the engine just came up: read the house
   }, link: v => {
+    if (!v && store.linkUp) reach.heard = Date.now()
     store.linkUp = v
     tell('houses:status', { connected: v })   // the app keeps its own word for whether this house is answering
     clearTimeout(lostTimer)

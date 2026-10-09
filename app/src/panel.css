@@ -367,7 +367,7 @@ input:focus-visible {
 .tile,
 .scene,
 .back,
-.banner,
+.reach-band,
 .offline-icon,
 .recent-icon,
 .button.ghost {
@@ -704,6 +704,9 @@ input:focus-visible {
 }
 .link.up::before {
   background: var(--live);
+}
+.link.out::before {
+  background: var(--lamp);
 }
 
 /* ---------- stage ---------- */
@@ -1810,6 +1813,23 @@ input:focus-visible {
 .tile.on .tile-state {
   color: var(--ink-2);
 }
+/* a change that never reached the hub (design/out-of-reach/): the card keeps its place, drained, and says so */
+.tile.unreached {
+  border-color: rgba(var(--lamp-rgb), 0.22);
+  box-shadow: inset 0 0 0 999px rgba(12, 13, 16, 0.22);
+}
+.tile-said {
+  display: block;
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--ink);
+}
+.tile-why {
+  display: block;
+  margin-top: 2px;
+  font-size: 13.5px;
+  color: var(--ink-2);
+}
 /* a switch seeing motion through its own sensor (units.ts): its one line says so, in the room's ink rather than muted */
 .tile.seeing .tile-state {
   color: var(--ink);
@@ -2668,36 +2688,94 @@ input:focus-visible {
   transform: translate(-50%, 10px);
 }
 
-.banner {
-  display: inline-flex;
+.reach-band {
+  position: fixed;
+  left: 40px;
+  right: 40px;
+  bottom: calc(26px + env(safe-area-inset-bottom));
+  z-index: 47;
+  min-height: 72px;
+  display: flex;
   align-items: center;
-  gap: 10px;
-  margin-bottom: 18px;
-  padding: 9px 14px;
-  border-radius: var(--r-sm);
+  gap: 16px;
+  padding: 12px 14px;
+  border-radius: var(--r-lg);
   background:
     linear-gradient(rgba(var(--lamp-rgb), 0.12), rgba(var(--lamp-rgb), 0.12)),
     var(--surface);
-  border: 1px solid rgba(var(--lamp-rgb), 0.25);
-  color: var(--ink-2);
+  border: 1px solid rgba(var(--lamp-rgb), 0.28);
+  box-shadow: 0 20px 50px -20px rgba(0, 0, 0, 0.8);
+  color: var(--ink);
+}
+.reach-band-icon {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  background: rgba(var(--lamp-rgb), 0.9);
+  color: var(--lamp-ink);
+}
+.reach-band-text {
+  min-width: 0;
+}
+.reach-band-text b {
+  display: block;
+  font-size: 17px;
+  font-weight: 500;
+  line-height: 23px;
+}
+.reach-band-text small {
+  display: block;
   font-size: 14px;
+  line-height: 20px;
+  color: var(--ink-2);
 }
-.banner svg {
-  color: var(--lamp-text);
-  animation: spin 2.4s linear infinite;
+.reach-band-act {
+  flex: none;
+  margin-left: auto;
+  height: 44px;
+  padding: 0 20px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--edge);
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 500;
+  white-space: nowrap;
 }
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
+.reach-band-act svg {
+  color: var(--ink-2);
+}
+@media (max-width: 860px) {
+  .reach-band {
+    left: 16px;
+    right: 16px;
+    bottom: calc(16px + env(safe-area-inset-bottom));
+    flex-wrap: wrap;
+    align-items: flex-start;
+    padding: 16px;
+  }
+  .reach-band-text {
+    flex: 1 1 0;
+  }
+  .reach-band-act {
+    flex: 1 0 100%;
+    justify-content: center;
+    margin-left: 0;
   }
 }
-.banner-enter-active,
-.banner-leave-active {
-  transition: opacity 0.3s var(--ease);
+.toast.over-band {
+  bottom: calc(118px + env(safe-area-inset-bottom));
 }
-.banner-enter-from,
-.banner-leave-to {
-  opacity: 0;
+/* What is shown may be old: the room as it was, hushed, under the band */
+.stage.hushed {
+  filter: saturate(0.12) brightness(0.6);
+  transition: filter 0.6s var(--ease);
 }
 
 .offline {

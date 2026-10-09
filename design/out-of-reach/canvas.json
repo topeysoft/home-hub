@@ -1,12 +1,36 @@
 {
   "name": "When a screen can't reach the hub",
-  "areas": ["Wall screens"],
-  "reading": ["why", "Today.dc.html", "today", "HubNotLightA.dc.html", "a", "CardKeepsB.dc.html", "b",
-              "NoticesC.dc.html", "c", "PhoneC.dc.html", "phone", "behind", "pick"],
+  "areas": [
+    "Wall screens"
+  ],
+  "reading": [
+    "why",
+    "Today.dc.html",
+    "today",
+    "HubNotLightA.dc.html",
+    "a",
+    "CardKeepsB.dc.html",
+    "b",
+    "NoticesC.dc.html",
+    "c",
+    "PhoneC.dc.html",
+    "phone",
+    "behind",
+    "pick"
+  ],
   "pages": [
     {
       "id": "reach",
-      "name": "A screen that can't reach the hub"
+      "name": "A screen that can't reach the hub",
+      "decided": {
+        "on": "2026-10-09",
+        "chose": "C, with B's card for a tap while cut off",
+        "board": "NoticesC.dc.html"
+      }
+    },
+    {
+      "id": "reach-rejected",
+      "name": "A screen that can't reach the hub: not chosen"
     }
   ],
   "artboards": [
@@ -26,7 +50,7 @@
       "w": 1440,
       "h": 900,
       "title": "A — the toast names the hub, and says nothing changed",
-      "page": "reach"
+      "page": "reach-rejected"
     },
     {
       "file": "CardKeepsB.dc.html",
@@ -35,7 +59,7 @@
       "w": 1440,
       "h": 900,
       "title": "B — the card keeps its place and says it didn't get through",
-      "page": "reach"
+      "page": "reach-rejected"
     },
     {
       "file": "NoticesC.dc.html",
@@ -83,7 +107,7 @@
     },
     {
       "id": "a",
-      "page": "reach",
+      "page": "reach-rejected",
       "x": 1560,
       "y": 940,
       "w": 1440,
@@ -91,7 +115,7 @@
     },
     {
       "id": "b",
-      "page": "reach",
+      "page": "reach-rejected",
       "x": 0,
       "y": 2240,
       "w": 1440,
@@ -119,7 +143,7 @@
       "x": 3120,
       "y": 0,
       "w": 500,
-      "text": "TO PICK\n\nA, B or C, or a mix of them. If C is picked, B's card is the natural pair for a tap while the screen is cut off, and C's second moment draws it that way. Or something else entirely: describe it.\n\nWhichever is picked, the separate cure on the left, a screen that does not need the hub's name for every request, is worth doing as well.\n\nNothing is decided yet."
+      "text": "DECIDED 9 OCTOBER 2026\n\nC: the screen notices on its own, every half minute, and says so along the foot after two misses. A tap while it is cut off guesses nothing and gets B's card. A and B are kept on the page below with their cases.\n\nThe separate cure on the left, a screen that does not need the hub's name for every request, is on branch screen-keeps-the-hub."
     }
   ]
 }
