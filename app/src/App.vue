@@ -6,7 +6,9 @@
 import { inApp } from './inapp'
 import { narrow } from './band'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
-import { store, start, halt, load, foundCount, visibleRooms, activity, roomActive, houseLine, weatherLine, needsSetup, dismissToast, updateReady, forgetDone, cap } from './store'
+import { store, start, halt, load, foundCount, visibleRooms, activity, roomActive, houseLine, weatherLine, needsSetup, dismissToast, updateReady, forgetDone, cap, linkNow, clockNow } from './store'
+import { bandFor, probe, reach } from './reach'
+import { door } from './door'
 import Setup from './Setup.vue'
 import Join from './Join.vue'
 import Away from './Away.vue'
@@ -187,6 +189,12 @@ const wxIcon = computed(() => WX_ICON[store.sky.condition] ?? 'cloud')
 
 const previewAt = new URLSearchParams(location.search).get('at')   // ?at=19:30 previews an hour; the clock follows the sky so a preview agrees with itself
 const shown = computed(() => { if (!previewAt) return now.value; const d = new Date(now.value); const [h, m] = previewAt.split(':').map(Number); d.setHours(h || 0, m || 0, 0, 0); return d })
+/* Not while the hub is restarting, updating or not ready: those have their own screen, which says more. */
+const band = computed(() => {
+  if (!store.loaded || store.restarting || store.updating || store.restoring || store.status?.driver !== 'ready') return null
+  return bandFor({ out: reach.out, lost: store.linkLost, since: reach.since, heard: reach.heard, phone: narrow.value, anywhere: !!door.token,
+    at: t => new Date(t + clockNow() - Date.now()).toLocaleTimeString(locale(), { hour: 'numeric', minute: '2-digit' }) })
+})
 const clock = computed(() => shown.value.toLocaleTimeString(locale(), { hour: 'numeric', minute: '2-digit' }))
 const facts = computed(() => idle.value ? restingFacts(shown.value) : [])   // only worked out while the panel rests
 const restWx = computed(() => idle.value ? restWeather() : null)
@@ -309,14 +317,11 @@ onUnmounted(() => {
         </button>
       </div>
       <div class="rail-foot">
-        <span class="link" :class="{ up: store.linkUp }">{{ store.linkUp ? 'Connected' : 'Reconnecting' }}</span>
+        <span class="link" :class="linkNow().cls">{{ linkNow().word }}</span>
       </div>
     </aside>
 
-    <main class="stage" v-if="!setup && !shut">
-      <Transition name="banner">
-        <div class="banner" v-if="store.loaded && store.linkLost"><Icon name="refresh" :size="16" /> Reconnecting to the hub. What you see may be a little behind.</div>
-      </Transition>
+    <main class="stage" :class="{ hushed: band?.hushed }" v-if="!setup && !shut">
 
       <div class="offline" v-if="!store.loaded || store.restarting || store.updating?.lost || store.status?.driver !== 'ready'">
         <!-- A restart is the one thing this panel does that destroys the thing doing it, and it is
@@ -400,8 +405,17 @@ onUnmounted(() => {
     <Transition name="sheet"><CodePrompt v-if="lock.prompt" /></Transition>
     <Keys v-if="wall" />
 
+    <!-- This screen cut off from the hub, said along its foot before anyone taps (design/out-of-reach/, C) -->
     <Transition name="toast">
-      <div class="toast" :class="store.toast.kind" v-if="store.toast" :key="store.toast.id" role="status">
+      <div class="reach-band" v-if="band" role="status">
+        <span class="reach-band-icon"><Icon name="unlinked" :size="22" /></span>
+        <span class="reach-band-text"><b>{{ band.title }}</b><small>{{ band.body }}</small></span>
+        <button class="reach-band-act" @click="probe()"><Icon name="refresh" :size="16" />Try now</button>
+      </div>
+    </Transition>
+
+    <Transition name="toast">
+      <div class="toast" :class="[store.toast.kind, { 'over-band': band }]" v-if="store.toast" :key="store.toast.id" role="status">
         <span class="toast-text">{{ store.toast.text }}</span>
         <button class="toast-act" v-if="store.toast.action" @click="store.toast.action.run(); dismissToast()">{{ store.toast.action.label }}</button>
       </div>

@@ -19,7 +19,7 @@
  * They kept their code; only the frame changed.
  */
 import { computed, onMounted, onUnmounted, ref, watch, type Component } from 'vue'
-import { foundCount, store, updateReady, loadSignals } from './store'
+import { foundCount, linkNow, store, updateReady, loadSignals } from './store'
 import { adjusted, feelFrom } from './look'
 import Icon from './Icon.vue'
 import LocationPage from './LocationPage.vue'
@@ -225,7 +225,7 @@ onUnmounted(() => window.removeEventListener('keydown', key))
             <Icon name="back" :size="16" class="flip" />
           </button>
         </nav>
-        <p class="house-foot"><span class="link" :class="{ up: store.linkUp }">{{ store.linkUp ? 'Connected' : 'Reconnecting' }}</span></p>
+        <p class="house-foot"><span class="link" :class="linkNow().cls">{{ linkNow().word }}</span></p>
       </aside>
 
       <section class="house-main">
