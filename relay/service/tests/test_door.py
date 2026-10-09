@@ -75,7 +75,11 @@ class Apps(unittest.TestCase):
 
     def test_the_houses_app_is_kept_as_tightly_as_the_printer_app(self):
         csp = re.compile(r'Content-Security-Policy "([^"]+)"')
-        self.assertEqual(csp.search(self.site("houses")).group(1), csp.search(self.site("printers")).group(1))
+        printers = csp.search(self.site("printers")).group(1)
+        # The one difference: the printer app compiles the WebAssembly it ships (its STEP reader). Never eval.
+        self.assertIn("script-src 'self' 'wasm-unsafe-eval';", printers)
+        self.assertNotIn("'unsafe-eval'", printers)
+        self.assertEqual(csp.search(self.site("houses")).group(1), printers.replace(" 'wasm-unsafe-eval'", ""))
         houses = self.site("houses")
         self.assertIn("frame-ancestors 'none'", houses)
         self.assertIn("script-src 'self';", houses)
