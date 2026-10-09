@@ -55,11 +55,10 @@
   /* The same ink, for the few things that sit on an OBJECT rather than on a
      card. A card holds a distance from the sky and flips to dark type when it
      passes the sky on the way up; a drawn object carries its own lighting and
-     does not. A thermostat's dial is a dark disc at every hour, so the reading
-     on it has to stay light while the card around it flips -- and it cannot ask
-     for --ink, because the card it is on is one of the surfaces that redeclares
-     that. This resolves here, where --ink still means what it says, and the
-     computed value is what inherits down. */
+     does not. Something drawn dark at every hour keeps its reading light while
+     the card around it flips -- and it cannot ask for --ink, because the card it
+     is on is one of the surfaces that redeclares that. This resolves here, where
+     --ink still means what it says, and the computed value is what inherits down. */
   --ink-lit: var(--ink);
 
   --r-lg: 22px;
@@ -8398,6 +8397,8 @@ select.input {
   display: grid;
   place-items: center;
   aspect-ratio: 1;
+  /* the ring is drawn in currentColor (art.ts), so it is the same ink as the number it goes round */
+  color: var(--ink);
   padding: 0 26px;
   /* never wider or taller than the slot it was given: the bento card fixes its
      own height to the rail's row, so a dial that sized itself purely from the
@@ -9313,18 +9314,8 @@ select.input {
   position: relative;
   z-index: 1;
   font-size: clamp(22px, 33cqh, 52px);
-  /* The reading is ON the dial now, not on the card, so it takes the DIAL's ink
-     and not the card's. art.ts paints that face dark at every hour -- a dial is
-     a dark disc in a lit room and in a dark one -- while the card underneath is
-     painted at a distance from the sky and flips to dark type by late morning.
-     Left on the card's answer this came out near-black on a near-black disc at
-     noon, with the card around it perfectly legible. Same shape as the glass
-     face redeclaring --card-ink: the surface moved, so what sits on it moves. */
-  color: var(--ink-lit);
-}
-.bento .tile.climate .clim-unit {
-  color: var(--ink-lit);
-  opacity: 0.66;
+  /* The card's ink, like any reading on a card: the ring around it is drawn in that ink too (art.ts),
+     so there is no dark glass to keep a light number for -- which is what --ink-lit was doing here. */
 }
 .bento .tile.climate .clim-doing {
   grid-column: 1 / -1;

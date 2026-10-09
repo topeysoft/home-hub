@@ -156,7 +156,9 @@ const sweep = (fn: (kind: Kind, art: ReturnType<typeof device>, at: string) => v
 
 describe('every device, in every state', () => {
   it('draws something', () => {
-    sweep((_k, art, at) => expect(art.marks.length, at).toBeGreaterThan(3))
+    /* the thermostat is a ring, not an object (design/thermostat/, The dial on the card, A): its track,
+       its arc and its handle are the whole of it, and off it is the track alone */
+    sweep((k, art, at) => expect(art.marks.length, at).toBeGreaterThan(k === 'thermostat' ? 0 : 3))
   })
 
   /* The one that matters, and the reason this file exists. Told it is off, nothing may emit: no
@@ -272,9 +274,12 @@ describe('which shape a light is', () => {
 
    Every other tile has a quiet bottom-right for a drawing to be cropped into. The climate tile is
    controls edge to edge and has none — but it is already a dial, so ClimateTile.vue crops to
-   art.face and puts the number on the dial's own face. That crop is the risk this covers: the two
-   marks that carry the reading are the set-point tick at the top and the heating/cooling arc, and
-   both sit near the bezel where a box a few units too tight would clip them silently. */
+   art.face and puts the number inside the ring. That crop is the risk this covers: the marks that
+   carry the reading are the handle where it was set and the heating/cooling arc, and both sit on the
+   ring's edge where a box a few units too tight would clip them silently.
+
+   And what it is NOT, since 9 October (design/thermostat/, The dial on the card, A): one maker's
+   thermostat. It is the pane's ring, drawn in the ink of the card it sits on. */
 describe('the thermostat, drawn round its own number', () => {
   const faceOf = (s: ArtState) => {
     const art = device('thermostat', s, M)
@@ -306,9 +311,8 @@ describe('the thermostat, drawn round its own number', () => {
         const [x0, y0, x1, y1] = bbox(m)
         return x1 <= f.x || x0 >= f.x + f.w || y1 <= f.y || y0 >= f.y + f.h
       })
-      /* exactly one mark is meant to fall outside it: the shadow the dial casts on the wall,
-         which belongs to the corner crop and not to a face seen head on */
-      expect(outside.length, `${st.label}: marks outside the face`).toBe(1)
+      /* a ring casts no shadow: nothing of it belongs outside the face */
+      expect(outside.length, `${st.label}: marks outside the face`).toBe(0)
       for (const m of art.marks) {
         if (outside.includes(m)) continue
         const [x0, y0, x1, y1] = bbox(m)
@@ -319,4 +323,29 @@ describe('the thermostat, drawn round its own number', () => {
       }
     })
   }
+
+  it('is nobody\'s hardware: no bezel, no glass, nothing lit by the sky -- only the ink it sits on', () => {
+    for (const st of [{ cooling: true }, { heating: true }, {}, { on: false }] as ArtState[]) {
+      const fills = device('thermostat', st, M).marks.flatMap((m) => [m.at.fill, m.at.stroke]).filter((v) => v && v !== 'none')
+      expect(fills.filter((v) => String(v).startsWith('url(')), JSON.stringify(st)).toEqual([])
+      expect(fills).toContain('currentColor')
+    }
+  })
+
+  it('puts the handle where it was set, and the arc between there and the room', () => {
+    const handle = (s: ArtState) => device('thermostat', s, M).marks.find((m) => m.el === 'circle' && m.at.fill === 'currentColor')
+    const top = handle({ set: 0.5 })!, low = handle({ set: 0 })!
+    expect(top.at.cx).toBeCloseTo(96, 0)                     // halfway round a ring open at the foot is the top
+    expect(Number(top.at.cy)).toBeLessThan(30)
+    expect(Number(low.at.cx)).toBeLessThan(70)                // the start is down at the bottom left
+    expect(Number(low.at.cy)).toBeGreaterThan(80)
+    const arc = (s: ArtState) => device('thermostat', s, M).marks.find((m) => m.at.stroke === '#7fb4e8')
+    expect(arc({ cooling: true, set: 0.5, now: 0.6 })).toBeTruthy()
+    expect(arc({ set: 0.5, now: 0.6 }), 'holding draws no arc').toBeUndefined()
+  })
+
+  it('draws an off thermostat as the ring alone', () => {
+    const marks = device('thermostat', { on: false }, M).marks
+    expect(marks).toHaveLength(1)
+  })
 })

@@ -92,3 +92,28 @@ test('the steps appear exactly while the dial can afford them', async ({ page })
     expect(c.size, `dial at ${height}px tall`).toBeGreaterThan(95)
   }
 })
+
+/* design/thermostat/, The dial on the card, A, chosen 9 October. The dial is the pane's ring, drawn in
+   the card's own ink -- not one maker's thermostat, and no dark glass needing a light number of its own.
+   So the ring and the number it goes round are drawn in one ink, the card's, in either shade, on the
+   wall and on a phone's room card (where a dark number on the old dark disc was reported the same day). */
+for (const [where, size, url] of [
+  ['a phone\'s room card', { width: 390, height: 844 }, '/?room=living&at=13:00'],
+  ['the wall', { width: 1440, height: 900 }, '/?layout=wall&nav=top&at=20:10'],
+] as const) for (const shade of ['light', 'dark']) {
+  test(`the ring is nobody's hardware, and it and the reading are one ink, on ${where} in ${shade} mode`, async ({ page }) => {
+    await page.setViewportSize(size)
+    await page.goto(`${url}&shade=${shade}`, { waitUntil: 'networkidle' })
+    const tile = page.locator('.tile.climate').first()
+    await expect(tile.locator('.clim-face .face-render')).toBeVisible()
+    const seen = await tile.evaluate(t => ({
+      ring: getComputedStyle(t.querySelector('.face-render')!).color,
+      reading: getComputedStyle(t.querySelector('.clim-big')!).color,
+      materials: [...t.querySelectorAll('.face-render [fill], .face-render [stroke]')]
+        .flatMap(m => [m.getAttribute('fill'), m.getAttribute('stroke')]).filter(v => v && v.startsWith('url(')),
+    }))
+    expect(seen.materials, 'a bezel or glass drawn from the sky\'s materials').toEqual([])
+    expect(seen.reading, 'the ring and the number it goes round are one ink').toBe(seen.ring)
+    expect(seen.reading).not.toBe('rgba(0, 0, 0, 0)')
+  })
+}
