@@ -1366,6 +1366,14 @@ input:focus-visible {
     color: var(--card-ink-2, var(--muted));
     opacity: 0.7;
   }
+/* the pin that says why an off thing is on Home: kept there from its pane (design/home-keep/KeepB) */
+.tile-maker.tile-always {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+}
   .tiles > .tile[data-size='third'] .tile-maker {
     display: none;
   }
@@ -2400,6 +2408,12 @@ input:focus-visible {
 }
 .onnow-chip.kept .onnow-place {
   color: var(--lamp-text);
+}
+/* Always here (onhome.ts): a thing this screen keeps, while it is off. Not faded like a chip that was just
+   tapped -- it is meant to be here -- only its icon is out. */
+.onnow-chip.unlit .onnow-icon {
+  background: var(--surface-hi);
+  color: var(--ink-2);
 }
 .onnow-leave-active {
   transition: opacity 0.26s ease, transform 0.26s ease;

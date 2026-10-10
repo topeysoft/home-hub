@@ -14,7 +14,7 @@ import { leadsFixture, partnerOf, seeing, speedWord } from '../units'
 import { heldLine, heldOf, roofTile } from '../controller'
 import { makerWord } from '../telling'
 
-const props = defineProps<{ device: Device }>()
+const props = defineProps<{ device: Device; always?: boolean }>()
 /* A STRIP THE CONTROLLER IS KEEPING DARK (design/controller-panel/, "held": A, decided 1 October). The
    tile stops claiming a state it cannot have: it says Staying off, and why, with a shield where the bulb
    was -- in the lamp color, the house's attention color and not a danger color, because the strip is
@@ -158,7 +158,9 @@ async function up() {
        @keydown.enter.space.prevent="held ? (store.opened = device) : perform(device, on ? 'off' : 'on', undefined, { state: on ? 'off' : 'on' })">
     <div class="fill" v-if="!held" :style="{ width: pct + '%' }"></div>
     <DeviceArt v-if="!held" :kind="kind" :state="{ on, brightness: pct / 100, color }" />
-    <span class="tile-maker" v-if="makerWord(device.maker) && !held">{{ makerWord(device.maker) }}</span>
+    <!-- kept on this screen's Home even when off (onhome.ts): the pin says why an off lamp is here -->
+    <span class="tile-maker tile-always" v-if="always && !held" title="Always on Home"><Icon name="keep" :size="13" /></span>
+    <span class="tile-maker" v-else-if="makerWord(device.maker) && !held">{{ makerWord(device.maker) }}</span>
     <div class="tile-body">
       <span class="tile-icon"><Icon :name="held ? 'shield' : 'light'" /></span>
       <span class="tile-name">{{ name }}</span>

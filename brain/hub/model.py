@@ -245,6 +245,9 @@ class Home:
         # to 2700K, and the difference -- who decided -- is the whole of what Automatic means. Kept
         # in settings beside `kinds` so a restore brings it back with the rest of the house.
         self.color_pinned: set[str] = set()
+        # What the household said never to show on Home (design/home-keep/, B). The house's answer rather than
+        # a screen's, because a plug that is noise on the wall is noise on every phone. Kept in settings.
+        self.off_home: set[str] = set()
         self.room_colors: dict[str, list] = {}   # kept per room, from settings, so a restore brings them back
         self.lamps: dict[str, str] = {}    # camera id -> the light built into the same unit (Ring floodlight and spotlight cams)
         self.eyes: dict[str, str] = {}     # light/switch/fan id -> the motion sensor built into the same unit (a Brilliant switch, a Ring pathlight): docs/units.md
@@ -279,6 +282,7 @@ class Home:
         out.update(self.told.get(eid, {}))
         if extra.get("fan_until", 0) > time.time(): out["fan_mode"] = "on"
         if cap.split(".")[0] == "light" and eid in self.color_pinned: out["color_pinned"] = True
+        if eid in self.off_home: out["off_home"] = True
         return out
 
     @staticmethod

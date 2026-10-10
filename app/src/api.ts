@@ -532,6 +532,7 @@ export async function getDeviceKinds(id: string): Promise<Kinds> {
 }
 /** A fan with a light in it: which part is the tile. 'fan' is the default and clears the record (docs/units.md). */
 export const setDeviceLead = (id: string, lead: 'fan' | 'light') => post<{ ok: boolean; leads: string }>(`/devices/${encodeURIComponent(id)}/lead`, { lead })
+export const setDeviceHome = (id: string, show: 'never' | 'on') => post<{ ok: boolean; show: string }>(`/devices/${encodeURIComponent(id)}/home`, { show })
 /** Say what a thing is. The driver's own word puts it back. */
 export const setDeviceKind = (id: string, kind: string | null) => post<{ ok: boolean; kind: string }>(`/devices/${encodeURIComponent(id)}/kind`, { kind })
 /* Every service the house has signed into: how it stands, and how much of the house came in with it.

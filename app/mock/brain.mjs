@@ -729,6 +729,17 @@ const bridgeRows = process.env.BRIDGES === 'none' ? [] : [
     playing: {},
     folder: '/data/sounds',
   })
+  /* Never on Home (design/home-keep/): the house's answer, carried on the thing as the brain carries it */
+  if (p.startsWith('/devices/') && p.endsWith('/home') && req.method === 'POST') { let raw = ''; req.on('data', c => (raw += c)); return req.on('end', () => {
+    let b = {}; try { b = JSON.parse(raw) } catch {}
+    const id = decodeURIComponent(p.split('/')[2])
+    const d = rooms.flatMap(r => r.devices).find(x => x.id === id)
+    if (!d) return json(res, { detail: 'unknown device' }, 404)
+    if (b.show !== 'never' && b.show !== 'on') return json(res, { detail: "On Home is never, or when it's on." }, 400)
+    if (b.show === 'never') d.attrs.off_home = true; else delete d.attrs.off_home
+    push({ type: 'device', device: d })
+    return json(res, { ok: true, show: b.show })
+  }) }
   // the two ways out of a quiet thing, and the way back into a part that stopped
   if (p.startsWith('/devices/') && p.endsWith('/check') && req.method === 'POST') {
     const id = p.split('/')[2]

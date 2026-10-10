@@ -346,9 +346,10 @@ function roomLine(r: Room, resting: boolean): string {
 export function roomActive(r: Room) {
   return r.devices.some(d => (isActive(d) && cap(d) !== 'camera' && cap(d) !== 'appliance') || (cap(d) === 'charger' && d.state === 'charging')) || printersIn(r).some(printerOn)
 }
-/** Everything that is on across the house, cameras and appliances excluded: the "on right now" strip. */
+/** Everything that is on across the house, cameras and appliances excluded: the "on right now" strip. What the household
+    set to Never on Home is left out too, of the row, the chips and the house's sentence alike (onhome.ts). */
 export function whatsOn(): Device[] {
-  return store.rooms.flatMap(r => r.devices.filter(d => isActive(d) && !PASSIVE.has(cap(d)) && cap(d) !== 'appliance'))
+  return store.rooms.flatMap(r => r.devices.filter(d => isActive(d) && !PASSIVE.has(cap(d)) && cap(d) !== 'appliance' && !d.attrs?.off_home))
 }
 export function houseLine(): string {
   if (!store.loaded) return store.error || 'Finding the house…'
@@ -483,7 +484,7 @@ export function noteCharger(was: Device, now: Device) {
 }
 /** What Home is still showing though it is off: quieted by hand, not yet forgotten. */
 export function justDone(): Device[] {
-  return Object.keys(done).map(deviceById).filter((d): d is Device => !!d && !isActive(d) && !PASSIVE.has(cap(d)))
+  return Object.keys(done).map(deviceById).filter((d): d is Device => !!d && !isActive(d) && !PASSIVE.has(cap(d)) && !d.attrs?.off_home)
 }
 /** "Off, just now" -- what a kept card says about itself. */
 export function doneLine(id: string, now = Date.now()): string {
