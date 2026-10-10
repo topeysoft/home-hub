@@ -106,6 +106,7 @@ class Hub:
         self.home.kinds = dict(self.settings.get("kinds") or {})   # what the owner said things are; kept in settings so a restore brings it back with the rest of the house
         self.home.color_pinned = set(self.settings.get("color_pinned") or [])   # and which lights somebody chose a color for, rather than leaving to the house
         self.home.room_colors = {k: list(v) for k, v in (self.settings.get("room_colors") or {}).items()}
+        self.home.off_home = set(self.settings.get("off_home") or [])   # what is never on Home, on any screen (design/home-keep/)
         self.home.leads = dict(self.settings.get("leads") or {})   # which part of a fan-with-a-light is the tile, where the owner has said (docs/units.md)
         self.log = EventLog(DATA / "events.db")
         self.streams: set[WebSocket] = set()
@@ -1080,6 +1081,24 @@ async def set_device_lead(device_id: str, body: dict):
     hub.log.add("home", dev.id, None, lead, source="user", detail={"leads": True})
     for part in parts: hub._broadcast(json.dumps({"type": "device", "device": part.__dict__}))
     return {"ok": True, "leads": lead}
+
+
+@app.post("/devices/{device_id}/home")
+async def set_device_home(device_id: str, body: dict):
+    """Whether this shows on Home: `{"show": "never"}` leaves it off every screen's Home, `{"show": "on"}` puts
+    it back to showing while it is on. Always is a screen's own and is kept on the screen (design/home-keep/)."""
+    hub.ready()
+    dev = hub.home.devices.get(device_id)
+    if not dev: raise HTTPException(404, "unknown device")
+    show = (body.get("show") or "").strip()
+    if show not in ("never", "on"): raise HTTPException(400, "On Home is never, or when it's on.")
+    never = show == "never"
+    if never: hub.home.off_home.add(dev.id); dev.attrs["off_home"] = True
+    else: hub.home.off_home.discard(dev.id); dev.attrs.pop("off_home", None)
+    hub.settings.set(off_home=sorted(hub.home.off_home))
+    hub.log.add("home", dev.id, None, show, source="user", detail={"off_home": never})
+    hub._broadcast(json.dumps({"type": "device", "device": dev.__dict__}))
+    return {"ok": True, "show": show}
 
 
 @app.post("/devices/{device_id}/kind")

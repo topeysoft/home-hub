@@ -4,7 +4,7 @@
 -->
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
-import { store, cap, houseLine, whatsOn, justDone, describe, ago, refreshEvents, loadHealth, keptPrints } from '../store'
+import { store, cap, deviceById, houseLine, whatsOn, justDone, describe, ago, refreshEvents, loadHealth, keptPrints } from '../store'
 import { cardLook, printCards } from '../printers'
 import PrintCard from '../tiles/PrintCard.vue'
 import { type Room } from '../api'
@@ -12,6 +12,8 @@ import { upcomingLine } from '../upcoming'
 import Icon from '../Icon.vue'
 import SceneBar from '../SceneBar.vue'
 import OnNow from '../OnNow.vue'
+import AlwaysHere from '../AlwaysHere.vue'
+import { alwaysIds } from '../onhome'
 import Attention from '../Attention.vue'
 import RoomGrid from '../RoomGrid.vue'
 import CameraTile from '../tiles/CameraTile.vue'
@@ -27,8 +29,11 @@ const next = computed(() => upcomingLine(props.now))   // what the house will do
    see `done` in store.ts. A block that vanished under the last tap would take the heading with it, which is
    the biggest jump on the screen. When only the quieted ones are left the heading says so rather than
    calling them on. */
-const anyOn = computed(() => whatsOn().length > 0 || justDone().length > 0)
-const onLabel = computed(() => whatsOn().length ? 'On right now' : 'Just turned off')
+/* what this phone keeps is its own block above, so it is not counted again here */
+const always = computed(() => alwaysIds().filter(id => { const d = deviceById(id); return !!d && !d.attrs?.off_home }))
+const notKept = (ds: { id: string }[]) => ds.filter(d => !alwaysIds().includes(d.id))
+const anyOn = computed(() => notKept(whatsOn()).length > 0 || notKept(justDone()).length > 0)
+const onLabel = computed(() => notKept(whatsOn()).length ? 'On right now' : 'Just turned off')
 const cameras = computed(() => props.rooms.flatMap(r => r.devices.filter(d => cap(d) === 'camera')))
 /* A print, under the band and above what is on (design/printers/PhoneB): on a phone it is often the reason
    the app was opened. A short block of its own, headed with what the prints are doing. */
@@ -72,6 +77,11 @@ onUnmounted(() => { clearInterval(t1); clearInterval(t2); clearInterval(t3) })
       <div class="print-list">
         <PrintCard v-for="p in prints" :key="p.id" :printer="p" compact />
       </div>
+    </div>
+
+    <div class="block" v-if="always.length">
+      <h2 class="label">Always here</h2>
+      <AlwaysHere />
     </div>
 
     <div class="block" v-if="anyOn">

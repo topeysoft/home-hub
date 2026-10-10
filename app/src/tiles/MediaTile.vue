@@ -10,7 +10,7 @@ import Icon from '../Icon.vue'
 import DeviceArt from '../DeviceArt.vue'
 import { useSlide } from '../panes/slide'
 
-const props = defineProps<{ device: Device }>()
+const props = defineProps<{ device: Device; always?: boolean }>()
 const s = computed(() => props.device.state)
 const off = computed(() => s.value === 'off' || s.value === 'standby')
 const dead = computed(() => isDead(props.device))
@@ -67,6 +67,7 @@ const stopSound = () => perform(d(), 'sound_off', undefined, { state: 'idle', at
     <!-- which player, because a house has several. Only the wall draws it; everywhere else the
          name is the line above the title, as it was -->
     <span class="media-which" aria-hidden="true">{{ name }}</span>
+    <span class="tile-maker tile-always" v-if="always" title="Always on Home"><Icon name="keep" :size="13" /></span>
     <!-- the pane of glass the wall lays over the cover's foot. Nothing to any other arrangement:
          it is display: contents there, so the words and the buttons are the grid's own children -->
     <div class="media-foot">

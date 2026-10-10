@@ -629,3 +629,41 @@ class FirstReadingTests(ApiTest):
                 "entity_id": "sensor.thermostat_wifi_signal", "old_state": {"state": "-60"},
                 "new_state": {"state": "-61", "attributes": {}}}})
         soon.assert_not_called()
+
+
+class OnHomeTests(ApiTest):
+    """Never on Home (design/home-keep/, B): the house's answer, so every screen leaves the thing out.
+    Always is each screen's own and never reaches the brain."""
+
+    def test_never_is_kept_with_the_settings_and_carried_on_the_thing(self):
+        r = self.client.post("/devices/switch.kettle/home", json={"show": "never"})
+        self.assertEqual((r.status_code, r.json()["show"]), (200, "never"))
+        self.assertTrue(self.hub.home.devices["switch.kettle"].attrs["off_home"])
+        self.assertEqual(json.loads((self.data / "settings.json").read_text())["off_home"], ["switch.kettle"])
+        self.assertEqual(self.sent("device")[-1]["device"]["attrs"]["off_home"], True)
+        from tests.apptest import house
+        self.hub.home.build(*house())                 # a registry change: the whole model, made again
+        self.assertTrue(self.hub.home.devices["switch.kettle"].attrs["off_home"])
+
+    def test_it_survives_a_state_change(self):
+        self.client.post("/devices/switch.kettle/home", json={"show": "never"})
+        self.hub.home.apply_state("switch.kettle", {"state": "on", "attributes": {"friendly_name": "Kettle"}})
+        self.assertTrue(self.hub.home.devices["switch.kettle"].attrs["off_home"])
+
+    def test_when_its_on_puts_it_back_and_leaves_no_record(self):
+        self.client.post("/devices/switch.kettle/home", json={"show": "never"})
+        r = self.client.post("/devices/switch.kettle/home", json={"show": "on"})
+        self.assertEqual(r.json()["show"], "on")
+        self.assertNotIn("off_home", self.hub.home.devices["switch.kettle"].attrs)
+        self.assertEqual(json.loads((self.data / "settings.json").read_text())["off_home"], [])
+
+    def test_the_history_says_it_in_plain_words(self):
+        self.client.post("/devices/switch.kettle/home", json={"show": "never"})
+        self.client.post("/devices/switch.kettle/home", json={"show": "on"})
+        said = [r["text"] for r in self.client.get("/happened/changes").json()["rows"]]
+        self.assertTrue(any("took Kettle off Home" in t for t in said), said)
+        self.assertTrue(any("put Kettle back on Home" in t for t in said), said)
+
+    def test_anything_else_is_refused(self):
+        self.assertEqual(self.client.post("/devices/switch.kettle/home", json={"show": "always"}).status_code, 400)
+        self.assertEqual(self.client.post("/devices/switch.nothing/home", json={"show": "never"}).status_code, 404)
