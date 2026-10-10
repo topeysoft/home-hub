@@ -1,0 +1,124 @@
+{
+  "name": "Solar and the battery",
+  "areas": ["Solar and the battery"],
+  "pages": [
+    {
+      "id": "where",
+      "name": "Where the house's power shows"
+    }
+  ],
+  "launch": {
+    "view": "canvas",
+    "page": "where"
+  },
+  "artboards": [
+    {
+      "file": "Today.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "Today — the house knows what the roof is making, and the wall says nothing",
+      "page": "where"
+    },
+    {
+      "file": "CardA.dc.html",
+      "x": 1560,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "A — a card among what is on",
+      "page": "where"
+    },
+    {
+      "file": "SaysB.dc.html",
+      "x": 3120,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "B — said only when it changes what you'd do",
+      "page": "where"
+    },
+    {
+      "file": "WeatherC.dc.html",
+      "x": 4680,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "C — the sun's own number, in the weather",
+      "page": "where"
+    },
+    {
+      "file": "Pane.dc.html",
+      "x": 1560,
+      "y": 1900,
+      "w": 1440,
+      "h": 900,
+      "title": "Shared — the power pane, whichever is picked",
+      "page": "where"
+    }
+  ],
+  "annotations": [
+    {
+      "id": "why",
+      "x": -620,
+      "y": 0,
+      "w": 500,
+      "page": "where",
+      "text": "WHY THIS EXISTS\n\nThe house has Tesla solar, and on 9 October the question was how to bring it in. Connecting it is already possible and needs nothing drawn: Add runs Home Assistant's own setups, and which one depends on what is on the wall in the garage. A Powerwall 2 or a Backup Gateway 2 joins locally with the gateway's address and password, and tools/discover.py already recognizes one on the network. A Powerwall 3, or solar with no Powerwall, has no local door Tesla still leaves open, so it comes in through the Tesla account -- Tesla Fleet, which asks for a developer key the Add screen already knows how to ask for, or Teslemetry, which is a sign-in and a subscription.\n\nWhat needs drawing is what happens next. Whichever way it comes in, the house then knows, every few seconds, what the roof is making, what the house is using, the battery's charge and which way it is moving, what is going to or coming from the grid, and whether the grid is up at all. hub/model.py reads none of it: SENSOR_CLASSES is temperature, humidity and light level, and its comment says power and energy \"belong to an energy view, not room tiles.\" There is no energy view.\n\nTHE QUESTION is where the house's power shows on the wall, and when. The three directions are whole answers to it, each drawn on Your afternoon as it ships at 1440 x 900, with the new parts outlined in dashed lamp. All three open the same pane, drawn once below them, because what a household sees after a tap is not what divides them.\n\nNOT IN QUESTION, and built whichever is picked: a grid outage is said in the band the moment it happens, as a fault, with how long the battery should last. That is the one moment nobody would want the wall to keep quiet through.\n\nA HOUSE WITHOUT A BATTERY gets the same answer with the battery taken out: the card is its top half, the band has fewer lines to say, the pane has three circles instead of four.\n\nRECOMMENDATION: B, with C's sun. Power is a fact about the house that is rarely a reason to do anything, and the wall's job is what is going on and what needs a person; a number that changes every few seconds on a card is a dashboard, which is the one thing this panel has avoided becoming. The sun warming behind the cloud costs nothing and says it anyway. But A is the honest answer for a household that likes watching the number, and \"something else -- I'll describe it\" is a real option."
+    },
+    {
+      "id": "today",
+      "x": 0,
+      "y": 960,
+      "w": 700,
+      "page": "where",
+      "text": "TODAY -- DRAWN FROM THE SHIPPED PANEL\n\nYour afternoon on the wall, from the same drawing as design/printers/TodayHome: the weather large on the left and what is on beside it, a row you sweep. Nothing about it changes when a Tesla system is connected, because nothing in hub/model.py takes a power reading.\n\nThe note over the sky is what the house knows at that moment, with numbers that add up: 5.8 kW from the roof is 1.2 into the house, 2.4 into the battery and 2.2 out to the grid. And the last line is the one that matters: if the grid went down this afternoon, the battery would take the house and the wall would carry on showing The Bear."
+    },
+    {
+      "id": "a",
+      "x": 1560,
+      "y": 960,
+      "w": 700,
+      "page": "where",
+      "text": "A -- A CARD AMONG WHAT IS ON\n\nThe roof is something the house is doing, so it is a card in the row with the show and the light, first because it is the largest thing happening. The big number is what the sun is making; one bar in three parts says where it is going; the battery sits at the foot with its charge and when it will be full. At night the card becomes the battery's, and on a still night with nothing moving it leaves the row like anything else that is not on.\n\nFOR: the most direct answer, and the one the Tesla app has taught a solar household to expect. Glanceable, and a tap away from the pane. It is the shipped bento's own grammar, so it costs one card kind.\n\nAGAINST: it is on the wall every sunny afternoon whether or not it means anything, and the number moves every few seconds. A card that never asks for anything and never stops changing is a dashboard, and it pushes the doorbell and the thermostat right along the row. It also reads kW to a household member who has no idea what 5.8 of them is."
+    },
+    {
+      "id": "b",
+      "x": 3120,
+      "y": 960,
+      "w": 700,
+      "page": "where",
+      "text": "B -- SAID ONLY WHEN IT CHANGES WHAT YOU'D DO\n\nThe wall stays as it ships. Power speaks in the band, as one line, only at the moments a household would act differently because of it: the sun has more than the house can use for the next hour or more, so this is the time for the dryer or the car; the grid has gone down and the battery has the house; the battery has fallen to what was kept for an outage. Each opens the power pane, which also lives in This house beside The hub for anyone who wants to look.\n\nFOR: no number on the wall that nobody asked for, and nothing new in the row. Every line is a sentence a newcomer understands without knowing what a kilowatt is. It is the band's existing manner -- one line, a tap, gone when it stops being true -- so it costs no new surface.\n\nAGAINST: a household that liked watching the roof has to go and look for it. \"Sun to spare\" needs a forecast and a judgment the brain does not make today, and a wrong one is worse than none. And the line has to be careful about the car: the wall can say it is a good time, but whether the hub can start charging depends on how the car came in."
+    },
+    {
+      "id": "c",
+      "x": 4680,
+      "y": 960,
+      "w": 700,
+      "page": "where",
+      "text": "C -- THE SUN'S OWN NUMBER, IN THE WEATHER\n\nWhat the roof makes is the sky's doing, so it is said under the sky's other facts: 78 degrees, partly cloudy, sunset at 6:42, 5.8 kW from the roof. The weather pill grows to carry it and the sun behind the cloud warms as the roof makes more, so the picture says it before the number does. Tap the pill and the power pane opens. At night the line becomes the battery's.\n\nFOR: no new card, and the one place on the wall that already means \"what the day is like\" gains the one fact about the day that is the house's own. The sun's warmth is a reading a newcomer gets without a unit.\n\nAGAINST: the pill is the weather's and has always been read as the weather, so a tap that opens power instead of a forecast surprises. It is a permanent number in the same way A is, just smaller. And it says nothing in the moment the grid goes down, which is why the outage line in the band is built whichever is picked."
+    },
+    {
+      "id": "pane",
+      "x": -620,
+      "y": 1900,
+      "w": 500,
+      "page": "where",
+      "text": "SHARED -- THE POWER PANE\n\nWhat any of the three opens, drawn on the shipped pane's geometry. The words on the left say what is happening in a sentence, then four facts: made today, used today, the battery, and whether the grid is up. The rig on the right is where the power is going, as a picture: the sun above, the house in the middle, the battery and the grid either side, and the car from the Wall Connector below it, because it is already in Home Assistant.\n\nTHE ONE THING A HOUSEHOLD SETS is how much of the battery to keep for an outage. Tesla calls it the backup reserve; the account setups can change it and the local one may only read it, in which case the chips are a fact rather than a control and the pane says so.\n\nTHE DAY so far runs along the foot: what the sun made, in lamp, and what the house used, as a line, sunrise to now.\n\nA WORD TO SETTLE in docs/wording.md before any of this is built: kW and kWh. They are what every solar household reads in the Tesla app, and they are still units a new household member has never had to know."
+    }
+  ],
+  "reading": [
+    "why",
+    "today",
+    "Today.dc.html",
+    "a",
+    "CardA.dc.html",
+    "b",
+    "SaysB.dc.html",
+    "c",
+    "WeatherC.dc.html",
+    "pane",
+    "Pane.dc.html"
+  ]
+}
