@@ -6,7 +6,16 @@
   "pages": [
     {
       "id": "where",
-      "name": "Where the house's power shows"
+      "name": "Where the house's power shows",
+      "decided": {
+        "on": "2026-10-10",
+        "chose": "B, with C's sun",
+        "board": "SaysB.dc.html"
+      }
+    },
+    {
+      "id": "where-rejected",
+      "name": "Where the house's power shows: not chosen"
     }
   ],
   "launch": {
@@ -25,12 +34,12 @@
     },
     {
       "file": "CardA.dc.html",
-      "x": 1560,
+      "x": 0,
       "y": 0,
       "w": 1440,
       "h": 900,
       "title": "A — a card among what is on",
-      "page": "where"
+      "page": "where-rejected"
     },
     {
       "file": "SaysB.dc.html",
@@ -62,6 +71,14 @@
   ],
   "annotations": [
     {
+      "id": "decided",
+      "x": -620,
+      "y": -760,
+      "w": 500,
+      "page": "where",
+      "text": "DECIDED 10 OCTOBER 2026\n\nB, with C's sun. Power is said in the band only when it changes what somebody would do, the sun behind the cloud warms with what the roof is making, and both open the power pane. A is on the page after this one, with its case."
+    },
+    {
       "id": "why",
       "x": -620,
       "y": 0,
@@ -79,10 +96,10 @@
     },
     {
       "id": "a",
-      "x": 1560,
+      "x": 0,
       "y": 960,
       "w": 700,
-      "page": "where",
+      "page": "where-rejected",
       "text": "A -- A CARD AMONG WHAT IS ON\n\nThe roof is something the house is doing, so it is a card in the row with the show and the light, first because it is the largest thing happening. The big number is what the sun is making; one bar in three parts says where it is going; the battery sits at the foot with its charge and when it will be full. At night the card becomes the battery's, and on a still night with nothing moving it leaves the row like anything else that is not on.\n\nFOR: the most direct answer, and the one the Tesla app has taught a solar household to expect. Glanceable, and a tap away from the pane. It is the shipped bento's own grammar, so it costs one card kind.\n\nAGAINST: it is on the wall every sunny afternoon whether or not it means anything, and the number moves every few seconds. A card that never asks for anything and never stops changing is a dashboard, and it pushes the doorbell and the thermostat right along the row. It also reads kW to a household member who has no idea what 5.8 of them is."
     },
     {
@@ -91,7 +108,7 @@
       "y": 960,
       "w": 700,
       "page": "where",
-      "text": "B -- SAID ONLY WHEN IT CHANGES WHAT YOU'D DO\n\nThe wall stays as it ships. Power speaks in the band, as one line, only at the moments a household would act differently because of it: the sun has more than the house can use for the next hour or more, so this is the time for the dryer or the car; the grid has gone down and the battery has the house; the battery has fallen to what was kept for an outage. Each opens the power pane, which also lives in This house beside The hub for anyone who wants to look.\n\nFOR: no number on the wall that nobody asked for, and nothing new in the row. Every line is a sentence a newcomer understands without knowing what a kilowatt is. It is the band's existing manner -- one line, a tap, gone when it stops being true -- so it costs no new surface.\n\nAGAINST: a household that liked watching the roof has to go and look for it. \"Sun to spare\" needs a forecast and a judgment the brain does not make today, and a wrong one is worse than none. And the line has to be careful about the car: the wall can say it is a good time, but whether the hub can start charging depends on how the car came in."
+      "text": "B -- SAID ONLY WHEN IT CHANGES WHAT YOU'D DO\n\nThe wall stays as it ships. Power speaks in the band, as one line, only at the moments a household would act differently because of it: the battery is full and the roof is still sending power away, so this is the time for the dryer or the car; the grid has gone down and the battery has the house, with how long it should last; the battery is getting low while the power is still out; and the power is back, which stays until the panel looks away. Each opens the power pane, and so does Solar and battery in This house. From C, the sun behind the cloud warms with what the roof is making.\n\nFOR: no number on the wall that nobody asked for, and nothing new in the row. Every line is a sentence a newcomer understands without knowing what a kilowatt is. It is the band's existing manner -- one line, a tap, gone when it stops being true -- so it costs no new surface.\n\nAGAINST: a household that liked watching the roof has to go and look for it. \"Sun to spare\" needs a forecast and a judgment the brain does not make today, and a wrong one is worse than none. And the line has to be careful about the car: the wall can say it is a good time, but whether the hub can start charging depends on how the car came in.\n\nCHANGED WHEN IT WAS PICKED, 10 October: the first drawing said \"Sun to spare until about 4 PM\", and the house has no forecast of the roof to say until when; it says the battery is full instead, which it knows. And the low-battery line is said only while the power is out -- on an ordinary evening the battery reaching its reserve is the system working, and nobody does anything differently."
     },
     {
       "id": "c",
