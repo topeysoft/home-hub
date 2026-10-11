@@ -27,6 +27,7 @@ import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { deviceById, installUpdate, keptPrints, loadHealth, notify, perform, plainly, store } from './store'
 import { bandNotes, printCards } from './printers'
 import { chargerBand } from './chargers'
+import { powerBand } from './power'
 import { stripSecondLater } from './api'
 import { controllerBand, type ControllerLine } from './controller'
 import Icon from './Icon.vue'
@@ -102,7 +103,12 @@ const found = computed(() => waiting.value.filter(w => w.id !== 'knock'))
 /* rendered only with something in it, so an empty band still collapses (.nudges:not(:has(> *))) */
 /* the car charging, as news (design/charger/, C's line): its card is in its room, so this is Home's only */
 const charging = computed(() => chargerBand())
-const news = computed(() => updateReady.value || !!whatsNew.value || !!moveTo.value || found.value.length > 0 || charging.value.length > 0)
+/* The house's power (design/energy/, B with C's sun): the power out is a line of its own, the way a fault
+   is; the power back and sun to spare are news. Every one of them opens the power pane. */
+const power = computed(() => powerBand(store.power))
+const powerOut = computed(() => power.value.filter(l => l.needs))
+const powerNews = computed(() => power.value.filter(l => !l.needs))
+const news = computed(() => updateReady.value || !!whatsNew.value || !!moveTo.value || found.value.length > 0 || charging.value.length > 0 || powerNews.value.length > 0)
 
 let t3: number | undefined
 onMounted(() => {
@@ -124,6 +130,10 @@ defineExpose({ updateReady })
        height and stop the row moving when something wants you. -->
   <div class="nudges">
   <Asks />
+  <button class="nudge power-out" v-for="l in powerOut" :key="'power:' + l.id" @click="store.powerOpen = true">
+    <span class="nudge-icon"><Icon name="battery" :size="20" /></span>
+    <span class="nudge-text"><span class="nudge-title">{{ l.title }}</span><span class="nudge-sub">{{ l.sub }}</span></span>
+  </button>
   <div class="nudge quiet" v-if="!updateReady && updateBusy">
     <span class="nudge-icon pulse"><Icon name="refresh" :size="20" /></span>
     <span class="nudge-text"><span class="nudge-title">Updating the hub</span><span class="nudge-sub">{{ phase?.says || 'Starting.' }} {{ phase?.dark ? 'This screen will blink and come back.' : 'Lights and switches keep working.' }} {{ (phase?.notices ?? []).join(' ') }}</span></span>
@@ -162,6 +172,10 @@ defineExpose({ updateReady })
   <button class="nudge charging" v-for="c in charging" :key="'charger:' + c.id" @click="store.opened = c.device">
     <span class="nudge-icon"><Icon name="charger" :size="20" /></span>
     <span class="nudge-text"><span class="nudge-title">{{ c.title }}</span><span class="nudge-sub">{{ c.sub }}</span></span>
+  </button>
+  <button class="nudge" v-for="l in powerNews" :key="'power:' + l.id" @click="store.powerOpen = true">
+    <span class="nudge-icon"><Icon :name="l.id === 'spare' ? 'sun' : 'grid'" :size="20" /></span>
+    <span class="nudge-text"><span class="nudge-title">{{ l.title }}</span><span class="nudge-sub">{{ l.sub }}</span></span>
   </button>
   </div>
   <button class="nudge" v-for="l in fromControllers" :key="l.id" @click="openController(l)">

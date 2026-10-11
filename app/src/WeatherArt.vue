@@ -23,8 +23,13 @@ import { computed, useId } from 'vue'
 import { illustration } from './sky'
 import { store } from './store'
 import { shade } from './shade'
+import { warmth } from './power'
 
 const wx = computed(() => illustration(store.sky.elevation, store.sky.condition, shade.value))
+/* The roof's share of the drawing (design/energy/, C's sun): the sun warms with what the house's own panels are
+   making. Only ever added to the weather's sun, never instead of it, so a house without panels -- and the weather
+   sheet, which is drawn from illustration() alone -- sees exactly the picture it always did. */
+const warm = computed(() => wx.value.sun.opacity * warmth(store.power?.solar, store.powerDay?.peak))
 
 /* A name of its own for this copy's gradient and mask, because there is more than one copy.
    The bar carries a second drawing for a phone and the stylesheet decides which screen shows
@@ -35,7 +40,7 @@ const wx = computed(() => illustration(store.sky.elevation, store.sky.condition,
    ArtDefs.vue is the other half of this rule -- materials every drawing shares are mounted
    once and addressed by one name; anything a component brings its own copy of needs its own. */
 const uid = useId()
-const cloudId = `wxcloud-${uid}`, moonId = `wxmoon-${uid}`
+const cloudId = `wxcloud-${uid}`, moonId = `wxmoon-${uid}`, glowId = `wxglow-${uid}`
 </script>
 
 <template>
@@ -51,9 +56,15 @@ const cloudId = `wxcloud-${uid}`, moonId = `wxmoon-${uid}`
         <rect x="0" y="0" width="210" height="150" fill="#fff" />
         <circle :cx="wx.moon.biteX" cy="38" r="27" fill="#000" />
       </mask>
+      <radialGradient :id="glowId">
+        <stop offset="0.45" style="stop-color: var(--lamp)" stop-opacity=".55" />
+        <stop offset="1" style="stop-color: var(--lamp)" stop-opacity="0" />
+      </radialGradient>
     </defs>
     <path v-if="wx.stars.opacity > 0.02" :d="wx.stars.d" fill="#eef2fb" :opacity="wx.stars.opacity" />
+    <circle v-if="warm > 0.01" class="wx-warm" cx="150" cy="44" r="58" :fill="`url(#${glowId})`" :opacity="warm" />
     <circle cx="150" cy="44" r="27" :fill="wx.sun.col" :opacity="wx.sun.opacity" />
+    <circle v-if="warm > 0.01" class="wx-warm" cx="150" cy="44" r="27" style="fill: var(--lamp)" :opacity="warm * 0.75 * wx.sun.opacity" />
     <circle cx="150" cy="44" r="27" :fill="wx.moon.col" :opacity="wx.moon.opacity" :mask="`url(#${moonId})`" />
     <path v-if="wx.wind.d" :d="wx.wind.d" :stroke="wx.wind.col" stroke-width="3.4" stroke-linecap="round" fill="none" :opacity="wx.wind.opacity" />
     <g :transform="wx.cloud.transform" :opacity="wx.cloud.opacity" :fill="`url(#${cloudId})`">
