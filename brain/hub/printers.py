@@ -379,9 +379,28 @@ class Printers:
         return await connect(f"wss://{host}/websocket", subprotocols=["astromech", f"astromech-token.{token}"],
                              ssl=ssl.create_default_context(), open_timeout=8, max_size=8 * 1024 * 1024, **extra)
 
+    async def _addresses(self, pid: str):
+        """Its addresses as its door says them now: a printer at a new address on the Wi-Fi (a box that speaks for
+        it moved, a new lease) has a new name at home, and the one kept from adding it no longer answers."""
+        p = self.known.get(pid)
+        if not p or not p.get("away"):
+            return
+        try:
+            st, _, raw = await asyncio.to_thread(self.request, "GET", f"{p['away']}/door/me", None, None, 5.0)
+        except Exception:
+            return
+        addr = ((as_json(raw) or {}).get("addresses") or {}) if st == 200 else {}
+        moved = {k: addr[k] for k in ("home", "away") if isinstance(addr.get(k), str) and addr[k].startswith("https://")
+                 and addr[k] != p.get(k)}
+        if moved:
+            p.update(moved)
+            self._save()
+            log.info("printers: %s moved: %s", pid, ", ".join(f"{k} {v}" for k, v in moved.items()))
+
     async def _follow(self, pid: str):
         delay = 2
         while pid in self.known:
+            await self._addresses(pid)
             p = self.known[pid]
             for via, url in (("home", p.get("home")), ("away", p.get("away"))):
                 if not url:

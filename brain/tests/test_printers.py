@@ -211,6 +211,24 @@ class Following(Base):
         self.assertEqual(resp.read(), b"PNG")
 
 
+class Moving(Base):
+    async def test_a_printer_at_a_new_address_is_reached_there(self):
+        """The Kobras' box moved from a Mac to a Pi: their names at home spelled a new address (9 October 2026)."""
+        old = "https://192-168-86-59.obi1.home.elyir.app"
+        self.p.known["obi1"] = {"name": "OBI1", "home": old, "away": AWAY, "token": "TOK", "phone": "ph1", "added": 0}
+        self.p.follow("obi1")
+        await turn()
+        self.assertEqual(self.tried[0], (HOME, "TOK"))
+        self.assertEqual(self.p.known["obi1"]["home"], HOME)
+        self.assertEqual(json.loads(P.STATE.read_text())["printers"]["obi1"]["home"], HOME)
+
+    async def test_a_door_that_does_not_answer_keeps_what_was_kept(self):
+        self.p.known["obi1"] = {"name": "OBI1", "home": HOME, "away": "https://elsewhere.elyir.app", "token": "TOK", "phone": "ph1", "added": 0}
+        self.p.follow("obi1")
+        await turn()
+        self.assertEqual(self.p.known["obi1"]["home"], HOME)
+
+
 class Acting(Base):
     async def test_the_short_list_only(self):
         await self.added()
