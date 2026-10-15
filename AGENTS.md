@@ -279,6 +279,13 @@ Do not reopen these, and do not propose around them.
   hub nor a puck ever hands one to the other (`Bridges.kind()`, `fwupdate.cpp`). A house's own names, keys
   and network scans never come into this tree either: the secret scan in CI and `tools/hooks/pre-commit`
   are there for that.
+- **A screen that can't reach the hub says so before anyone taps** (9 October, `design/out-of-reach/`, C with
+  B's card). An open live connection is not proof: the screen makes a fresh request every half minute, and two
+  misses put a band along the foot ("Changes made here aren't reaching the hub", since when, the switches on the
+  wall still work). The corner stops saying Connected. While cut off, a tap guesses nothing, and the card it
+  touched says Still on rather than flipping back. A request that never arrived names the hub; only one the hub
+  answered with a failure names the light. The band replaces the Reconnecting banner. Pinned by
+  `app/tests/reach.test.ts` and `app/e2e/reach.spec.ts`; the rules and words are `app/src/reach.ts`.
 
 ---
 
