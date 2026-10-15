@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
 # SPDX-FileCopyrightText: 2026 Temitope Adeyeri
 # SPDX-License-Identifier: AGPL-3.0-or-later
-# The host as an appliance. Three things a box in somebody else's house needs that a developer's box
+# The host as an appliance. Four things a box in somebody else's house needs that a developer's box
 # does not, each one file, each written only when it differs from what is there:
 #   1. a hardware watchdog, so a hung kernel reboots itself instead of waiting for a person with ssh;
 #   2. a cap on every container's log, so a chatty Zigbee network cannot fill a 32 GB eMMC;
-#   3. a cap on the system journal, for the same reason.
+#   3. a cap on the system journal, for the same reason;
+#   4. Wi-Fi that never dozes, so the hub keeps hearing what is said to everyone (host/wifi-awake.sh).
 # install.sh runs this as root on every install and update. Exit 10 means the log cap is new and the
 # containers have to be made again to take it (install.sh does that once); anything else non-zero is
 # a real failure. Nothing here is Pi-specific except turning the Pi's watchdog on when it is off.
@@ -73,6 +74,9 @@ if put /etc/systemd/journald.conf.d/home-hub.conf "$(printf '[Journal]\nSystemMa
   have systemctl && systemctl restart systemd-journald >/dev/null 2>&1 || true
   echo "  journal: capped at 200 MB"
 fi
+
+# 4. Wi-Fi power saving, off.
+"$(dirname "$0")/wifi-awake.sh" || true
 
 [ "$recreate" = 1 ] && exit 10
 exit 0
