@@ -214,7 +214,9 @@ write_files:
       # versioned directory on the volume, with `current` pointing at one. The camera is the page's own and
       # nobody else's: adding a printer scans the code on the printer's screen from inside the installed app. Every phone that uses it
       # trusts this code with its printers' tokens, so the page may talk to printer names under this
-      # zone and nowhere else, may not be framed, and runs no script it did not ship with.
+      # zone and nowhere else, may not be framed, and runs no script it did not ship with. It may compile the
+      # WebAssembly it ships ('wasm-unsafe-eval', not 'unsafe-eval'): the STEP reader for Look at a model, which
+      # reads a file on the phone and never fetches code from anywhere else.
       printers.${zone}:9443 {
         bind 127.0.0.1
         tls {
@@ -225,7 +227,7 @@ write_files:
         }
         root * /srv/printers/current
         header {
-          Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.${zone}; connect-src 'self' https://*.${zone} wss://*.${zone}; frame-src https://*.${zone}; worker-src 'self'; manifest-src 'self'; font-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; object-src 'none'"
+          Content-Security-Policy "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://*.${zone}; connect-src 'self' https://*.${zone} wss://*.${zone}; frame-src https://*.${zone}; worker-src 'self'; manifest-src 'self'; font-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'; object-src 'none'"
           X-Content-Type-Options nosniff
           Referrer-Policy no-referrer
           Permissions-Policy "camera=(self), microphone=(), geolocation=()"
