@@ -34,6 +34,7 @@ import AskPane from './AskPane.vue'
 import { isPage } from './pages'
 import Opened from './Opened.vue'
 import PrinterPane from './PrinterPane.vue'
+import PowerPane from './PowerPane.vue'
 import WeatherPane from './WeatherPane.vue'
 import Icon from './Icon.vue'
 import { clockParts, restingFacts, restWeather } from './resting'
@@ -379,6 +380,7 @@ onUnmounted(() => {
     <Viewer />
     <Opened v-if="store.opened" />
     <PrinterPane v-if="store.printer" />
+    <PowerPane v-if="store.powerOpen" />
     <WeatherPane v-if="store.outside" :now="shown" />
     <AskPane v-if="asking" />
     <!-- :duration because what moves is inside: Vue times a transition from the

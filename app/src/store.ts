@@ -4,7 +4,7 @@ import { carried, tell } from './inapp'
 import { moveCode, withoutCode } from './move'
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { reactive, watch } from 'vue'
-import { getMe, claimMove, kickStream, type Me, doRestart, type Rung, getBridge, type Bridge, getStrip, stripLooking, type Strip, getHome, getEvents, getAmbient, getScenes, getStatus, getDiscovered, getRoutines, getAssistant, getPresence, getHealth, getSounds, connect, act, setIntent, setHomeIntent, type Room, type Device, type Home, type Event, type Ambient, type Rules, type Status, type Found, type Intent, type Routine, type Assistant, type Presence, type Note, type Sound, requestUpdate, getPhones, type Phone, type Ask, getAccounts, type Account, getShare, type Share, getHappened, type Happened, getChanges, type Changes, getSignals, type SignalsPage, type TryBrief, getRoofline, type Roofline, getPrinters, type Printers, type Printer } from './api'
+import { getMe, claimMove, kickStream, type Me, doRestart, type Rung, getBridge, type Bridge, getStrip, stripLooking, type Strip, getHome, getEvents, getAmbient, getScenes, getStatus, getDiscovered, getRoutines, getAssistant, getPresence, getHealth, getSounds, connect, act, setIntent, setHomeIntent, type Room, type Device, type Home, type Event, type Ambient, type Rules, type Status, type Found, type Intent, type Routine, type Assistant, type Presence, type Note, type Sound, requestUpdate, getPhones, type Phone, type Ask, getAccounts, type Account, getShare, type Share, getHappened, type Happened, getChanges, type Changes, getSignals, type SignalsPage, type TryBrief, getRoofline, type Roofline, getPrinters, type Printers, type Printer, getPower, getPowerDay, type Power, type PowerDay } from './api'
 import { previewHeld, previewHeldNote, previewRoofDevice, previewRoofline, previewStripBeat } from './controller'
 import { lock, CANCELED, failed } from './code'
 import { isPage } from './pages'
@@ -105,6 +105,9 @@ export const store = reactive({
      ones found on the Wi-Fi, and any ask waiting at a printer. Null on a hub that predates them. */
   printers: null as Printers | null,
   printer: null as string | null,      // the printer whose pane is open (PrinterPane.vue), by id
+  power: null as Power | null,         // the sun, the battery and the grid (brain/hub/power.py); null in a house without them
+  powerOpen: false,                    // the power pane (PowerPane.vue)
+  powerDay: null as PowerDay | null,   // today so far, and the most the roof has made this month, which the sun's warmth is measured against
   /* A print card the house no longer has a print for -- OBI1 Ready again -- keeps its place, drained,
      until the panel looks away, exactly as a lamp just turned off does. This is the last thing each
      card said; `done` (below) is what says it is still owed a place. printers.ts says why. */
@@ -672,6 +675,10 @@ export const keptPrints = () => Object.values(store.printsKept).filter(p => done
 /** Things found nearby and not in the house yet: on the network, and 3D printers on the Wi-Fi. */
 export const foundCount = () => store.found.length + (store.printers?.found.length ?? 0)
 export const printerById = (id: string | null) => store.printers?.printers.find(p => p.id === id) ?? null
+export async function loadPower() {
+  try { store.power = await getPower() } catch { store.power = null }
+  if (store.power) try { store.powerDay = await getPowerDay() } catch { /* the sun's warmth falls back to today's own reading */ }
+}
 let printersPoll: number | undefined
 export async function loadPrinters() {
   try { applyPrinters(await getPrinters()) } catch { store.printers = null }
@@ -975,7 +982,7 @@ export async function load() {
   await refreshStatus()
   if (lock.unpaired) return                    // the join screen is up; the house answers once this phone is in
   try { applyHome(await getHome()) } catch { store.error = 'The hub is not answering.' }
-  loadAmbient(); loadRules(); loadRoutines(); loadAssistant(); loadPresence(); loadHealth(); loadSounds(); loadPhones(); loadAccounts(); loadShare(); loadRoofline(); loadPrinters()
+  loadAmbient(); loadRules(); loadRoutines(); loadAssistant(); loadPresence(); loadHealth(); loadSounds(); loadPhones(); loadAccounts(); loadShare(); loadRoofline(); loadPrinters(); loadPower()
 }
 let foundPoll: number | undefined
 /* The hub came back on a different build from the one this page was reading. Until it reloads, the
@@ -1017,7 +1024,7 @@ export async function start() {
   refreshBridge()
   refreshStrip()
   watchReach()
-  stop = connect({ device: applyDevice, home: applyHome, intent: applyIntent, drafts: d => { store.drafts = d; eventsSoon() }, presence: p => { store.presence = p; eventsSoon() }, phones: () => loadPhones(true), share: () => { store.shareTick++; loadShare() }, signals: t => { store.signalTry = t; if (store.signals) loadSignals() }, roofline: r => { if (!ROOF_PARAM) store.roofline = r }, printers: applyPrinters, ambient: a => { store.ambient = a; updateSky() }, status: s => {
+  stop = connect({ device: applyDevice, home: applyHome, intent: applyIntent, drafts: d => { store.drafts = d; eventsSoon() }, presence: p => { store.presence = p; eventsSoon() }, phones: () => loadPhones(true), share: () => { store.shareTick++; loadShare() }, signals: t => { store.signalTry = t; if (store.signals) loadSignals() }, roofline: r => { if (!ROOF_PARAM) store.roofline = r }, printers: applyPrinters, power: p => { store.power = p }, ambient: a => { store.ambient = a; updateSky() }, status: s => {
     const was = store.status?.driver, version = store.status?.version
     store.status = s
     if (newBuild(version, s.version)) {

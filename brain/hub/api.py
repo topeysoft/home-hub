@@ -42,6 +42,7 @@ from .bridge import Bridges
 from .strip import Strips, StripError
 from .roofline import Roofline
 from .printers import Printers
+from .power import Power
 from .signals import Signals
 from . import things
 from .things import Things
@@ -133,6 +134,8 @@ class Hub:
         self.strip = Strips(self)          # a light strip knocking over Bluetooth: hub/strip.py
         self.roofline = Roofline(self)     # several strip controllers as one light outside, its evenings and its holidays
         self.printers = Printers(self)     # 3D printers on the Wi-Fi, let in at the printer and followed: hub/printers.py
+        self.power = Power()               # the sun on the roof, the battery and the grid: hub/power.py
+        self._power_sent: tuple[float, tuple | None] = (0.0, None)
         self.net = Network(self)           # how this hub is connected, and what it hands out: docs/network.md
         self.share = Share(self)           # what this house lets a Matter bridge publish: docs/matter.md
         self.share_status: dict = {}       # what the bridge last said about itself (pairing codes, who holds it)
@@ -262,6 +265,7 @@ class Hub:
         else: log.info("no home location yet: the panel will ask for one")
         snap = await self.ha.snapshot()
         self.home.build(*snap)
+        self.power.load(snap[2], snap[3])
         self.presence.load(snap[3]); self.presence.seed(self.log)
         self.engine.load(force=True); self.engine.seed()
         self.comfort.load()
@@ -277,6 +281,7 @@ class Hub:
         asyncio.create_task(self.strip.watch())          # and any that start knocking
         self._broadcast(json.dumps({"type": "home", "home": self.home_dict()}))
         self._broadcast(json.dumps({"type": "ambient", "ambient": self.ambient()}))
+        self.power_changed(force=True)
         log.info("home: %d rooms, %d devices, weather=%s", len(self.home.rooms), len(self.home.devices), self.weather and self.weather["id"])
 
     def ready(self):
@@ -468,6 +473,8 @@ class Hub:
         await asyncio.sleep(1.0)
         snap = await self.ha.snapshot()
         self.home.build(*snap)
+        self.power.load(snap[2], snap[3])
+        self.power_changed(force=True)
         self.presence.load(snap[3])
         self.engine.load(force=True); self.engine.seed()
         self.comfort.load()
@@ -482,8 +489,18 @@ class Hub:
         self._broadcast(json.dumps({"type": "home", "home": self.home_dict()}))
         log.info("home rebuilt: %d rooms, %d devices", len(self.home.rooms), len(self.home.devices))
 
+    POWER_EVERY = 10.0   # the gateway reports every few seconds; the panel is told at most this often unless the band changes
+
+    def power_changed(self, force=False):
+        now, (at, said) = time.time(), self._power_sent
+        if not force and said == self.power.said() and now - at < self.POWER_EVERY: return
+        self._power_sent = (now, self.power.said())
+        self._broadcast(json.dumps({"type": "power", "power": self.power.now()}))
+
     def _on_state(self, ev):
         d = ev["data"]
+        if self.power.on_state(d["entity_id"], d.get("new_state")):
+            return self.power_changed()
         if d["entity_id"].startswith("weather.") and d.get("new_state"):
             if not self.weather or self.weather["id"] == d["entity_id"]:
                 self.weather = self._weather_of(d["new_state"])
@@ -1431,6 +1448,19 @@ async def bridge_wifi(body: dict):
 # ---------- 3D printers: found on the Wi-Fi, let in at the printer, and followed (docs/printers.md) ----------
 @app.get("/printers")
 def printers_status(): return hub.printers.status()
+
+
+@app.get("/power")
+def power_now():
+    """The sun, the house, the battery and the grid right now; null where the house has no such system."""
+    return hub.power.now()
+
+
+@app.get("/power/day")
+async def power_day():
+    """Today so far, for the pane: made and used since midnight, and the sun and the house through the day."""
+    if not hub.power.exists() or not hub.ha: return None
+    return await hub.power.day(hub.ha, hub.tz)
 
 
 @app.post("/printers/look")

@@ -98,4 +98,11 @@ describe('the card it is drawn on', () => {
     expect(toneVars(DUSK.el, DUSK.wx)['--act-ink']).toBe('#f1eee8')
     expect(toneVars(NOON.el, NOON.wx)['--act-ink']).toBe('#1e1b24')
   })
+
+  /* a chosen chip is the ink as its fill and --bg as its text, so the two flip together or "Cool"
+     goes dark on dark (reported 9 October) */
+  it('flips the ground a chosen chip is lettered in, with it', () => {
+    expect(toneVars(DUSK.el, DUSK.wx)['--act-bg']).toBe('#0c0d10')
+    expect(toneVars(NOON.el, NOON.wx)['--act-bg']).toBe('#e7eaf3')
+  })
 })

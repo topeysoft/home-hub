@@ -160,6 +160,7 @@ export function toneVars(elevation: number, condition: string, name: ToneName = 
   vars['--act-ink'] = aLight ? '#1e1b24' : '#f1eee8'
   vars['--act-ink-2'] = aLight ? 'rgba(30,27,36,.66)' : '#cfcbc3'
   vars['--act-chip'] = aLight ? 'rgba(30,27,36,.12)' : 'rgba(255,255,255,.16)'
+  vars['--act-bg'] = aLight ? '#e7eaf3' : '#0c0d10'      // what a chosen chip's text is, on a chip of --act-ink
   return vars
 }
 

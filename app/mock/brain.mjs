@@ -4,7 +4,8 @@
    Knobs: PORT, WX=rainy (a condition), FOUND=0 (nothing new nearby), ENGINE=down (the engine-starting screen),
    LOCKED=1 (a code is set), FRESH=1 (first run), ASK=1 (a phone is asking to join; needs LOCKED=1), ?join=1 (the join screen),
    UPDATE=ready (one waiting, with its sheet), UPDATE=running (one happening, walking the phases), UPDATE=away (the sheet a
-   phone outside the house gets), ?printers= on the panel's address (a house with 3D printers: mock/printers.mjs).
+   phone outside the house gets), ?printers= on the panel's address (a house with 3D printers: mock/printers.mjs), ?power=
+   (a house with a Tesla gateway: mock/power.mjs).
    Nothing here talks to a real device; every POST or DELETE says ok. */
 import http from 'node:http'
 import fs from 'node:fs'
@@ -13,6 +14,7 @@ import crypto from 'node:crypto'
 import { execFileSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
 import { printerNotes, printersAsked, printersRoute } from './printers.mjs'
+import { powerRoute } from './power.mjs'
 
 const DIST = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'dist')
 const PORT = Number(process.env.PORT || 8399)
@@ -548,6 +550,7 @@ const server = http.createServer((req, res) => {
     }
   }
   if (printersRoute(req, res, p)) return    // 3D printers, only for a page that asked for them: mock/printers.mjs
+  if (powerRoute(req, res, p)) return       // a Tesla gateway, the same way: mock/power.mjs
   if (p === '/setup/status') return json(res, status)
   if (p === '/update/notes') return json(res, { notes: releaseNotes[0], history: releaseNotes })
   /* Install: on a hub the brain restarts and comes back as the next build, and the page follows it

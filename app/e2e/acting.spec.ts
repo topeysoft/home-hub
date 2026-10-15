@@ -74,3 +74,22 @@ test('a thermostat with nothing to do wears nothing at all', async ({ page }) =>
   const lamp = Math.hypot(r - 233, g - 184, b - 114)
   expect(lamp).toBeGreaterThan(60)
 })
+
+/* Reported 9 October, a phone in dark mode by day: on a cooling card pale enough to flip its ink dark,
+   the chosen chips -- "Cool", "Thermostat" -- were dark text on a dark chip, and the card's name stayed
+   light. Both halves of a chosen chip and the name come off the card's one ink, at noon and at night. */
+const lum = (rgb: string) => { const [r, g, b] = rgb.match(/[\d.]+/g)!.map(Number); return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255 }
+for (const at of ['13:00', '21:00']) {
+  test(`a painted card's chosen chips and name read, on a phone at ${at}`, async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 844 })
+    await page.goto(`/?room=living&at=${at}&shade=dark`, { waitUntil: 'networkidle' })
+    const tile = page.locator('.tile.climate.act-cooling').first()
+    await expect(tile).toBeVisible()
+    const seen = await tile.evaluate(t => {
+      const chip = t.querySelector('.clim-chip.on')!, cs = getComputedStyle(chip)
+      return { text: cs.color, fill: cs.backgroundColor, name: getComputedStyle(t.querySelector('.tile-name')!).color, reading: getComputedStyle(t.querySelector('.clim-big')!).color }
+    })
+    expect(Math.abs(lum(seen.text) - lum(seen.fill)), `"${seen.text}" on "${seen.fill}"`).toBeGreaterThan(0.5)
+    expect(seen.name, 'the name is the card\'s ink, like its reading').toBe(seen.reading)
+  })
+}
