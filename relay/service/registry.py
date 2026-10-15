@@ -21,8 +21,14 @@ An invite is a grant made ahead of time: the operator mints a code (cli.py invit
 and the house that brings it is carried the moment it does -- with its claim, or any time after on a name
 it already holds. It is the flash-time token docs/service.md keeps for boxes that were bought, minted by
 hand for testers until then. One use each, kept only as a hash like the secrets.
+
+A ticket is how a paid plan elsewhere carries a house: a service the house pays (a payer, such as Elyir
+Bench Cloud) signs "carry this name until then" with a key it shares with this relay, hands that to the
+house, and the house brings it here with its own secret. Both are needed: the payer can't carry a name its
+holder didn't ask for, and a holder can't carry itself without a payer's say-so. Tickets are good for an
+hour and carry at most TICKET_REACH ahead, so a plan that stops simply runs out.
 """
-import hashlib, hmac, re, secrets, sqlite3, threading, time
+import base64, hashlib, hmac, json, re, secrets, sqlite3, threading, time
 from contextlib import contextmanager
 from pathlib import Path
 
@@ -31,6 +37,7 @@ HOLD = DAY                       # a claim nobody pays for is let go after this
 ALWAYS = 4102444800.0            # 2100: "always", as a number JSON can carry
 LABEL = re.compile(r"^[a-z0-9](?:[a-z0-9-]{0,28}[a-z0-9])?$")
 INVITE_KEEP = 30 * DAY           # an invite nobody used by then is no good
+TICKET_REACH = 45 * DAY          # the furthest ahead a payer's ticket may carry a house
 # Crockford's letters without the ones a person misreads (0 O 1 I L U): twelve of them is ~59 bits, read
 # aloud or typed off a phone, and nobody guesses one at five claims a day.
 INVITE_LETTERS = "23456789ABCDEFGHJKMNPQRSTVWXYZ"
@@ -44,7 +51,7 @@ INVITE_LETTERS = "23456789ABCDEFGHJKMNPQRSTVWXYZ"
 RESERVED = frozenset("""
     api relay www mail smtp imap pop ftp ns ns1 ns2 dns home lan local localhost admin root operator
     status help support billing pay account accounts login signin auth app apps elyir hub hubs test
-    selftest staging dev _acme-challenge printers nearby houses
+    selftest staging dev _acme-challenge printers nearby houses cloud cloud-staging printers-staging
 """.split())
 
 SCHEMA = """
@@ -207,6 +214,13 @@ class Registry:
             raise LookupError(label)
         return secret
 
+    def carry(self, label: str, until: float, note: str = ""):
+        """Carry this house until then, unless it is carried longer already (a grant or an invite reaches further)."""
+        r = self._row(label)
+        if not r: raise LookupError(label)
+        if (r["entitled_until"] or 0) >= until: return
+        self.db.execute("update houses set entitled_until = ?, held_until = null, note = ? where name = ?", (until, note, label))
+
     # ---- invites: a grant made ahead of time ----
     def invite(self, until: float, note: str = "", keep: float = INVITE_KEEP) -> str:
         """A code that carries whichever house brings it until `until`. Shown once, here; only its hash is kept."""
@@ -297,3 +311,48 @@ class Registry:
             if content.get("subdomain"): return "a house is carried only under its own name"
             return None
         return None
+
+
+class Payers:
+    """The services whose tickets carry a house, each with the key it signs with: lines of "name key" in a file
+    on the relay's volume (so a payer is added without a new box), or RELAY_PAYERS="name=key,...".
+    Read again whenever the file changes."""
+
+    def __init__(self, path: Path | str | None = None, env: str = ""):
+        self.path = Path(path) if path else None
+        self.env = dict(p.split("=", 1) for p in env.split(",") if "=" in p)
+        self._seen: tuple[float, dict] = (-1.0, {})
+
+    def keys(self) -> dict:
+        mtime = self.path.stat().st_mtime if self.path and self.path.exists() else 0.0
+        if mtime != self._seen[0]:
+            lines = self.path.read_text().splitlines() if mtime else []
+            found = dict(line.split(None, 1) for line in lines if line.strip() and not line.startswith("#") and len(line.split()) == 2)
+            self._seen = (mtime, found)
+        return {**self.env, **self._seen[1]}
+
+
+def _b64(raw: bytes) -> str:
+    return base64.urlsafe_b64encode(raw).decode().rstrip("=")
+
+
+def sign_ticket(key: str, payer: str, name: str, until: float, expires: float, house: str = "") -> str:
+    """What a payer hands a house. Here so the tests, and a payer written in Python, make the same thing."""
+    body = _b64(json.dumps({"p": payer, "n": name, "u": until, "e": expires, "h": house}, separators=(",", ":")).encode())
+    return body + "." + _b64(hmac.new(key.encode(), body.encode(), hashlib.sha256).digest())
+
+
+def read_ticket(ticket: str, name: str, keys: dict, now: float) -> tuple[float, str]:
+    """(until, note) if this ticket carries this name now; PermissionError saying why not otherwise."""
+    try:
+        body, sig = ticket.split(".")
+        claims = json.loads(base64.urlsafe_b64decode(body + "=" * (-len(body) % 4)))
+        payer, until, expires = str(claims["p"]), float(claims["u"]), float(claims["e"])
+    except Exception:
+        raise PermissionError("That isn't a ticket.") from None
+    key = keys.get(payer)
+    want = _b64(hmac.new(key.encode(), body.encode(), hashlib.sha256).digest()) if key else ""
+    if not key or not hmac.compare_digest(want, sig): raise PermissionError("That ticket isn't signed by anyone this relay knows.")
+    if claims.get("n") != name: raise PermissionError("That ticket is for another name.")
+    if expires < now: raise PermissionError("That ticket ran out. Ask for a new one.")
+    return min(until, now + TICKET_REACH), f"{payer} {claims.get('h') or ''}".strip()

@@ -74,6 +74,14 @@ ssh root@<relay> docker exec relay-service python cli.py invites          # used
 ssh root@<relay> docker exec relay-service python cli.py uninvite 9HTF    # an unused code, by its last four
 ```
 
+**Or a paid plan elsewhere, with a ticket.** A service the house pays (a payer: Elyir Bench Cloud for
+printers) signs "carry this name until then" with a key it shares with the relay and hands that to the
+house; the house brings it with its own secret (`POST /houses/<name>/carry {"ticket"}`). Both are
+needed, so a payer can't carry a name its holder didn't ask for. A ticket is good for an hour and
+carries at most 45 days ahead, never shortening a longer grant: a plan that stops just runs out, and
+the name stays the house's. Payers and their keys are lines of `name key` in `/var/lib/relay/service/payers`
+on the volume (read again when it changes, kept across a new box), or `RELAY_PAYERS=name=key`.
+
 **The printer app** (`printers.elyir.app`, since 2 October 2026) is static files served by the same
 Caddy as `api`, carried through frps as one more always-carried name whose secret is derived from the
 relay token. It belongs to the printer project and is published from that repository, never edited on
