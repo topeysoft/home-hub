@@ -40,7 +40,7 @@ import { failed } from './code'
  * See design/device for the boards all of that was drawn on.
  */
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
-import { forgetDevice, getDeviceEvents, getDeviceKinds, moveDevice, renameDevice, setDeviceKind, setDeviceLead, setDeviceShared, type Event, type Kinds } from './api'
+import { forgetDevice, getDeviceEvents, getDeviceKinds, moveDevice, renameDevice, setDeviceHome, setDeviceKind, setDeviceLead, setDeviceShared, type Event, type Kinds } from './api'
 import { partnerOf, partsOf, renameParts, renamesUnit } from './units'
 import { isMachine } from './machines'
 import MachinePane from './panes/MachinePane.vue'
@@ -62,6 +62,7 @@ import SensePane from './panes/SensePane.vue'
 import RoofPane from './panes/RoofPane.vue'
 import RoofPlate from './RoofPlate.vue'
 import { roofSentence } from './roof'
+import { ON_HOME_SAY, alwaysIds, keepAlways, offersOnHome, onHomeOf, onHomeWhy, type OnHome } from './onhome'
 
 const dev = computed(() => store.opened)
 const kind = computed(() => dev.value ? cap(dev.value) : '')
@@ -250,6 +251,30 @@ async function leadWith(k: 'fan' | 'light') {
   catch (e: any) { d.attrs.leads = was; p.attrs.leads = was; notify(e.message, 'error') }
 }
 
+/* Whether it is on Home (design/home-keep/, B). Always is this screen's and is kept here; Never is the house's and goes
+   to the brain. The roofline is its own pane and keeps its own evenings, so it is not asked. */
+const homeOffered = computed(() => !!dev.value && offersOnHome(kind.value) && !roof.value)
+const onHome = computed<OnHome>(() => dev.value ? onHomeOf(dev.value) : 'on')
+const homing = ref(false)
+const homeFull = ref<string[]>([])
+async function showOnHome(v: OnHome) {
+  const d = dev.value; if (!d || v === onHome.value) return
+  homeFull.value = []
+  if (v === 'always' && !keepAlways(d.id, true)) {
+    homeFull.value = alwaysIds().map(id => deviceById(id)?.name).filter((n): n is string => !!n)
+    return
+  }
+  if (v !== 'always') keepAlways(d.id, false)
+  const never = v === 'never', was = !!d.attrs.off_home
+  if (never === was) return
+  if (never) d.attrs.off_home = true; else delete d.attrs.off_home
+  try { await setDeviceHome(d.id, never ? 'never' : 'on') }
+  catch (e: any) {
+    if (was) d.attrs.off_home = true; else delete d.attrs.off_home
+    notify(e.message, 'error')
+  }
+}
+
 /* Rename or move it, HERE. The verb used to open the house's settings panel, which has no rename in it --
    a promise the button made and the panel broke. The name and the room are the two things a person can see
    and disagree with (the kind is the third, above), so they are edited where they are read: the head of
@@ -274,7 +299,7 @@ async function leadWith(k: 'fan' | 'light') {
  * acted on -- "What this house has" groups the thing under exactly that account.
  */
 const ending = ref(false), ended = ref(''), keptBy = ref(''), refused = ref('')
-watch(() => dev.value?.id, () => { ending.value = false; ended.value = ''; keptBy.value = ''; refused.value = '' })
+watch(() => dev.value?.id, () => { ending.value = false; ended.value = ''; keptBy.value = ''; refused.value = ''; homing.value = false; homeFull.value = [] })
 async function takeItOut() {
   const d = dev.value; if (!d || saving.value) return
   saving.value = true
@@ -414,6 +439,18 @@ onUnmounted(() => {
                           :aria-pressed="k === offer.kind" @click="showAs(k)">{{ offer.words[k] }}</button>
                 </div>
                 <p class="opened-kind-why">{{ offer.why }}</p>
+              </div>
+            </div>
+            <!-- whether it is on Home: the same quiet row, under Show this as (design/home-keep/KeepBPane) -->
+            <div class="opened-kind opened-home" v-if="homeOffered && !editing">
+              <button class="opened-kind-say" :aria-expanded="homing" @click="homing = !homing">{{ ON_HOME_SAY[onHome] }}</button>
+              <div class="opened-kind-pick" v-if="homing">
+                <div class="opened-kind-row">
+                  <button class="opened-kind-one" :class="{ on: onHome === 'always' }" :aria-pressed="onHome === 'always'" @click="showOnHome('always')">Always</button>
+                  <button class="opened-kind-one" :class="{ on: onHome === 'on' }" :aria-pressed="onHome === 'on'" @click="showOnHome('on')">When it's on</button>
+                  <button class="opened-kind-one" :class="{ on: onHome === 'never' }" :aria-pressed="onHome === 'never'" @click="showOnHome('never')">Never</button>
+                </div>
+                <p class="opened-kind-why">{{ onHomeWhy(onHome, room?.name ?? null, homeFull) }}</p>
               </div>
             </div>
             <!-- whether the other apps can see this one. Only where the house is sharing this kind at

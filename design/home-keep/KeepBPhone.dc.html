@@ -1,0 +1,102 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap">
+  <style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: "Instrument Sans", -apple-system, "SF Pro Text", system-ui, sans-serif; -webkit-font-smoothing: antialiased;
+    /* the panel's tokens, app/src/panel.css, at 7:10 in the morning on the glass face */
+    --ink: #f4f1ec; --ink-2: rgba(244,241,236,.68); --ink-3: rgba(244,241,236,.46);
+    --lamp-rgb: 233,184,114; --lamp: rgb(var(--lamp-rgb)); --lamp-ink: #2a1c07;
+    --live-rgb: 116,198,157; --live: rgb(var(--live-rgb));
+    --r-lg: 28px; --r-md: 18px; --r-sm: 12px; }
+  .screen { position: relative; width: 1440px; height: 900px; overflow: hidden; color: var(--ink); font-size: 17px; line-height: 1.4;
+    background: linear-gradient(180deg, #1f2140 0%, #2a2a4c 34%, #3d3452 58%, #5c4250 70%, #7a5444 77%, #2a2228 79%, #17151b 100%); }
+  .abs { position: absolute; }
+  svg.i { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+  .gl { position: absolute; border-radius: var(--r-lg);
+    background-image: linear-gradient(112deg, transparent 26%, rgba(255,255,255,.11) 45%, rgba(255,255,255,.02) 56%, transparent 64%),
+                      linear-gradient(148deg, rgba(128,124,170,.34), rgba(88,84,128,.16) 46%, rgba(112,108,152,.26));
+    backdrop-filter: blur(26px) saturate(1.7); -webkit-backdrop-filter: blur(26px) saturate(1.7);
+    box-shadow: inset 0 -46px 56px -48px rgba(30,22,60,.9), 0 23px 53px -26px rgba(10,8,30,.6), 0 2px 10px rgba(10,8,30,.35); }
+  .gl::after { content: ""; position: absolute; inset: 0; border-radius: inherit; padding: 1.4px; pointer-events: none;
+    background: linear-gradient(150deg, rgba(255,255,255,.42), rgba(255,255,255,.06) 40%, rgba(255,255,255,.04) 70%, rgba(255,255,255,.22));
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor;
+    mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); mask-composite: exclude; }
+  .tab { display: inline-flex; align-items: center; gap: 9px; height: 40px; padding: 0 20px; border-radius: 999px; font-size: 16px; color: var(--ink-2); }
+  .tab.on { background: rgba(255,255,255,.1); color: var(--ink); font-weight: 500; }
+  .round { position: absolute; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; color: var(--ink-2); }
+  /* a card in the row: 18 18 16 inside, the name and state at the foot */
+  .card { overflow: hidden; }
+  .card .ico { position: absolute; left: 18px; top: 18px; width: 38px; height: 38px; border-radius: var(--r-sm); display: grid; place-items: center;
+    background: rgba(255,255,255,.12); color: var(--ink-2); }
+  .card.on .ico { background: var(--lamp); color: var(--lamp-ink); }
+  .card .chip { position: absolute; right: 18px; top: 18px; height: 26px; padding: 0 10px; border-radius: 999px; background: rgba(255,255,255,.08);
+    font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--ink-2); display: inline-flex; align-items: center; gap: 5px; }
+  .card .nm { position: absolute; left: 18px; right: 18px; bottom: 37px; font-size: 17px; font-weight: 500; letter-spacing: -.005em; }
+  .card .st { position: absolute; left: 18px; right: 18px; bottom: 16px; font-size: 14.5px; color: var(--ink-2); }
+  .card.on .st { color: var(--lamp); }
+  .card .bar { position: absolute; left: 18px; right: 18px; bottom: 12px; height: 3px; border-radius: 2px; background: rgba(255,255,255,.14); }
+  .card .bar i { display: block; height: 100%; border-radius: 2px; background: var(--lamp); }
+  .lit { background-image: linear-gradient(112deg, transparent 26%, rgba(255,255,255,.12) 45%, rgba(255,255,255,.02) 56%, transparent 64%),
+                           linear-gradient(170deg, rgba(var(--lamp-rgb),.62), rgba(178,118,72,.42) 55%, rgba(120,76,58,.5)); }
+  .scene { position: absolute; left: 19px; right: 19px; height: 77px; border-radius: var(--r-md); background: rgba(255,255,255,.07); display: flex; align-items: center; gap: 12px; padding: 0 12px; }
+  .scene .si { width: 44px; height: 44px; border-radius: 14px; background: rgba(255,255,255,.13); display: grid; place-items: center; color: var(--ink-2); flex: none; }
+  .scene b { display: block; font-weight: 500; font-size: 15.5px; }
+  .scene span { display: block; font-size: 13px; color: var(--ink-2); line-height: 1.3; }
+  .cap { font-size: 12.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-2); }
+  /* what is new on a board: outlined in dashed lamp, so the eye finds the change */
+  .new { outline: 1.5px dashed rgba(var(--lamp-rgb),.85); outline-offset: 6px; }
+  /* the board's own words, not the panel's */
+  .note { position: absolute; background: rgba(12,11,16,.86); border: 1px dashed rgba(var(--lamp-rgb),.55); border-radius: 12px; padding: 14px 16px;
+    font-size: 14px; line-height: 1.45; color: rgba(244,241,236,.86); }
+  .note .k { display: block; font-size: 11.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--lamp); margin-bottom: 6px; }
+  .note p { margin: 0 0 6px; } .note p:last-child { margin: 0; }
+
+  .ph { position: relative; width: 390px; height: 844px; overflow: hidden; color: #1d1b22; font-size: 17px; line-height: 1.35;
+    background: linear-gradient(180deg, #c9cbe8 0%, #d9d3e6 40%, #ecd6cf 72%, #e9cfc0 100%); }
+  .lbl { position: absolute; left: 16px; font-size: 11.5px; letter-spacing: .12em; text-transform: uppercase; color: rgba(29,27,34,.55); }
+  .chip2 { position: absolute; height: 50px; border-radius: 18px; background: rgba(255,255,255,.58); border: 1px solid rgba(255,255,255,.8);
+    display: flex; align-items: center; gap: 10px; padding: 0 14px 0 8px; box-shadow: 0 6px 18px -10px rgba(60,40,80,.35); }
+  .chip2 .ci { width: 32px; height: 32px; border-radius: 9px; background: var(--lamp); color: var(--lamp-ink); display: grid; place-items: center; }
+  .chip2.off .ci { background: rgba(29,27,34,.08); color: rgba(29,27,34,.55); }
+  .chip2 b { display: block; font-size: 15px; font-weight: 500; }
+  .chip2 span { display: block; font-size: 12px; color: rgba(29,27,34,.55); }
+  .sc { position: absolute; top: 219px; width: 174px; height: 54px; border-radius: 16px; background: rgba(255,255,255,.62); display: flex; align-items: center; gap: 10px; padding: 0 10px; box-shadow: 0 6px 18px -10px rgba(60,40,80,.35); }
+  .sc i { width: 34px; height: 34px; border-radius: 10px; background: rgba(29,27,34,.07); display: grid; place-items: center; font-style: normal; }
+  .note { font-size: 12.5px; }
+</style>
+</helmet>
+<div class="ph">
+  <div class="abs" style="left:0; top:0; width:390px; height:70px; border-bottom:1px solid rgba(29,27,34,.08); background:rgba(255,255,255,.18);"></div>
+  <div class="abs" style="left:16px; top:20px; font-size:29px; letter-spacing:-.02em;">7:10 AM</div>
+  <div class="abs" style="left:137px; top:16px; height:44px; padding:0 15px; border-radius:14px; background:#1d1b22; color:#fff; display:grid; place-items:center; font-size:16px;">Home</div>
+  <div class="abs" style="left:221px; top:16px; width:55px; height:44px; border-radius:14px 0 0 14px; background:rgba(255,255,255,.6); padding:11px 0 0 14px; font-size:16px; overflow:hidden; color:rgba(29,27,34,.7);">Living</div>
+  <div class="abs" style="left:288px; top:19px; width:38px; height:38px; border-radius:50%; background:rgba(255,255,255,.6); display:grid; place-items:center;"><svg class="i" width="16" height="16" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></div>
+  <div class="abs" style="left:335px; top:19px; width:38px; height:38px; border-radius:50%; background:rgba(255,255,255,.6); display:grid; place-items:center;"><svg class="i" width="16" height="16" viewBox="0 0 24 24"><path d="M5 8h14M5 12h14M5 16h9"/></svg></div>
+  <div class="abs" style="left:16px; top:91px; font-size:40px; letter-spacing:-.025em;">Good morning</div>
+  <div class="abs" style="left:16px; top:144px; font-size:18px; color:rgba(29,27,34,.62);">Something is on in the Backyard.</div>
+  <div class="abs" style="left:16px; top:175px; font-size:14.5px; color:rgba(29,27,34,.62); display:flex; gap:6px; align-items:center;"><span style="color:#b07a2a;"><svg class="i" width="13" height="13" viewBox="0 0 24 24"><path d="M12 4v4M12 16v4M4 12h4M16 12h4M7 7l2 2M15 15l2 2M17 7l-2 2M9 15l-2 2"/></svg></span>Next: Living room lights on at dusk, 6:18 PM</div>
+  <div class="sc" style="left:16px;"><i><svg class="i" width="17" height="17" viewBox="0 0 24 24"><path d="M19 14.5A7.5 7.5 0 0 1 9.5 5a7.5 7.5 0 1 0 9.5 9.5z"/></svg></i><div><b style="font-size:15.5px; font-weight:500; display:block;">Bedtime</b><span style="font-size:12px; color:rgba(29,27,34,.55);">Lights and scree…</span></div></div>
+  <div class="sc" style="left:200px;"><i><svg class="i" width="17" height="17" viewBox="0 0 24 24"><path d="M14 4h5v16h-5M10 8l-4 4 4 4M6 12h9"/></svg></i><div><b style="font-size:15.5px; font-weight:500; display:block;">Everything off</b><span style="font-size:12px; color:rgba(29,27,34,.55);">Lights, screens …</span></div></div>
+  <div class="abs" style="left:16px; top:299px; width:358px; height:54px; border-radius:14px; background:rgba(255,255,255,.4); border:1px solid rgba(29,27,34,.08); display:flex; align-items:center; padding:0 8px 0 16px; color:rgba(29,27,34,.5);"><svg class="i" width="16" height="16" viewBox="0 0 24 24"><path d="M12 4v4M12 16v4M4 12h4M16 12h4M7 7l2 2M15 15l2 2M17 7l-2 2M9 15l-2 2"/></svg><span style="margin-left:12px;">Tell the house…</span><span style="margin-left:auto; height:36px; padding:0 14px; border-radius:11px; background:rgba(29,27,34,.55); color:#fff; display:grid; place-items:center; font-size:15px;">Go</span></div>
+  <div class="lbl new" style="top:385px;">Always here</div>
+  <div class="new" style="position:absolute; left:16px; top:411px; width:358px; height:50px;"></div>
+  <div class="chip2 off" style="left:16px; top:411px; width:170px;"><span class="ci"><svg class="i" width="17" height="17" viewBox="0 0 24 24"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/></svg></span><div><b>Kitchen lights</b><span>Kitchen · Off</span></div></div>
+  <div class="chip2 off" style="left:194px; top:411px; width:176px;"><span class="ci"><svg class="i" width="17" height="17" viewBox="0 0 24 24"><path d="M5 9h11v5a5 5 0 0 1-5 5h-1a5 5 0 0 1-5-5zM16 10h1.5a2.5 2.5 0 0 1 0 5H16M8 3.5c0 1 1 1.5 1 2.5M12 3.5c0 1 1 1.5 1 2.5"/></svg></span><div><b>Coffee maker</b><span>Kitchen · Off</span></div></div>
+  <div class="lbl" style="top:489px;">On right now</div>
+  <div class="chip2 " style="left:16px; top:515px; width:196px;"><span class="ci"><svg class="i" width="17" height="17" viewBox="0 0 24 24"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/></svg></span><div><b>Walkway pathlight</b><span>Backyard</span></div></div>
+  <div class="lbl" style="top:597px;">Cameras</div>
+  <div class="abs" style="left:16px; top:623px; width:236px; height:150px; border-radius:22px; background:linear-gradient(180deg,#2a3142,#1a1e2a);"></div>
+  <div class="abs" style="left:262px; top:623px; width:236px; height:150px; border-radius:22px; background:linear-gradient(180deg,#2c2a30,#18161c);"></div>
+  <div class="note" style="left:16px; top:783px; width:358px; padding:8px 12px;">Always is this phone's own. The office plug is Never, so it is not under On right now, and the line above no longer counts it.</div>
+</div>
+</x-dc>
+</body>
+</html>
