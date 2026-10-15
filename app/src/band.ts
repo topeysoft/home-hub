@@ -22,7 +22,7 @@ import { store } from './store'
 
 export type BandItem =
   | 'ask' | 'notes' | 'knock' | 'controller' | 'updating' | 'signal'
-  | 'update' | 'whats-new' | 'move' | 'waiting' | 'charging'
+  | 'update' | 'whats-new' | 'move' | 'waiting' | 'charging' | 'power' | 'power-out'
   | 'passcode' | 'location' | 'home-screen'
 export type BandKind = 'needs' | 'news' | 'setup'
 
@@ -30,7 +30,9 @@ export const KIND: Record<BandItem, BandKind> = {
   ask: 'needs', notes: 'needs', knock: 'needs', controller: 'needs',
   // In progress, with a sentence that changes: a chip would cut the sentence, which is the news.
   updating: 'needs', signal: 'needs',
-  update: 'news', 'whats-new': 'news', move: 'news', waiting: 'news', charging: 'news',
+  /* The power out, and the battery carrying the house: what somebody does next depends on it. */
+  'power-out': 'needs',
+  update: 'news', 'whats-new': 'news', move: 'news', waiting: 'news', charging: 'news', power: 'news',
   passcode: 'setup', location: 'setup', 'home-screen': 'setup',
 }
 

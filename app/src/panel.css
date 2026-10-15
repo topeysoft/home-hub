@@ -125,6 +125,12 @@
 :root[data-shade='light'] .sheet-back {
   background: oklch(0.4 0.04 265 / 0.28);
 }
+/* A sheet, and what the command box says above itself, were drawn as dark glass for a dark page;
+   with the ink turned dark they hid their own words. */
+:root[data-shade='light'] :is(.sheet, .bottombar .say-hint, .bottombar .say-note, .bottombar .say-answer, .bottombar .drafts) {
+  background: rgba(var(--surface-rgb), 0.94);
+  box-shadow: 0 40px 100px -30px rgba(var(--wash-rgb), 0.35);
+}
 :root[data-shade='light'] .house-veil {
   background: oklch(0.4 0.04 265 / 0.22);
 }
@@ -14064,6 +14070,138 @@ button.reading[data-held] {
 .tile.plain.charger.on .tile-state,
 .tile.plain.charger.on .tile-icon { color: var(--live); }
 .nudge.charging .nudge-icon { background: var(--live); color: #0b2216; }
+
+/* ---------- the house's power (design/energy/, B with C's sun) ----------
+   PowerPane.vue, on the device pane's frame, and the band's line for the power going out. The picture is
+   drawn in a 700 x 400 box that keeps its shape, so the circles placed in percentages land where the lines
+   in power-lines end. */
+.nudge.power-out {
+  border-color: rgba(var(--danger-rgb), 0.45);
+  background: linear-gradient(rgba(var(--danger-rgb), 0.12), rgba(var(--danger-rgb), 0.12)), var(--surface);
+}
+.nudge.power-out .nudge-icon { background: var(--danger); color: #2a0e0e; }
+.power-big-unit {
+  margin-left: 12px;
+  font-size: 22px;
+  letter-spacing: 0;
+  color: var(--muted);
+}
+.power-rig { flex-direction: column; gap: 14px; container-type: inline-size; }
+.power-flow {
+  position: relative;
+  flex: 0 0 auto;
+  width: 100%;
+  aspect-ratio: 700 / 400;
+}
+.power-lines { position: absolute; inset: 0; width: 100%; height: 100%; }
+.power-line {
+  fill: none;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-dasharray: 2 8;
+  vector-effect: non-scaling-stroke;
+}
+.power-line.to-house { stroke: var(--lamp); }
+.power-line.to-battery { stroke: var(--live); }
+.power-line.to-grid { stroke: var(--muted); }
+.power-line.power-still { opacity: 0.18; }
+.power-amount {
+  position: absolute;
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  transform: translateX(-50%);
+}
+.power-amount.at-house { left: calc(50% + 36px); top: 29%; }
+.power-amount.at-battery { left: 23%; top: 9%; }
+.power-amount.at-grid { left: 77%; top: 9%; }
+.power-node {
+  position: absolute;
+  width: 170px;
+  text-align: center;
+  transform: translateX(-50%);
+}
+.power-node.power-sun { left: 50%; top: calc(13% - 44px); }
+.power-node.power-house { left: 50%; top: 42%; }
+.power-node.power-battery { left: 15.7%; top: 42%; }
+.power-node.power-grid { left: 84.3%; top: 42%; }
+.power-node.power-car { left: 50%; top: 75%; width: 240px; }
+.power-orb {
+  width: 76px;
+  height: 76px;
+  margin: 0 auto;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: rgba(var(--wash-rgb), 0.07);
+  border: 1px solid var(--edge);
+  color: var(--ink-2);
+}
+.power-node.power-sun .power-orb { width: 88px; height: 88px; }
+.power-node.power-sun.up .power-orb {
+  background: var(--lamp);
+  color: var(--lamp-ink);
+  border-color: transparent;
+  box-shadow: 0 0 40px -6px rgba(var(--lamp-rgb), 0.6);
+}
+.power-node.power-house .power-orb { color: var(--ink); }
+.power-node.power-battery .power-orb {
+  color: var(--live);
+  background: conic-gradient(rgba(var(--live-rgb), 0.4) 0 var(--charge), rgba(var(--wash-rgb), 0.05) var(--charge) 100%);
+}
+.power-node.power-grid .power-orb { color: var(--muted); }
+.power-node.power-grid.out .power-orb { color: var(--danger); border-color: rgba(var(--danger-rgb), 0.5); }
+.power-node.power-car .power-orb { width: 56px; height: 56px; }
+.power-node b { display: block; margin-top: 10px; font-size: 15px; font-weight: 500; }
+.power-node small { display: block; font-size: 13px; color: var(--muted); }
+.power-reserve {
+  margin: auto 0 0;
+  padding: 0 4px;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 15px;
+  color: var(--ink-2);
+}
+.power-reserve .opened-fact-k { margin: 0; }
+.power-reserve b { color: var(--ink); font-weight: 500; }
+.power-node .power-narrow { display: none; }
+/* A phone's rig is too narrow for the picture's circles and their words to keep apart, so there they are two
+   columns of circles, each with its words, and the lines between them are left out. */
+@container (max-width: 520px) {
+  .power-flow {
+    aspect-ratio: auto;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px 12px;
+  }
+  .power-lines,
+  .power-amount { display: none; }
+  .power-node,
+  .power-node.power-car {
+    position: static;
+    width: auto;
+    transform: none;
+  }
+  .power-node .power-orb,
+  .power-node.power-sun .power-orb,
+  .power-node.power-car .power-orb { width: 56px; height: 56px; }
+  .power-node .power-narrow { display: block; }
+}
+.power-day-chart { position: relative; flex: 1 1 auto; min-width: 0; }
+.power-day-chart svg { display: block; width: 100%; height: 44px; overflow: visible; }
+.power-day-sun { fill: rgba(var(--lamp-rgb), 0.28); stroke: var(--lamp); stroke-width: 2; vector-effect: non-scaling-stroke; }
+.power-day-house { fill: none; stroke: var(--ink); stroke-width: 1.6; vector-effect: non-scaling-stroke; }
+.power-day-now { stroke: rgba(var(--wash-rgb), 0.4); stroke-dasharray: 3 3; vector-effect: non-scaling-stroke; }
+.power-day-ticks { position: relative; height: 18px; margin-top: 6px; }
+.power-day-ticks span {
+  position: absolute;
+  transform: translateX(-50%);
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+}
 
 /* ---------- the wall's keyboard (design/keyboard/, C) ----------
    Keys.vue, mounted only on the wall unit, which has no keyboard of its own. Docked along the bottom on the panel's

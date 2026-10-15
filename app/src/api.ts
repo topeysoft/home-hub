@@ -476,6 +476,18 @@ export type AskState = 'waiting' | 'allowed' | 'refused' | 'expired' | 'failed'
 export type PrinterAsk = { id: string; name: string; state: AskState; title: string; detail: string; until: number | null }
 export type Printers = { printers: Printer[]; found: FoundPrinter[]; asking: Record<string, AskState>; asks?: PrinterAsk[] }
 export async function getPrinters(): Promise<Printers> { const r = await request('/printers'); if (!r.ok) await fail(r); return r.json() }
+
+/* THE HOUSE'S OWN POWER (brain/hub/power.py, design/energy/): the sun on the roof, the house, the battery and the
+   grid, in kW. `battery` is into the battery and `grid` is from the grid, so a negative is the battery giving and
+   the house sending power away. `spare`, `out_since` and `back` are the brain's judgments, and the band's lines. */
+export type Power = {
+  solar: number | null; house: number | null; battery: number | null; grid: number | null
+  charge: number | null; reserve: number | null; grid_up: boolean | null; left: number | null; has_battery: boolean
+  spare: boolean; out_since: number | null; back: { at: number; lasted: number } | null
+}
+export type PowerDay = { made: number | null; used: number | null; peak: number | null; since: number; curve: { at: number; solar: number | null; house: number | null }[] }
+export async function getPower(): Promise<Power | null> { const r = await request('/power'); if (!r.ok) await fail(r); return r.json() }
+export async function getPowerDay(): Promise<PowerDay | null> { const r = await request('/power/day'); if (!r.ok) await fail(r); return r.json() }
 export const lookForPrinters = () => post<Printers>('/printers/look')
 export const askPrinter = (id: string) => post<Printers>(`/printers/${encodeURIComponent(id)}/add`)
 export async function stopAsking(id: string): Promise<Printers> {
@@ -789,7 +801,7 @@ let live: WebSocket | null = null
 export function kickStream() { live?.close() }
 
 /** Live updates from the brain. Reconnects with backoff; reports link state. */
-export function connect(on: { device: (d: Device) => void; home: (h: Home) => void; ambient: (a: Ambient) => void; status: (s: Status) => void; intent: (i: Intent) => void; drafts: (d: Routine[]) => void; presence: (p: Presence) => void; phones: () => void; share: () => void; signals: (t: TryBrief | null) => void; roofline?: (r: Roofline) => void; printers?: (p: Printers) => void; link: (up: boolean) => void }) {
+export function connect(on: { device: (d: Device) => void; home: (h: Home) => void; ambient: (a: Ambient) => void; status: (s: Status) => void; intent: (i: Intent) => void; drafts: (d: Routine[]) => void; presence: (p: Presence) => void; phones: () => void; share: () => void; signals: (t: TryBrief | null) => void; roofline?: (r: Roofline) => void; printers?: (p: Printers) => void; power?: (p: Power | null) => void; link: (up: boolean) => void }) {
   let delay = 1000, ws: WebSocket | null = null, closed = false
   const open = () => {
     ws = live = new WebSocket(wsUrl('/stream'), wsProtocols())   // the token rides as a subprotocol, never in the URL (door.ts)
@@ -808,6 +820,7 @@ export function connect(on: { device: (d: Device) => void; home: (h: Home) => vo
       else if (m.type === 'signals') on.signals(m.trying ?? null)   // a try moved on, or a row was switched; the brief is for the band
       else if (m.type === 'roofline') on.roofline?.(m.roofline)   // its evenings, its look, the way round, a box gone dark
       else if (m.type === 'printers') on.printers?.(m.printers)   // the whole printer status: what each is doing, found, asking
+      else if (m.type === 'power') on.power?.(m.power)   // the sun, the battery and the grid: at once when the band changes, else every ten seconds
     }
     ws.onclose = () => { on.link(false); if (!closed) setTimeout(open, delay = Math.min(delay * 2, 15000)) }
     ws.onerror = () => ws?.close()
