@@ -1,0 +1,149 @@
+{
+  "name": "When a screen can't reach the hub",
+  "areas": [
+    "Wall screens"
+  ],
+  "reading": [
+    "why",
+    "Today.dc.html",
+    "today",
+    "HubNotLightA.dc.html",
+    "a",
+    "CardKeepsB.dc.html",
+    "b",
+    "NoticesC.dc.html",
+    "c",
+    "PhoneC.dc.html",
+    "phone",
+    "behind",
+    "pick"
+  ],
+  "pages": [
+    {
+      "id": "reach",
+      "name": "A screen that can't reach the hub",
+      "decided": {
+        "on": "2026-10-09",
+        "chose": "C, with B's card for a tap while cut off",
+        "board": "NoticesC.dc.html"
+      }
+    },
+    {
+      "id": "reach-rejected",
+      "name": "A screen that can't reach the hub: not chosen"
+    }
+  ],
+  "artboards": [
+    {
+      "file": "Today.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "Today — the tap never leaves the screen, and the toast blames the light",
+      "page": "reach"
+    },
+    {
+      "file": "HubNotLightA.dc.html",
+      "x": 1560,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "A — the toast names the hub, and says nothing changed",
+      "page": "reach-rejected"
+    },
+    {
+      "file": "CardKeepsB.dc.html",
+      "x": 0,
+      "y": 1300,
+      "w": 1440,
+      "h": 900,
+      "title": "B — the card keeps its place and says it didn't get through",
+      "page": "reach-rejected"
+    },
+    {
+      "file": "NoticesC.dc.html",
+      "x": 1560,
+      "y": 1300,
+      "w": 1440,
+      "h": 900,
+      "title": "C — the screen notices on its own, before anyone taps",
+      "page": "reach"
+    },
+    {
+      "file": "PhoneC.dc.html",
+      "x": 3120,
+      "y": 1300,
+      "w": 390,
+      "h": 844,
+      "title": "C on a phone — the same band, and the fix a phone has",
+      "page": "reach"
+    }
+  ],
+  "annotations": [
+    {
+      "id": "why",
+      "page": "reach",
+      "x": -620,
+      "y": 0,
+      "w": 500,
+      "text": "WHY THIS EXISTS (9 OCTOBER 2026)\n\nIn a real house this evening, the kitchen's wall screen -- joined to the house's hub, opened with ?screen=1 -- could not start a new connection to the hub for more than three hours. Its Wi-Fi stopped passing the hub's name, so hub.local stopped resolving, while the live connection it had already opened stayed up. The screen went on showing the kitchen correctly, to the second, and could change nothing.\n\nSomebody tapped Under Cabinet to turn it off. The card went Off at once, the request never reached the hub, and a few seconds later the card went back to On with the toast \"Under Cabinet isn't answering\". The same with the night light. Both lights were fine.\n\nThe Reconnecting banner never showed, because it shows only when the live connection closes, and that one never did. The corner said Connected the whole time.\n\nThis collection is about what a screen says when it can't reach the hub. Why the Wi-Fi did that is a separate question."
+    },
+    {
+      "id": "behind",
+      "page": "reach",
+      "x": -620,
+      "y": 900,
+      "w": 500,
+      "text": "BEHIND EVERY DIRECTION\n\nTWO FAILURES, TOLD APART. A request that never reached the hub is not the same as the hub answering that a light did not respond. Today both become \"<name> isn't answering\". In every direction here, a light that does not answer still says so in today's words, and a hub that can't be reached names the hub.\n\nTHE CURE IS SEPARATE, AND WORTH DOING TOO. A joined screen should not need the hub's name for every request. It already knows the hub's address from the connection it has open, and design/companion/ promised that a screen \"is found again by the hub's id, not its name\". With that, most of this evening would not have happened. It would not help when the hub is unplugged or the screen's Wi-Fi is down, and those are the cases these boards are for.\n\nWORDS. \"The hub\" is the product's own word. \"Can't reach\" rather than offline or disconnected, because the screen cannot tell whether the hub is down or only its own way to it. \"The switches on the wall still work\" is close to the restart screen's \"Switches on the wall keep working\", so the panel says it one way. Wi-Fi appears only on the phone, where it is the household's own word and the likely fix."
+    },
+    {
+      "id": "today",
+      "page": "reach",
+      "x": 0,
+      "y": 940,
+      "w": 1440,
+      "text": "TODAY -- THE TAP NEVER LEAVES THE SCREEN\n\nStep through it with the chips. TAP: Under Cabinet is on, and somebody taps it. GUESS: perform() in app/src/store.ts writes the expected Off into the card before asking, so the card goes dark and the room line drops to 2 lights on. BACK ON: the request fails without ever reaching the hub. perform() puts the card back and toasts `${shortName} isn't answering`, which names the light, in the error style. NIGHT LIGHT: the same thing happens again.\n\nThe corner says Connected throughout, because store.linkUp follows the live connection, and that never dropped. App.vue's \"Reconnecting to the hub. What you see may be a little behind.\" follows the same flag, so it never appeared. The person's natural conclusion is that the lights are broken. They weren't: the screen was the only thing cut off, and nothing on it said so. Drawn from the shipped panel at ?screen=1 with the kitchen as the screen's room, 7:40 PM, using values computed from app/src/panel.css."
+    },
+    {
+      "id": "a",
+      "page": "reach-rejected",
+      "x": 1560,
+      "y": 940,
+      "w": 1440,
+      "text": "A -- THE TOAST NAMES THE HUB\n\nThe smallest change. perform() tells a request that never reached the hub apart from one the hub answered with a failure, and only the second keeps today's \"<name> isn't answering\". The first says \"Couldn't reach the hub, so Under Cabinet is still on\", with Try again on the toast. A second miss within a minute names the screen and where else the light can be turned off: \"This screen still can't reach the hub. The switch on the wall works.\" The card still goes back to On, because that is true.\n\nFOR: one sentence and one button, all of it in perform() beside plainError(). Nothing new to draw and nothing to keep. It fixes the part that misled people, which was blaming the light. The toast grows past today's 520 px cap.\n\nAGAINST: it still lasts only as long as a toast, and it says nothing until somebody has already been let down by a tap. The card is back to On, so a person who looked away never sees it. The corner keeps saying Connected, so the screen contradicts itself. And the second light fails exactly like the first, because the screen learns nothing from the first miss."
+    },
+    {
+      "id": "b",
+      "page": "reach-rejected",
+      "x": 0,
+      "y": 2240,
+      "w": 1440,
+      "text": "B -- THE CARD KEEPS ITS PLACE\n\nAGENTS.md section 4, applied to a tap that failed. The card the person touched stays where the finger left it, drained but still lit, because the light is still on. It says so in its own words: \"Still on\" and \"This screen couldn't reach the hub\", with Try again on the card. No toast. The card stays like that until a tap gets through, the screen rests, or the long backstop runs out, the same as the done map in store.ts, which this would extend rather than adding a second timer. After one failure the corner stops saying Connected and says \"Can't reach the hub\", since the screen now knows. Once Try again gets through, the card says \"Off · just now\", as a card somebody turned off already does.\n\nFOR: the answer is where the person is looking, and it stays there. The card is also the retry. The rest of the room is untouched, so somebody who only wanted the light off is not shown an error about the whole house.\n\nAGAINST: it still learns only from a tap, so the first light is always a surprise. Two kept cards make the room look patchy and repeat one sentence twice, when the cause is the screen and not the cards. A card that says Still on for an hour, on a wall nobody has tapped again, looks stuck. And the corner word is small, too small to read from across the kitchen."
+    },
+    {
+      "id": "c",
+      "page": "reach",
+      "x": 1560,
+      "y": 2240,
+      "w": 1440,
+      "text": "C -- THE SCREEN NOTICES ON ITS OWN\n\nEvery half minute the screen makes a small new request to the hub, the same kind a tap makes. It does not check the live connection, because that stayed up all evening, which is why Today looked fine. After two misses in a row, about a minute, the foot of the screen says so before anyone taps, in the place the toast appears: \"Changes made here aren't reaching the hub\", since when, that it keeps trying, and that the switches on the wall still work. The cards stay as they are, because they are still up to date: the live connection is still bringing changes in. A tap while the screen is cut off guesses nothing. The card stays on and says to use the switch, which is B's card under C's band. When nothing comes in either (the hub unplugged, or the screen's Wi-Fi gone), the room is hushed and shown as it was, and the band says \"This screen can't reach the hub\" and when it last heard from it. This one band replaces today's Reconnecting banner, which shows only in that second case. The band goes as soon as a request gets through.\n\nFOR: nobody has to be let down by a tap to find out. The band says the one thing a person needs, which is to use the switch. When what the screen shows may be old, it says so with a time instead of a spinner. It is the only direction that would have told this house anything during the three hours nobody tapped.\n\nAGAINST: it is the most to build: a fresh request every half minute from every screen, a second state beside linkLost, and the hushed room. A band across the kitchen wall for three hours, while every light works, can make the house look broken, which is louder than the problem it reports. A brief blip raises the band unless the two-miss rule is right. And while the band is up it covers who is home and the assistant. The assistant could not reach the hub either, so covering it is honest, but it is still a change to the foot of the screen."
+    },
+    {
+      "id": "phone",
+      "page": "reach",
+      "x": 3120,
+      "y": 2184,
+      "w": 390,
+      "text": "C, ON A PHONE\n\nPhones have the same gap. A phone set to Home only uses the house through the same local name, so it can show the house and fail to change it in exactly the same way.\n\nThe band is the same, at the foot where a thumb is, with the one thing a phone can do that a wall screen can't: it is set to Home only, so the likeliest cause is that it isn't on the home Wi-Fi, and checking that is the fix offered.\n\nA phone set to Anywhere has already switched to the house's web address, which does not depend on the home network's name, so this particular failure does not reach it.\n\nA and B work the same on a phone as on the wall, so they are not drawn twice."
+    },
+    {
+      "id": "pick",
+      "page": "reach",
+      "x": 3120,
+      "y": 0,
+      "w": 500,
+      "text": "DECIDED 9 OCTOBER 2026\n\nC: the screen notices on its own, every half minute, and says so along the foot after two misses. A tap while it is cut off guesses nothing and gets B's card. A and B are kept on the page below with their cases.\n\nThe separate cure on the left, a screen that does not need the hub's name for every request, is on branch screen-keeps-the-hub."
+    }
+  ]
+}

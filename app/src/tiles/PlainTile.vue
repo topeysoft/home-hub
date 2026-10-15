@@ -14,10 +14,12 @@ import { kindFor, type ArtState } from '../art'
 import { useArm } from '../twice'
 import { leadsFixture, partnerOf, seeing } from '../units'
 import { makerWord } from '../telling'
+import { reach, stillLine } from '../reach'
 
 const props = defineProps<{ device: Device }>()
 const kind = computed(() => cap(props.device))
 const on = computed(() => kind.value === 'charger' ? isCharging(props.device) : isActive(props.device))
+const still = computed(() => reach.unreached[props.device.id] ? stillLine(on.value) : null)
 const dead = computed(() => isDead(props.device))
 const pending = computed(() => !!store.pending[props.device.id])
 const passive = computed(() => ['sensor', 'motion', 'contact', 'charger'].includes(kind.value))
@@ -76,7 +78,7 @@ function tap() {
 </script>
 
 <template>
-  <button class="tile plain" :class="[kind, { on, dead, passive, pending, arming, seeing: eye }]" :disabled="passive || dead" @click="tap" :aria-pressed="passive ? undefined : on">
+  <button class="tile plain" :class="[kind, { on, dead, passive, pending, arming, seeing: eye, unreached: !!still }]" :disabled="passive || dead" @click="tap" :aria-pressed="passive ? undefined : on">
     <!-- no artwork of its own, so the icon, oversized and faint, is the art: a shelf of no-name plugs reads composed rather than empty -->
     <DeviceArt v-if="shape" :kind="shape" :state="artState" />
     <!-- rung four: nothing drawn for this one, so the icon goes oversized and faint and becomes the art -->
@@ -85,7 +87,8 @@ function tap() {
     <div class="tile-body">
       <span class="tile-icon"><Icon :name="iconFor(device)" /></span>
       <span class="tile-name">{{ name }}</span>
-      <span class="tile-state" :class="{ big: kind === 'sensor' }">{{ label }}</span>
+      <span class="tile-state" v-if="still"><span class="tile-said">{{ still.said }}</span><span class="tile-why">{{ still.why }}</span></span>
+      <span class="tile-state" v-else :class="{ big: kind === 'sensor' }">{{ label }}</span>
       <!-- a cover says how far in a bar as well as in words: "70% open" is the
            number, the bar is the picture of it, and the board draws both -->
       <span class="tile-bar" v-if="kind === 'cover' && device.attrs.current_position != null" aria-hidden="true"><i :style="{ width: device.attrs.current_position + '%' }"></i></span>
