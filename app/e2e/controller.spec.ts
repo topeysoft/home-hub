@@ -456,7 +456,8 @@ test.describe('the Roofline’s pane on a phone', () => {
 })
 
 /* Every other light keeps the pane it had: the column, Automatic, the colors and the three levels, in the
-   places they were measured at on 1 October before the Roofline's pane was built (1440x900). */
+   places they were measured at on 1 October before the Roofline's pane was built (1440x900). The facts sit one
+   row lower since 9 October, for the On Home row under Show this as (design/home-keep/KeepBPane). */
 test('a lamp’s pane is unchanged beside the roofline', async ({ page }) => {
   await page.goto('/?room=living&at=18:52&roofline=christmas', { waitUntil: 'networkidle' })
   await hold(page, '.tile.light:has-text("Ceiling light")')
@@ -471,7 +472,7 @@ test('a lamp’s pane is unchanged beside the roofline', async ({ page }) => {
   near(await at('.rig-col'), [670, 325, 168, 401])
   near(await at('.rig-color'), [864, 382, 292, 321])
   near(await at('.rig-levels'), [1182, 382, 182, 321])
-  near(await at('.pane-facts'), [49, 682, 560, 67])
+  near(await at('.pane-facts'), [49, 716, 560, 67])
   near(await at('.pane-day'), [49, 809, 1342, 61])
 })
 
