@@ -48,10 +48,13 @@ INVITE_LETTERS = "23456789ABCDEFGHJKMNPQRSTVWXYZ"
 # The apps this box serves are on the list too (printers, houses), and so is nearby: a house that held
 # one of those names would be handed every phone that came looking for the app. Being here also keeps
 # them off /nearby, which is a list of houses and printers rather than of the service's own names.
+# Elyir Bench's own words too (bench, bench-box, elyir-bench): a printer or box holding one would read as the
+# product's address. Bench asks again as <name>-<four characters of its machine id> when refused.
 RESERVED = frozenset("""
     api relay www mail smtp imap pop ftp ns ns1 ns2 dns home lan local localhost admin root operator
     status help support billing pay account accounts login signin auth app apps elyir hub hubs test
     selftest staging dev _acme-challenge printers nearby houses cloud cloud-staging printers-staging
+    bench bench-box elyir-bench
 """.split())
 
 SCHEMA = """
