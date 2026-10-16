@@ -10,7 +10,7 @@ import { appHost, offerMove, moveCode, switchFor, waitsToBeLetOut, withoutCode }
 import { apiUrl, door, learnLan, look, looks, moved, withToken, wsProtocols, wsUrl } from '../src/door'
 
 const phone = (over: Partial<Phone> = {}): Phone => ({ id: 'p1', name: "Jordan's iPhone", kind: 'phone', joined: 0, expires: null, remote: false, last_seen: null, how: 'code', me: true, ...over })
-const me = (over: Partial<Me> = {}): Me => ({ locked: true, paired: true, home: 'Maple Court', phone: phone(), address: 'https://maple-court.elyir.app', lan: '192-168-86-53.maple-court.home.elyir.app', ...over })
+const me = (over: Partial<Me> = {}): Me => ({ locked: true, paired: true, home: 'Maple Court', phone: phone(), address: 'https://maple-court.elyir.app', lan: '192-168-1-53.maple-court.home.elyir.app', ...over })
 
 describe('the band line', () => {
   it('is for a phone of the house that is not in the Houses app yet, anywhere but inside the app', () => {
@@ -62,7 +62,7 @@ describe('the door', () => {
   afterEach(() => { moved('', null); door.base = ''; vi.unstubAllGlobals() })
 
   it('carries nothing and looks for nothing on a page that has no token -- hub.local is already home', () => {
-    learnLan('192-168-86-53.maple-court.home.elyir.app')
+    learnLan('192-168-1-53.maple-court.home.elyir.app')
     expect(looks()).toBe(false)
     expect(withToken(new Headers()).has('Authorization')).toBe(false)
     expect(wsProtocols()).toBeUndefined()
@@ -70,28 +70,28 @@ describe('the door', () => {
   })
 
   it('once moved, sends the token as a header and as a subprotocol, never in a URL', () => {
-    moved('tok', '192-168-86-53.maple-court.home.elyir.app')
+    moved('tok', '192-168-1-53.maple-court.home.elyir.app')
     expect(withToken(new Headers()).get('Authorization')).toBe('Bearer tok')
     expect(wsProtocols()).toEqual(['hub', 'tok'])
-    door.base = 'https://192-168-86-53.maple-court.home.elyir.app'
-    expect(wsUrl('/stream')).toBe('wss://192-168-86-53.maple-court.home.elyir.app/stream')
-    expect(apiUrl('/home')).toBe('https://192-168-86-53.maple-court.home.elyir.app/home')
+    door.base = 'https://192-168-1-53.maple-court.home.elyir.app'
+    expect(wsUrl('/stream')).toBe('wss://192-168-1-53.maple-court.home.elyir.app/stream')
+    expect(apiUrl('/home')).toBe('https://192-168-1-53.maple-court.home.elyir.app/home')
     expect(wsUrl('/stream')).not.toContain('tok')
   })
 
   it('learns only a name that is a home name', () => {
     learnLan('evil.example.com')
     expect(door.lan).toBe('')
-    learnLan('192-168-86-53.maple-court.home.elyir.app')
-    expect(door.lan).toBe('192-168-86-53.maple-court.home.elyir.app')
+    learnLan('192-168-1-53.maple-court.home.elyir.app')
+    expect(door.lan).toBe('192-168-1-53.maple-court.home.elyir.app')
   })
 
   it('uses the hub at home while it answers, and the relay when it does not', async () => {
-    moved('tok', '192-168-86-53.maple-court.home.elyir.app')
+    moved('tok', '192-168-1-53.maple-court.home.elyir.app')
     vi.stubGlobal('location', { protocol: 'https:', hostname: 'maple-court.elyir.app', host: 'maple-court.elyir.app' })
     vi.stubGlobal('fetch', vi.fn(async () => new Response('{"ok":true}', { status: 200 })))
     await look()
-    expect(door.base).toBe('https://192-168-86-53.maple-court.home.elyir.app')
+    expect(door.base).toBe('https://192-168-1-53.maple-court.home.elyir.app')
     vi.stubGlobal('fetch', vi.fn(async () => { throw new TypeError('unreachable') }))
     await look()
     expect(door.base).toBe('')

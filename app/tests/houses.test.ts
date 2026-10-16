@@ -50,16 +50,16 @@ describe('the houses on this Wi-Fi', () => {
 
   /* What the maker's own Wi-Fi said on 3 October: one house, three printers, all with names on the relay. */
   const answers: Record<string, () => Response> = {
-    'https://nearby.elyir.app/nearby': () => Response.json({ names: ['c3po', 'maple-court', 'obi1', 'r2d2'] }),
+    'https://nearby.elyir.app/nearby': () => Response.json({ names: ['vega', 'maple-court', 'atlas', 'juno'] }),
     'https://maple-court.elyir.app/alive': () => Response.json({ ok: true, version: 'main-1a2b3c4', commit: '1a2b3c4' }),
-    'https://obi1.elyir.app/alive': () => new Response('<!doctype html>', { headers: { 'content-type': 'text/html' } }),
-    'https://r2d2.elyir.app/alive': () => new Response('{"detail":"Not Found"}', { status: 404, headers: { 'content-type': 'application/json' } }),
+    'https://atlas.elyir.app/alive': () => new Response('<!doctype html>', { headers: { 'content-type': 'text/html' } }),
+    'https://juno.elyir.app/alive': () => new Response('{"detail":"Not Found"}', { status: 404, headers: { 'content-type': 'application/json' } }),
   }
 
   it('are the names that answer like a hub, and never a printer', async () => {
     vi.stubGlobal('fetch', async (url: string) => {
       const a = answers[url]
-      if (!a) throw new TypeError('Failed to fetch')          // c3po: refused across origins, as a printer is
+      if (!a) throw new TypeError('Failed to fetch')          // vega: refused across origins, as a printer is
       return a()
     })
     expect(await nearby({ hostname: 'houses.elyir.app' })).toEqual(['maple-court'])

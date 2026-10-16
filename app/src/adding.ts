@@ -226,8 +226,8 @@ export type BandLine = {
 /*
  * 3D PRINTERS FOUND ON THE WI-FI are things waiting like any other, and the line is word for word the
  * one a Hue bridge gets (design/printers/FoundLine): the same count, the same fold, the same tap that
- * opens Add. What it adds is what they are. A printer's name is whatever somebody called it -- R2D2,
- * OBI1 -- and explains nothing to a person who did not set it up, so the line says "3D printers" once,
+ * opens Add. What it adds is what they are. A printer's name is whatever somebody called it -- Juno,
+ * Atlas -- and explains nothing to a person who did not set it up, so the line says "3D printers" once,
  * after their names.
  */
 const printerPhrase = (printers: { name: string }[]) => printers.length === 1

@@ -1171,7 +1171,7 @@ from that report, as the hub will, with no scan. `open` answered `ring`. The han
 asks ten seconds apart, the press at thirty seconds, **a ring**, one more ask, the Wi-Fi, the hub
 details: **done in 46.6 s over nine exchanges**, and the errand closed when asked. The strip's own log:
 *rang whoever is at the door*, *credentials … arrived through our door*, *looking for the hub at
-mqtt://192.168.86.53:1883*, *announced as a light the house can switch on*.
+mqtt://192.168.1.53:1883*, *announced as a light the house can switch on*.
 
 **Not built.** The brain does not yet speak this format: `Strips.adopt` still uses only the hub's own
 radio, and asking `ears.choose()` and running an errand through Home Assistant is the next piece.
@@ -1242,7 +1242,7 @@ stop it for the connect and resume it after.
 silicon at last.** 23 September.
 
 **The bug, found in passing in item 39.** `find_hub()` appended `.local` to whatever `mhost` held,
-so a hub that handed over its *address* produced `mqtt://192.168.86.53.local:1883`, which is nowhere,
+so a hub that handed over its *address* produced `mqtt://192.168.1.53.local:1883`, which is nowhere,
 and the strip joined the Wi-Fi, said *nobody came*, and never appeared. `brain/hub/strip.py:460` sends
 `name or host or "hub"`, so any house whose broker is known by address was affected — and the native
 test found it was worse than that: a name that already said `.local` became `hub.local.local`. The
@@ -1252,7 +1252,7 @@ six cases against the old rule**.
 
 **Proven on the board that had the bug.** Strip `2e4258` had been adopted three times today and the
 broker still had it `offline`. Reflashed with the app only, NVS untouched, it said *looking for the
-hub at mqtt://192.168.86.53:1883*, then *announced as a light the house can switch on*, and the
+hub at mqtt://192.168.1.53:1883*, then *announced as a light the house can switch on*, and the
 broker shows it `online`.
 
 **AND ITEM 33'S FIRMWARE HALF RAN, BECAUSE THE BUG HAD KEPT IT FROM EVER TRYING.** A retained
@@ -1362,7 +1362,7 @@ pressing a button. Nothing interactive should ever go this way.
 **One bug found on the way past, and it is not the errand's.** `find_hub()` in the strip's firmware
 appends `.local` to whatever `mhost` holds, unconditionally
 (`app_main.cpp:505`) — so a hub that hands over an **address** rather than a name produces
-`mqtt://192.168.86.53.local:1883`, which resolves to nothing, and the strip says *nobody came. Still
+`mqtt://192.168.1.53.local:1883`, which resolves to nothing, and the strip says *nobody came. Still
 here, no longer asking*. `brain/hub/strip.py:460` sends `name or host or "hub"`, so any house whose
 broker config has a host and no name adopts a strip that completes setup and never appears.
 The puck has three ways to find the hub for exactly this reason (`docs/network.md`); the strip has
@@ -1866,7 +1866,7 @@ wrong too.
 user and no password. The strip joined the house, resolved the hub and reached the broker:
 
     I (1543) strip: already set up, through our own door
-    I (5083) esp_netif_handlers: sta ip: 192.168.86.70
+    I (5083) esp_netif_handlers: sta ip: 192.168.1.70
     W (5913) mqtt_client: Connection refused, not authorized
 
 The tell was in plain sight on the bench all day and read as a success: *"the hub said where it is:

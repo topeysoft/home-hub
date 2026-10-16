@@ -1,7 +1,7 @@
 #!/bin/sh
 # SPDX-FileCopyrightText: 2026 Temitope Adeyeri
 # SPDX-License-Identifier: AGPL-3.0-or-later
-# The certificate for the house's name at home -- 192-168-86-53.<house>.home.elyir.app -- kept current.
+# The certificate for the house's name at home -- 192-168-1-53.<house>.home.elyir.app -- kept current.
 #
 # Runs inside the stock lego image (docker-compose.yml, lan-cert), so there is no ACME code of ours. The
 # challenge is DNS-01, because a LAN address is the one place a CA's validator can never reach; lego's

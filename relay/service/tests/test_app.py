@@ -113,33 +113,33 @@ class Service(unittest.TestCase):
         self.assertIsNone(self.r.invite_problem(code))
 
     def test_a_paid_plan_elsewhere_carries_a_house_that_brings_its_ticket(self):
-        """Bench Cloud signs "carry obi1 until then"; the printer brings it with its own secret."""
+        """Bench Cloud signs "carry atlas until then"; the printer brings it with its own secret."""
         keyfile = Path(self.dir.name) / "payers"
         keyfile.write_text("# payer key\nbench s3cret\n")
         c = TestClient(make(self.r, now=lambda: self.t, payers=Payers(keyfile)))
-        secret = c.post("/houses", json={"name": "obi1"}).json()["secret"]
+        secret = c.post("/houses", json={"name": "atlas"}).json()["secret"]
         me = {"Authorization": f"Bearer {secret}"}
-        good = lambda **k: sign_ticket(**{"key": "s3cret", "payer": "bench", "name": "obi1", "until": self.t + 30 * DAY,
+        good = lambda **k: sign_ticket(**{"key": "s3cret", "payer": "bench", "name": "atlas", "until": self.t + 30 * DAY,
                                           "expires": self.t + 3600, "house": "h_1", **k})
-        carried = c.post("/houses/obi1/carry", json={"ticket": good()}, headers=me)
+        carried = c.post("/houses/atlas/carry", json={"ticket": good()}, headers=me)
         self.assertEqual(carried.status_code, 200)
         self.assertTrue(carried.json()["carried"]); self.assertEqual(carried.json()["entitled_until"], self.t + 30 * DAY)
-        self.assertIsNone(self.c.get("/houses/obi1", headers=me).json()["held_until"])
+        self.assertIsNone(self.c.get("/houses/atlas", headers=me).json()["held_until"])
         # a ticket only works with the name's own secret, for that name, signed by a known payer, in time
-        self.assertEqual(c.post("/houses/obi1/carry", json={"ticket": good()}).status_code, 404)
-        for bad, why in ((good(name="r2d2"), "another name"), (good(key="guess"), "signed"), (good(expires=self.t - 1), "ran out"),
+        self.assertEqual(c.post("/houses/atlas/carry", json={"ticket": good()}).status_code, 404)
+        for bad, why in ((good(name="juno"), "another name"), (good(key="guess"), "signed"), (good(expires=self.t - 1), "ran out"),
                          (good(payer="someone"), "signed"), ("nonsense", "isn't a ticket")):
-            r = c.post("/houses/obi1/carry", json={"ticket": bad}, headers=me)
+            r = c.post("/houses/atlas/carry", json={"ticket": bad}, headers=me)
             self.assertEqual(r.status_code, 403); self.assertIn(why, r.json()["detail"]["message"])
         # never further than TICKET_REACH, and never shortening a longer grant
-        c.post("/houses/obi1/carry", json={"ticket": good(until=self.t + 400 * DAY)}, headers=me)
-        self.assertEqual(self.r.status("obi1")["entitled_until"], self.t + TICKET_REACH)
-        self.r.grant("obi1", self.t + 365 * DAY, "by hand")
-        c.post("/houses/obi1/carry", json={"ticket": good()}, headers=me)
-        self.assertEqual(self.r.status("obi1")["entitled_until"], self.t + 365 * DAY)
+        c.post("/houses/atlas/carry", json={"ticket": good(until=self.t + 400 * DAY)}, headers=me)
+        self.assertEqual(self.r.status("atlas")["entitled_until"], self.t + TICKET_REACH)
+        self.r.grant("atlas", self.t + 365 * DAY, "by hand")
+        c.post("/houses/atlas/carry", json={"ticket": good()}, headers=me)
+        self.assertEqual(self.r.status("atlas")["entitled_until"], self.t + 365 * DAY)
         # a plan that stops simply runs out: carried no longer, but the name stays the house's
         self.t += 366 * DAY
-        self.assertFalse(self.r.status("obi1")["carried"]); self.assertTrue(self.r.taken("obi1"))
+        self.assertFalse(self.r.status("atlas")["carried"]); self.assertTrue(self.r.taken("atlas"))
 
     def test_a_payer_is_added_on_the_volume_without_a_restart(self):
         keyfile = Path(self.dir.name) / "payers"
@@ -163,7 +163,7 @@ class Nearby(unittest.TestCase):
         self.dir = tempfile.TemporaryDirectory()
         self.t = 1_790_000_000.0
         self.r = Registry(Path(self.dir.name) / "houses.db", now=lambda: self.t)
-        for name in ("obi1", "r2d2", "janes-voron"):
+        for name in ("atlas", "juno", "janes-voron"):
             secret = self.r.claim(name)["secret"]
             self.r.grant(name, self.t + 365 * DAY)
             ip = "203.0.113.9" if name != "janes-voron" else "198.51.100.7"
@@ -179,7 +179,7 @@ class Nearby(unittest.TestCase):
     def test_a_page_sees_the_printers_behind_its_own_address_and_no_others(self):
         home = TestClient(self.app, client=("203.0.113.9", 4000))
         r = home.get("/nearby", headers={"Origin": "https://printers.elyir.app"})
-        self.assertEqual(r.json(), {"names": ["obi1", "r2d2"]}, "the service's own names never show")
+        self.assertEqual(r.json(), {"names": ["atlas", "juno"]}, "the service's own names never show")
         self.assertEqual(r.headers["access-control-allow-origin"], "https://printers.elyir.app")
         self.assertEqual(r.headers["cache-control"], "no-store")
         elsewhere = TestClient(self.app, client=("192.0.2.1", 4000))
@@ -187,11 +187,11 @@ class Nearby(unittest.TestCase):
         self.assertNotIn("access-control-allow-origin", home.get("/nearby", headers={"Origin": "https://evil.example"}).headers)
 
     def test_a_house_that_stops_being_carried_drops_off_and_a_move_follows_it(self):
-        self.r.grant("r2d2", self.t - 1)
-        self.assertEqual(self.r.nearby("203.0.113.9"), ["obi1"])
-        self.r.seen("obi1", "[2001:db8::5]:443")
+        self.r.grant("juno", self.t - 1)
+        self.assertEqual(self.r.nearby("203.0.113.9"), ["atlas"])
+        self.r.seen("atlas", "[2001:db8::5]:443")
         self.assertEqual(self.r.nearby("203.0.113.9"), [])
-        self.assertEqual(self.r.nearby("2001:db8::5"), ["obi1"])
+        self.assertEqual(self.r.nearby("2001:db8::5"), ["atlas"])
 
 class OwnNames(unittest.TestCase):
     """The names the box carries for itself: each app is carried from the secret cloud-init hands it, and may

@@ -5,7 +5,7 @@
 A house's public name, jordan.elyir.app, resolves to the relay -- right for a phone away, wrong for one on
 the sofa, which would go out to the relay and back for every tap (docs/away.md: the relay is only in the
 path when a phone is away). So each house also has a name that spells its own LAN address,
-192-168-86-53.jordan.home.elyir.app, and this answers it with that address. It is the shape of Plex's
+192-168-1-53.jordan.home.elyir.app, and this answers it with that address. It is the shape of Plex's
 plex.direct, chosen on 1 October 2026 because NO HOUSE EVER CAUSES A DNS WRITE: Terraform delegates
 home.elyir.app here once, and every house's name is worked out from the question rather than stored.
 
@@ -35,7 +35,7 @@ create table if not exists challenges (
 
 
 def private_address(label: str) -> str | None:
-    """192-168-86-53 -> 192.168.86.53, if that is an address inside a house and nothing else."""
+    """192-168-1-53 -> 192.168.1.53, if that is an address inside a house and nothing else."""
     m = DASHED.match(label)
     if not m: return None
     try: ip = ipaddress.ip_address(".".join(m.groups()))

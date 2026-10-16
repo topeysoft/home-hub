@@ -1055,7 +1055,7 @@ static void find_hub() {
     // shop. It is then simply a Matter light and none of this half ever runs.
     if (host.empty()) { ESP_LOGI(TAG, "no hub to look for; this is somebody else's light"); return; }
     // A NAME GETS .local AND AN ADDRESS DOES NOT -- see hub_uri.h for the strip that finished setup
-    // and never appeared because it was looking for 192.168.86.53.local.
+    // and never appeared because it was looking for 192.168.1.53.local.
     const std::string uri = broker_uri(host);
     ESP_LOGI(TAG, "looking for the hub at %s", uri.c_str());
     esp_mqtt_client_config_t cfg = {};

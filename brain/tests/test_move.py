@@ -117,10 +117,10 @@ class Token(Base):
 
     def test_a_phone_of_the_house_is_told_the_name_at_home(self):
         env = self.data / ".env"
-        env.write_text("HUB_LAN_NAME=192-168-86-53.maple-court.home.elyir.app\n")
+        env.write_text("HUB_LAN_NAME=192-168-1-53.maple-court.home.elyir.app\n")
         with mock.patch.dict("os.environ", {"HUB_DRIVER": str(self.data)}):
             me = self.client.get("/phones/me").json()
-            self.assertEqual(me["lan"], "192-168-86-53.maple-court.home.elyir.app")
+            self.assertEqual(me["lan"], "192-168-1-53.maple-court.home.elyir.app")
             self.assertEqual(me["address"], ORIGIN)
             self.client.cookies.clear()
             self.assertIsNone(self.client.get("/phones/me").json()["lan"])                   # a stranger is told nothing

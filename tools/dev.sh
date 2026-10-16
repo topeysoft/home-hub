@@ -370,7 +370,7 @@ case "${1:-status}" in
   #   tools/dev.sh puck list                every bridge the hub set up: room, chip, version, online
   #   tools/dev.sh puck hallway             by the room it serves...
   #   tools/dev.sh puck c0e33a              ...or by its chip
-  #   tools/dev.sh puck hallway 192.168.86.53   through a hub other than hub.local
+  #   tools/dev.sh puck hallway 192.168.1.53   through a hub other than hub.local
   #   tools/dev.sh strip [list|room|chip] [house]   the same, for a light strip (strip/firmware, ESP-IDF)
   puck|strip)
          kind=$1; which=${2:-}; house=${3:-hub.local}

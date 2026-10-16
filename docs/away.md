@@ -343,7 +343,7 @@ never sees the setup step, so this is the way in:
    `https://<name>.elyir.app` -- the house's own certificate, through the relay.
 
 **The alias that covers home, built 2 October 2026.** The relay box is the nameserver for `home.elyir.app`
-(`relay/service/home.py`): `192-168-86-53.maple-court.home.elyir.app` answers `192.168.86.53` for a carried house,
+(`relay/service/home.py`): `192-168-1-53.maple-court.home.elyir.app` answers `192.168.1.53` for a carried house,
 only for private addresses. `host/away.sh` writes `HUB_LAN_NAME` from the address the hub really has -- not
 `HUB_IP`, which a DHCP lease had left behind on the maker's hub -- and `lan-cert` (stock lego) proves that one
 name over DNS-01 through the service, so Caddy serves it on the LAN (`caddy/away/on.caddy`). Caddy fetches the
@@ -415,7 +415,7 @@ door under test was the `:9443` site as it is actually written.*
   box in step 3 is sized for a few thousand houses rather than one. The reasoning, the tiers and what may never be
   sold are `docs/service.md`.
 - ~~**The alias that covers home**~~ **Closed, 1 October 2026: the address in the name.** A small maker-run DNS server
-  answers names that spell the hub's LAN address -- `192-168-86-59.jordan.home.elyir.app` is `192.168.86.59` -- the way
+  answers names that spell the hub's LAN address -- `192-168-1-59.jordan.home.elyir.app` is `192.168.1.59` -- the way
   Plex's `plex.direct` does. Terraform delegates the one subzone to it once and **no house ever causes a DNS write**,
   which is the rule the zone was built on. The hub's certificate for that name is proved over DNS-01, with the
   challenge answered by the same server for the house that signed the request, so still no house holds a Cloudflare

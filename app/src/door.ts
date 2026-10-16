@@ -5,7 +5,7 @@
  *
  * A phone that has moved to the house's own name -- https://maple-court.elyir.app -- loads the app there,
  * from wherever it is. On the sofa, going out to the relay and back for every tap is exactly what the
- * relay is not for, so the app looks for the hub's name at home -- https://192-168-86-53.maple-court.home.elyir.app,
+ * relay is not for, so the app looks for the hub's name at home -- https://192-168-1-53.maple-court.home.elyir.app,
  * which the relay's DNS answers with the hub's LAN address -- and talks to it directly when it answers.
  * Away, that name is a private address nobody can reach, the look fails fast, and everything goes the
  * way the page came: through the relay.

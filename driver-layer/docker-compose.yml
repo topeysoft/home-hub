@@ -190,7 +190,7 @@ services:
       # The house's whole public name, made here from the one part .env holds, so the two can never disagree.
       - HUB_AWAY_NAME=${HUB_AWAY_HOUSE:-}.${HUB_AWAY_ZONE:-elyir.app}
       - HUB_ACME_CA=${HUB_ACME_CA:-https://acme-v02.api.letsencrypt.org/directory}
-      # The house's name at home, 192-168-86-53.<house>.home.elyir.app, written by host/away.sh from the hub's
+      # The house's name at home, 192-168-1-53.<house>.home.elyir.app, written by host/away.sh from the hub's
       # real address. Only read while the away door is on (caddy/away/on.caddy).
       - HUB_LAN_NAME=${HUB_LAN_NAME:-}
       - BRAIN_UPSTREAM=localhost:8300

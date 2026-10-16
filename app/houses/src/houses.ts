@@ -16,7 +16,7 @@ export type HouseRecord = {
   id: string          // the house's label in the zone: `jordan` of jordan.elyir.app
   name: string        // what this phone calls it (AppName): only this phone sees it
   origin: string      // https://jordan.elyir.app
-  lan: string         // the house's name at home, as it last said: 192-168-86-53.jordan.home.elyir.app
+  lan: string         // the house's name at home, as it last said: 192-168-1-53.jordan.home.elyir.app
   token: string       // this phone's pass for this house
   added: number
   opened: number      // when it was last opened here: where the app opens when no house answers at home

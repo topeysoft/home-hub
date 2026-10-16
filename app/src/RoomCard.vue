@@ -43,7 +43,7 @@ const lamp = computed(() => leadLight(props.room))
 const temp = computed(() => temperature(props.room))
 const line = computed(() => {
   if (props.size === 'full' && media.value) return activityParts(props.room, false).join(' · ') || restingLine(props.room)   // the media has a row of its own below
-  /* a card with no chips says how far the print is in its line: "OBI1 printing, 42% · C3PO ready" */
+  /* a card with no chips says how far the print is in its line: "Atlas printing, 42% · Vega ready" */
   const ps = printersIn(props.room)
   if (!ps.length) return restingLine(props.room)
   const named = new Set(ps.map(printerPart))
