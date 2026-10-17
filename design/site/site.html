@@ -148,6 +148,10 @@ const nav = (right) => `<div class="nav">${MARK(28)}<span class="name">Elyir Hom
 const NAV_FULL = nav(`<span>Try it</span><span>Get it</span><span>Use it anywhere</span><span class="pill ghost sm">Sign in</span>`)
 const NAV_PHONE = `<div class="nav" style="height:60px;padding:0 20px">${MARK(26)}<span class="name" style="font-size:16px">Elyir Home Hub</span><div class="links"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#f1eee8" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></div></div>`
 
+const WAITLIST_LINE = `<div style="border-top:1px solid var(--s-line);padding-top:18px;display:grid;gap:10px">
+  <p style="font-size:15.5px"><span style="font-weight:500">Want one ready to plug in?</span> <span class="lead">We're making one. Leave your email and we'll write once, when it's ready.</span></p>
+  <div class="field"><span class="in" style="height:42px;line-height:40px;font-size:15px">you@example.com</span><span class="pill ghost sm" style="height:42px">Tell me</span></div></div>`
+
 const FILES = [['.github','home-hub','11 days ago'],['app','home-hub','11 days ago'],['brain','home-hub','11 days ago'],['design','home-hub','11 days ago'],['docs','The README is the front door for Elyir Home Hub','11 days ago'],['driver-layer','home-hub','11 days ago'],['kiosk','home-hub','11 days ago'],['matter-bridge','home-hub','11 days ago'],['puck','home-hub','11 days ago'],['relay','relay: the printer app may compile the WebAssembly…','yesterday'],['releases','home-hub','11 days ago'],['sounds','home-hub','11 days ago'],['strip','home-hub','11 days ago'],['tools','The README is the front door for Elyir Home Hub','11 days ago'],['.gitignore','home-hub','11 days ago'],['.gitleaks.toml','home-hub','11 days ago'],['AGENTS.md','home-hub','11 days ago'],['CLA.md','home-hub','11 days ago'],['CONTRIBUTING.md','Security reports go to security@elyir.app…','11 days ago']]
 
 const BOARDS = {
@@ -166,14 +170,15 @@ const BOARDS = {
     <div class="tabs" style="padding:0 16px"><span>Code</span><span>Issues</span><span>Pull requests</span><span>Actions</span></div>
     <div class="files"><div><span><b>Temitope Adeyeri</b> Merge pull…</span><em>6 Commits</em></div>${FILES.slice(0, 10).map(([n, , t]) => `<div><b>${n}</b><em>${t}</em></div>`).join('')}</div></div>`),
 
-  a: () => computer('hub.elyir.com', `${NAV_FULL}
-    <div style="display:grid;grid-template-columns:500px 1fr;gap:48px;padding:52px 56px 0;align-items:start">
-      <div style="padding-top:36px;display:grid;gap:26px">
+  a: (line = false) => computer('hub.elyir.com', `${NAV_FULL}
+    <div style="display:grid;grid-template-columns:500px 1fr;gap:48px;padding:${line ? 36 : 52}px 56px 0;align-items:start">
+      <div style="padding-top:${line ? 24 : 36}px;display:grid;gap:${line ? 22 : 26}px">
         <div class="label">Elyir Home Hub</div>
         <h1 style="font-size:64px">Your house, on one screen.</h1>
         <p class="lead" style="font-size:19px">Lights, locks, cameras and the thermostat, on a screen on the wall and every phone in the house. Setting it up is a few questions. It keeps working when the internet is down.</p>
         <div style="display:flex;gap:12px"><span class="pill lamp">Put it on a computer you have</span><span class="pill ghost">Try it live</span></div>
         <p class="small">Free and open source · a Raspberry Pi 5, a NUC or a mini PC</p>
+        ${line ? WAITLIST_LINE : ''}
       </div>
       <div style="position:relative;height:600px">
         <div style="position:absolute;right:-110px;top:0">${wall('wall-evening', 800)}</div>
@@ -182,14 +187,18 @@ const BOARDS = {
     </div>
     <div style="position:absolute;left:56px;right:56px;bottom:0;border-top:1px solid var(--s-line);padding-top:26px;height:96px"><h2 style="font-size:30px;color:var(--s-ink-2)">Try a pretend house, right here</h2></div>`),
 
-  'a-phone': () => phone('hub.elyir.com', `${NAV_PHONE}
-    <div style="padding:22px 20px 0;display:grid;gap:18px">
+  'a-phone': (line = false) => phone('hub.elyir.com', `${NAV_PHONE}
+    <div style="padding:${line ? 14 : 22}px 20px 0;display:grid;gap:${line ? 14 : 18}px">
       <div class="label">Elyir Home Hub</div>
       <h1 style="font-size:40px">Your house, on one screen.</h1>
       <p class="lead" style="font-size:16.5px">Lights, locks, cameras and the thermostat, on a screen on the wall and every phone in the house. Setting it up is a few questions.</p>
       <div style="display:grid;gap:10px"><span class="pill lamp">Try it live</span><span class="pill ghost">Put it on a computer you have</span></div>
+      ${line ? WAITLIST_LINE : ''}
     </div>
-    <div style="display:flex;justify-content:center;margin-top:30px">${hand('phone-home', 250, 330)}</div>`),
+    <div style="display:flex;justify-content:center;margin-top:${line ? 22 : 30}px">${hand('phone-home', 250, 330)}</div>`),
+
+  d: () => BOARDS.a(true),
+  'd-phone': () => BOARDS['a-phone'](true),
 
   'a-more': () => computer('hub.elyir.com', `
     <div style="display:grid;grid-template-columns:480px 1fr;gap:56px;padding:40px 56px 0;align-items:center">
@@ -271,6 +280,7 @@ const FILE_TO_BOARD = {
   'SameAsBenchA.dc.html': 'a', 'SameAsBenchA-phone.dc.html': 'a-phone', 'SameAsBenchA-more.dc.html': 'a-more',
   'EveningB.dc.html': 'b', 'EveningB-phone.dc.html': 'b-phone', 'EveningB-more.dc.html': 'b-more',
   'WhoForC.dc.html': 'c', 'WhoForC-phone.dc.html': 'c-phone',
+  'WaitlistLineD.dc.html': 'd', 'WaitlistLineD-phone.dc.html': 'd-phone',
 }
 
 const solo = new URLSearchParams(location.search).get('board')
@@ -292,6 +302,7 @@ async function readingPage() {
   for (const item of order) {
     if (FILE_TO_BOARD[item]) {
       const id = FILE_TO_BOARD[item], isPhone = id.endsWith('phone')
+      if (!BOARDS[id]) continue
       if (!row) { row = document.createElement('div'); row.className = 'row'; read.append(row) }
       const b = document.createElement('div')
       b.className = 'board' + (isPhone ? ' ph' : '')
