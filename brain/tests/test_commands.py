@@ -233,3 +233,28 @@ class Say(unittest.IsolatedAsyncioTestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class Complete(unittest.IsolatedAsyncioTestCase):
+    """The wall keyboard's completions (design/keyboard/, C): read-only, and never a sentence the grammar refuses."""
+
+    async def test_every_sentence_offered_is_one_the_grammar_runs(self):
+        offered = Hub().commands._sentences(None)
+        self.assertGreater(len(offered), 8)
+        for s in offered:
+            hub = Hub()
+            with self.subTest(said=s):
+                self.assertIsNotNone(await hub.commands._grammar(s, None), f"offered but not understood: {s!r}")
+
+    def test_what_is_typed_is_finished_from_the_house(self):
+        c = Hub().commands
+        self.assertEqual(c.complete("kitchen li")[:3], ["kitchen lights off", "kitchen lights on", "dim the kitchen lights"])
+        self.assertIn("movie in the den", c.complete("movie"))
+        self.assertIn("lock the front door", c.complete("front"))
+        self.assertEqual(c.complete("zzz"), [])
+
+    def test_nothing_runs_and_the_room_on_screen_comes_first(self):
+        hub = Hub()
+        self.assertTrue(hub.commands.complete("", "garage")[0].endswith("garage door") or "garage" in hub.commands.complete("", "garage")[0])
+        self.assertEqual(hub.acts, [])
+        self.assertEqual(hub.commands.complete("is any"), ["is anything on?"])

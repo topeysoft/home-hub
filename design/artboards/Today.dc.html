@@ -1,0 +1,83 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; background: #0c0d10; color: #f1eee8;
+      font-family: "Instrument Sans", -apple-system, "SF Pro Text", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      --ink: #f1eee8; --ink-2: #b9b5ad; --muted: #7f7d77; --edge: rgba(255,255,255,.1);
+      --lamp-rgb: 233,184,114; --lamp: rgb(var(--lamp-rgb));
+      --danger-rgb: 224,138,138; --danger: rgb(var(--danger-rgb));
+    }
+    .abs { position: absolute; }
+    .cap { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .shot { position: absolute; top: 112px; width: 432px; height: 270px; border-radius: 10px; overflow: hidden;
+            border: 1px solid var(--edge); box-shadow: 0 30px 70px -34px rgba(0,0,0,.95); }
+    .shot img { width: 432px; height: 270px; display: block; }
+    .lbl { position: absolute; top: 84px; font-size: 13px; color: var(--ink-2); }
+    .lbl b { color: var(--ink); font-weight: 500; }
+    .pin { position: absolute; width: 26px; height: 26px; border-radius: 50%; background: var(--danger); color: #1d0c0c;
+           font-size: 13px; font-weight: 600; display: grid; place-items: center;
+           box-shadow: 0 0 0 4px rgba(var(--danger-rgb),.25), 0 6px 14px rgba(0,0,0,.5); }
+    .col { position: absolute; top: 414px; width: 432px; display: grid; gap: 18px; }
+    .find { display: grid; grid-template-columns: 26px 1fr; gap: 14px; font-size: 14.5px; line-height: 1.55; color: var(--ink-2); }
+    .find .n { width: 26px; height: 26px; border-radius: 50%; border: 1.5px solid rgba(var(--danger-rgb),.7); color: var(--danger);
+               font-size: 13px; font-weight: 600; display: grid; place-items: center; }
+    .find b { color: var(--ink); font-weight: 500; }
+    .mono { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: .9em; color: var(--ink); }
+  </style>
+</helmet>
+<div class="abs" style="inset: 0; overflow: hidden;">
+  <div class="abs" style="left: 48px; right: 48px; top: 34px; display: flex; align-items: baseline; gap: 24px;">
+    <span class="cap" style="white-space: nowrap;">Today &mdash; the viewer as it ships</span>
+    <span style="font-size: 13.5px; color: var(--muted);">tools/artboards.mjs at 1440 &times; 900, captured 5 October from this checkout: the front page, a canvas, and that canvas read as a page.</span>
+  </div>
+
+  <span class="lbl" style="left: 48px;"><b>The front page</b> &middot; 39 collections, 467 boards, 481 notes</span>
+  <span class="lbl" style="left: 504px;"><b>A canvas</b> &middot; The strip controller on the wall, as it opens</span>
+  <span class="lbl" style="left: 960px;"><b>Read</b> &middot; the same collection, after pressing r</span>
+
+  <div class="shot" style="left: 48px;"><img src="shots/today-index.jpg" alt=""></div>
+  <div class="shot" style="left: 504px;"><img src="shots/today-canvas.jpg" alt=""></div>
+  <div class="shot" style="left: 960px;"><img src="shots/today-read.jpg" alt=""></div>
+
+  <span class="pin" style="left: 380px; top: 124px;">1</span>
+  <span class="pin" style="left: 60px; top: 284px;">2</span>
+  <span class="pin" style="left: 200px; top: 230px;">3</span>
+  <span class="pin" style="left: 560px; top: 126px;">4</span>
+  <span class="pin" style="left: 562px; top: 200px;">5</span>
+  <span class="pin" style="left: 1040px; top: 138px;">6</span>
+  <span class="pin" style="left: 1360px; top: 300px;">7</span>
+
+  <div class="col" style="left: 48px;">
+    <div class="find"><span class="n">1</span><span><b>Nothing to type into.</b> What you remember is a board&rsquo;s title or a phrase from a note (&ldquo;held dark&rdquo;, &ldquo;the band&rdquo;), and 467 titles and 481 notes can only be found by opening collections until one looks right.</span></div>
+    <div class="find"><span class="n">2</span><span><b>Folder order, three to a screen.</b> The page is thirteen rows deep, newest work nowhere in particular. Thirteen cards are titled with the folder name: <span class="mono">forget</span>, <span class="mono">healed</span>, <span class="mono">rest</span>, <span class="mono">nightfall</span>.</span></div>
+    <div class="find"><span class="n">3</span><span><b>A card shows how many, never what happened.</b> 9 boards, 8 notes &mdash; not whether it was decided, which direction won, when, or whether it is built.</span></div>
+  </div>
+
+  <div class="col" style="left: 504px;">
+    <div class="find"><span class="n">4</span><span><b>Six page names wrap the bar onto two lines</b>, and &ldquo;Not chosen&rdquo; is a tab like any other. On the canvas the board that won looks exactly like the ones that lost.</span></div>
+    <div class="find"><span class="n">5</span><span><b>It opens at fit &mdash; 17% here.</b> Every note is too small to read, and they are the reason the collection exists. Getting to a sentence is a zoom and a pan, every time.</span></div>
+  </div>
+
+  <div class="col" style="left: 960px;">
+    <div class="find"><span class="n">6</span><span><b>Read is the right idea, drawn as one long column.</b> Notes and boards in order, but nothing to jump to: no sections for Today, A, B and C, no outline, nothing to say which one won. The notes&rsquo; headings are capitals because that is how they are typed into <span class="mono">canvas.json</span>.</span></div>
+    <div class="find"><span class="n">7</span><span><b>Dark only, everywhere.</b> The colors are written into the page, so there is no light mode to switch to, even for an afternoon of reading notes.</span></div>
+  </div>
+
+  <div class="abs" style="left: 48px; right: 48px; top: 806px; border-top: 1px solid var(--edge); padding-top: 18px; font-size: 14px; line-height: 1.6; color: var(--muted);">
+    <b style="color: var(--ink); font-weight: 500;">Every one of these is information canvas.json already has, unused.</b> Titles, notes, page names, the reading order and the launch board are all read on every request; the dates are in git. None of it reaches the front page except a count.
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

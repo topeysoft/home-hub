@@ -11,28 +11,28 @@ import { cleanName, offersOutside, outsideRow, payUrl, price, takeWords, verdict
 const paid: Offer = { open: true, price: '$3 a month', pay: 'https://pay.example/start' }
 const byHand: Offer = { open: true, price: null, pay: null, by_hand: true }
 const closed: Offer = { open: false, price: null, pay: null }
-const state = (over: Partial<AddressState> = {}): AddressState => ({ offer: paid, guess: 'temi', house: null, ...over })
+const state = (over: Partial<AddressState> = {}): AddressState => ({ offer: paid, guess: 'jordan', house: null, ...over })
 
 describe('whether the step is offered at all', () => {
   it('appears only when the service is offering and the house has no address', () => {
     expect(offersOutside(state())).toBe(true)
     expect(offersOutside(state({ offer: closed }))).toBe(false)
-    expect(offersOutside(state({ house: 'temi' }))).toBe(false)
+    expect(offersOutside(state({ house: 'jordan' }))).toBe(false)
     expect(offersOutside(null)).toBe(false)
   })
 })
 
 describe('the field', () => {
   it('turns what somebody typed into what an address can be', () => {
-    expect(cleanName("Temi's House")).toBe('temis-house')
+    expect(cleanName("Jordan's House")).toBe('jordans-house')
     expect(cleanName('  -The  Palace- ')).toBe('the-palace')
   })
 
   it('says free, or whose it is, in one line -- and nothing for an answer about a name nobody is typing now', () => {
-    expect(verdict({ name: 'temi', free: true, address: 'temi.elyir.app' }, 'temi')).toEqual({ tone: 'ok', text: 'temi.elyir.app is free' })
-    expect(verdict({ name: 'temi', free: false, why: 'taken', suggestions: [] }, 'temi')).toEqual({ tone: 'no', text: 'temi.elyir.app is another house’s' })
+    expect(verdict({ name: 'jordan', free: true, address: 'jordan.elyir.app' }, 'jordan')).toEqual({ tone: 'ok', text: 'jordan.elyir.app is free' })
+    expect(verdict({ name: 'jordan', free: false, why: 'taken', suggestions: [] }, 'jordan')).toEqual({ tone: 'no', text: 'jordan.elyir.app is another house’s' })
     expect(verdict({ name: 'api', free: false, why: 'That one is kept for the service itself.' }, 'api').text).toBe('That one is kept for the service itself.')
-    expect(verdict({ name: 'tem', free: true }, 'temi')).toEqual({ tone: '', text: '' })
+    expect(verdict({ name: 'tem', free: true }, 'jordan')).toEqual({ tone: '', text: '' })
     expect(verdict(null, '')).toEqual({ tone: '', text: '' })
   })
 })
@@ -46,9 +46,9 @@ describe('the offer, said plainly', () => {
   it('pays on a phone, never on the wall', () => {
     expect(takeWords(paid)).toBe('Continue on your phone')
     expect(takeWords(byHand)).toBe('Give it this address')
-    expect(payUrl(paid, 'temi')).toBe('https://pay.example/start?house=temi')
-    expect(payUrl({ ...paid, pay: 'https://pay.example/start?plan=a' }, 'temi')).toBe('https://pay.example/start?plan=a&house=temi')
-    expect(payUrl(byHand, 'temi')).toBeNull()
+    expect(payUrl(paid, 'jordan')).toBe('https://pay.example/start?house=jordan')
+    expect(payUrl({ ...paid, pay: 'https://pay.example/start?plan=a' }, 'jordan')).toBe('https://pay.example/start?plan=a&house=jordan')
+    expect(payUrl(byHand, 'jordan')).toBeNull()
   })
 })
 
@@ -59,14 +59,14 @@ describe('the row on This hub', () => {
 
   it('says how it is, and offers the one thing to do', () => {
     const until = Date.UTC(2027, 9, 1) / 1000
-    const carried = outsideRow(state({ house: 'temi', address: 'temi.elyir.app', want: 'on', on: true, carried: true, entitled_until: until }))!
-    expect(carried.value).toBe('temi.elyir.app · on')
+    const carried = outsideRow(state({ house: 'jordan', address: 'jordan.elyir.app', want: 'on', on: true, carried: true, entitled_until: until }))!
+    expect(carried.value).toBe('jordan.elyir.app · on')
     expect(carried.sub).toMatch(/^Paid up until October 1, 2027\. If it ever stops, everything at home carries on as it is\.$/)
     expect(carried.action).toBe('Turn off')
-    expect(outsideRow(state({ house: 'temi', address: 'temi.elyir.app', want: 'on', waiting: true }))!.sub).toBe('Getting the web address ready — about a minute.')
-    expect(outsideRow(state({ house: 'temi', address: 'temi.elyir.app', want: 'on', carried: false }))!.sub).toBe('Waiting for the payment to go through.')
-    expect(outsideRow(state({ offer: byHand, house: 'temi', address: 'temi.elyir.app', want: 'on', carried: false }))!.sub).toBe('We are turning it on.')
-    const off = outsideRow(state({ house: 'temi', address: 'temi.elyir.app', want: 'off' }))!
-    expect(off.value).toBe('temi.elyir.app · off'); expect(off.action).toBe('Turn on')
+    expect(outsideRow(state({ house: 'jordan', address: 'jordan.elyir.app', want: 'on', waiting: true }))!.sub).toBe('Getting the web address ready — about a minute.')
+    expect(outsideRow(state({ house: 'jordan', address: 'jordan.elyir.app', want: 'on', carried: false }))!.sub).toBe('Waiting for the payment to go through.')
+    expect(outsideRow(state({ offer: byHand, house: 'jordan', address: 'jordan.elyir.app', want: 'on', carried: false }))!.sub).toBe('We are turning it on.')
+    const off = outsideRow(state({ house: 'jordan', address: 'jordan.elyir.app', want: 'off' }))!
+    expect(off.value).toBe('jordan.elyir.app · off'); expect(off.action).toBe('Turn on')
   })
 })

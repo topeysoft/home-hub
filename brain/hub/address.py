@@ -1,6 +1,6 @@
 # SPDX-FileCopyrightText: 2026 Temitope Adeyeri
 # SPDX-License-Identifier: AGPL-3.0-or-later
-"""The house's own address -- temi.elyir.app -- and the switch that lets it be reached from outside.
+"""The house's own address -- jordan.elyir.app -- and the switch that lets it be reached from outside.
 
 The house is complete without any of this. Reaching it away from home goes through the maker's relay,
 which is an optional service somebody pays for (docs/service.md), and this module is the hub's half of
@@ -36,7 +36,7 @@ HOST = re.compile(r"^[a-z0-9](?:[a-z0-9.-]{0,251}[a-z0-9])?$")
 
 
 def first_guess(home: str | None) -> str:
-    """The address the field starts with, from what the house was called in setup: Temi's house -> temi."""
+    """The address the field starts with, from what the house was called in setup: Jordan's house -> jordan."""
     t = (home or "").strip().lower()
     t = re.sub(r"['’]s\b", "", t)
     t = re.sub(r"\b(the|house|home|place)\b", " ", t)
@@ -196,7 +196,7 @@ class Address:
         return f"https://houses.{st['zone']}" if st.get("house") and st.get("zone") else None
 
     def house(self) -> str | None:
-        """The house's label in the zone (`temi` of temi.elyir.app): how the app names the house to claim from."""
+        """The house's label in the zone (`jordan` of jordan.elyir.app): how the app names the house to claim from."""
         return self._state().get("house") or None
 
     def lan_name(self) -> str | None:

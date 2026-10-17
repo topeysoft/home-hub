@@ -1,0 +1,43 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>Held sky</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500&family=Plus+Jakarta+Sans:wght@200;300;400;500&display=swap">
+<link rel="stylesheet" href="scene.css">
+</head>
+<body>
+<div class="board"></div>
+<script src="scene.js"></script>
+<script>
+/* B: the sky stays behind everything, but held up into the light. It keeps the hour by its color,
+   not by how dark it gets: open blue at noon, apricot and lilac at dusk, a pale periwinkle at
+   night with the stars still faintly in it. The cards are frosted white over it -- glass, the
+   panel's own material, turned to day. */
+const SKIES = {
+  noon: { stops: ['oklch(.80 .075 240)', 'oklch(.89 .045 228)', 'oklch(.95 .022 95)'], hill: 'oklch(.89 .04 140)', glow: 'noon', cut: 'oklch(.83 .065 238)' },
+  dusk: { stops: ['oklch(.80 .055 290)', 'oklch(.87 .055 335)', 'oklch(.92 .06 60)'], hill: 'oklch(.86 .035 330)', glow: 'dusk', cut: 'oklch(.82 .055 300)' },
+  night: { stops: ['oklch(.74 .045 268)', 'oklch(.81 .04 262)', 'oklch(.87 .03 250)'], hill: 'oklch(.80 .035 264)', stars: 0.9, cut: 'oklch(.76 .045 266)' },
+}
+window.Look = (s) => {
+  const k = SKIES[s.hour]
+  return {
+    sky: Scene.sky(k),
+    vars: {
+      ...Scene.LIGHT,
+      '--page-ink-2': '#57546a',
+      '--chrome': 'rgba(255,255,255,.55)', '--chrome-edge': 'rgba(255,255,255,.72)', '--chrome-ink-2': '#57546a',
+      '--chrome-shadow': '0 14px 34px -22px rgba(40,50,90,.4)',
+      '--tab-on': '#ffffff', '--tab-on-ink': '#1e1b24', '--tab-on-shadow': '0 2px 8px -2px rgba(40,50,90,.25)',
+      '--card': 'rgba(255,255,255,.62)', '--card-edge': 'rgba(255,255,255,.75)', '--card-blur': 'blur(24px) saturate(1.5)',
+      '--card-shadow': '0 18px 40px -24px rgba(40,50,90,.4)', '--card-ink-2': '#57546a', '--well': 'rgba(255,255,255,.6)',
+      '--cool': 'linear-gradient(155deg, oklch(.87 .06 245 / .88), oklch(.80 .08 250 / .88))',
+      '--lamp-on': 'linear-gradient(160deg, oklch(.92 .085 82 / .9), oklch(.85 .11 70 / .9))',
+      '--loz': 'rgba(255,255,255,.5)', '--loz-edge': 'rgba(255,255,255,.72)', '--loz-ink-2': '#57546a',
+      '--moon-cut': k.cut, '--av-edge': 'rgba(255,255,255,.85)',
+      '--rest-ink-2': '#4b4858', '--rest-shadow': '0 1px 30px rgba(255,255,255,.45)',
+    },
+  }
+}
+Scene.init({ tag: 'B — Held sky: the sky kept, held up into the light' })
+</script>
+</body>
+</html>

@@ -1,0 +1,40 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>Lamplit</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500&family=Plus+Jakarta+Sans:wght@200;300;400;500&display=swap">
+<link rel="stylesheet" href="scene.css">
+</head>
+<body>
+<div class="board"></div>
+<script src="scene.js"></script>
+<script>
+/* C: paper that knows the time. White at noon, warming toward cream after sunset, and by night a
+   page the color of paper under a lamp -- never dark, but not a white wall at midnight either. The
+   ink never flips. And a wall at rest after sunset goes to the dark resting screen it has today,
+   because a resting wall is one nobody is reading. */
+const PAGES = {
+  noon: { page: 'linear-gradient(180deg, #f7f4ef, #efebe4)', card: '#ffffff', well: '#f4f1ec' },
+  dusk: { page: 'linear-gradient(180deg, oklch(.935 .024 78), oklch(.895 .032 70))', card: 'oklch(.978 .015 82)', well: 'oklch(.945 .02 80)' },
+  night: { page: 'linear-gradient(180deg, oklch(.86 .038 78), oklch(.815 .045 70))', card: 'oklch(.925 .03 82)', well: 'oklch(.885 .034 78)' },
+}
+window.Look = (s) => {
+  if (s.screen === 'rest' && s.hour !== 'noon') return { sky: Scene.real(s.hour, { veil: Scene.REST_VEIL }), vars: { ...Scene.DARK } }
+  const p = PAGES[s.hour], night = s.hour === 'night'
+  return {
+    page: p.page,
+    weather: 'window',
+    vars: {
+      ...Scene.LIGHT,
+      '--chrome': p.card, '--card': p.card, '--well': p.well, '--av-edge': p.card,
+      '--page-ink-2': night ? '#5a5560' : '#6e6a73', '--card-ink-2': night ? '#5a5560' : '#6e6a73', '--chrome-ink-2': night ? '#5a5560' : '#6e6a73',
+      '--chrome-shadow': night ? '0 1px 2px rgba(60,40,20,.08), 0 10px 26px -16px rgba(60,40,20,.3)' : Scene.LIGHT['--chrome-shadow'],
+      '--card-shadow': night ? '0 1px 2px rgba(60,40,20,.08), 0 16px 36px -20px rgba(60,40,20,.34)' : Scene.LIGHT['--card-shadow'],
+      '--cool': night ? 'linear-gradient(155deg, oklch(.80 .06 245), oklch(.74 .075 250))' : Scene.LIGHT['--cool'],
+      '--lamp-on-shadow': s.hour === 'noon' ? Scene.LIGHT['--card-shadow'] : '0 0 0 1px rgba(255,200,120,.35), 0 0 90px -10px oklch(.85 .13 75 / .75)',
+    },
+  }
+}
+Scene.init({ tag: 'C — Lamplit: paper that warms at night, dark only at rest' })
+</script>
+</body>
+</html>

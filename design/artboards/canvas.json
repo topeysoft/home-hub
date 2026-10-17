@@ -1,0 +1,323 @@
+{
+  "areas": [
+    "Tools"
+  ],
+  "pages": [
+    {
+      "id": "viewer",
+      "name": "The viewer"
+    },
+    {
+      "id": "viewer-rejected",
+      "name": "The viewer: not chosen"
+    },
+    {
+      "id": "elsewhere",
+      "name": "From other checkouts"
+    },
+    {
+      "id": "elsewhere-rejected",
+      "name": "From other checkouts: not chosen"
+    }
+  ],
+  "artboards": [
+    {
+      "file": "Today.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "Today — the viewer as it ships",
+      "page": "viewer"
+    },
+    {
+      "file": "ContentsA.dc.html",
+      "x": 1560,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "A — contents: every collection one line, newest first",
+      "is_interactive": true,
+      "page": "viewer"
+    },
+    {
+      "file": "ReadA.dc.html",
+      "x": 1560,
+      "y": 1080,
+      "w": 1440,
+      "h": 900,
+      "title": "A, inside — a collection reads as a document",
+      "is_interactive": true,
+      "page": "viewer"
+    },
+    {
+      "file": "CanvasC.dc.html",
+      "x": 3120,
+      "y": 1080,
+      "w": 1440,
+      "h": 900,
+      "title": "Canvas, from C — opening on the board that won, the note beside it",
+      "is_interactive": true,
+      "page": "viewer"
+    },
+    {
+      "file": "LibraryB.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "B — library: a sidebar that never leaves",
+      "is_interactive": true,
+      "page": "viewer-rejected"
+    },
+    {
+      "file": "BoardB.dc.html",
+      "x": 0,
+      "y": 1080,
+      "w": 1440,
+      "h": 900,
+      "title": "B, inside — one board at a time, its note beside it",
+      "is_interactive": true,
+      "page": "viewer-rejected"
+    },
+    {
+      "file": "SpotlightC.dc.html",
+      "x": 1560,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "C — spotlight: today's pages, with ⌘K over them",
+      "is_interactive": true,
+      "page": "viewer-rejected"
+    },
+    {
+      "file": "TodayElsewhere.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "Today — a board waiting in another checkout",
+      "page": "elsewhere"
+    },
+    {
+      "file": "WaitingA.dc.html",
+      "x": 1560,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "A — waiting, at the top of the front page",
+      "page": "elsewhere",
+      "is_interactive": true
+    },
+    {
+      "file": "InPlaceB.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "B — in their place, with the branch beside them",
+      "page": "elsewhere-rejected",
+      "is_interactive": true
+    },
+    {
+      "file": "SwitchC.dc.html",
+      "x": 1560,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "C — one checkout at a time, from a switcher",
+      "page": "elsewhere-rejected",
+      "is_interactive": true
+    },
+    {
+      "file": "ElsewhereOpen.dc.html",
+      "x": 0,
+      "y": 1600,
+      "w": 1440,
+      "h": 900,
+      "title": "Opened, from another checkout — the same for all three",
+      "page": "elsewhere",
+      "is_interactive": true
+    }
+  ],
+  "annotations": [
+    {
+      "id": "away-decided",
+      "x": -620,
+      "y": -760,
+      "w": 500,
+      "page": "elsewhere",
+      "text": "DECIDED 5 OCTOBER 2026 -- A\n\nThe front page opens with what the other checkouts have that this one has not, a card each with its branch, and Waiting for you on a new collection nobody has picked on. No band when there is nothing. Search covers every checkout and puts a collection whose name matches first. A collection opened from elsewhere says where it lives and where a pick goes.\n\nSeeing the checkouts themselves -- which are stale, which hold work that exists nowhere else -- was asked for at the same time and is not this page's job: it belongs where every session starts, tools/dev.sh, and not in the boards. B and C are on the next page with their cases intact."
+    },
+    {
+      "id": "decided",
+      "x": -620,
+      "y": -760,
+      "w": 500,
+      "page": "viewer",
+      "text": "DECIDED 5 OCTOBER 2026 -- A, WITH C'S CANVAS\n\nThe front page is A's contents, newest first and grouped by area, with search narrowing it in place. A collection reads as A's document: the outline from its pages, the decision at the top, each board with its note beside it. Canvas is a switch in the bar, and behind it is C's canvas: it opens on the board that won at a zoom you can see, its pages are one menu, and a click opens the board's note in a drawer.\n\nB and C's front page are on the next page with their cases intact. Built in tools/artboards/, pinned by tools/artboards/lib.test.mjs."
+    },
+    {
+      "id": "why",
+      "x": -620,
+      "y": 0,
+      "w": 500,
+      "text": "WHY THIS EXISTS\n\nAsked for on 5 October 2026: the boards help, but finding the one you want is hard. There is no search and no index, the layout could be better, and the viewer is dark only, which tires the eyes over an afternoon of reading notes. The printer-setup page drawn as a Claude artifact was named as the style that works: a document with a Today, the directions, an Agreed or Not chosen on each, the boards in device frames, and light and dark.\n\nThis is the viewer, tools/artboards.mjs, not the panel. It is drawn first anyway, because the reason for the rule is the same: composition cannot be reviewed as a list of parts.\n\nWHAT ALL THREE DIRECTIONS SHARE. Search over board titles, note text, page names and collection names, all of which canvas.json already carries (467 titles, 481 notes). Newest first, from git dates. A Chosen or Open on every collection and every page. A theme switch, Auto, Light or Dark, for the viewer's own chrome only: a board is the spec and keeps the colors it was drawn in, so in light mode a wall board is still a dark rectangle on paper. A link for every board.\n\nWHAT DIFFERS is where you land, and how a collection reads once you are in it.",
+      "page": "viewer"
+    },
+    {
+      "id": "data",
+      "x": -620,
+      "y": 1080,
+      "w": 500,
+      "text": "WHERE CHOSEN AND OPEN COME FROM\n\nToday it can only be guessed. 22 collections have a page named Not chosen; 7 have a note headed DECIDED, CHOSEN or PICKED with a date. Neither catches everything: knock was decided on 22 September (AGENTS.md section 5, C with A) and has no such page or note.\n\nSo every direction reads an optional field per page in canvas.json -- \"decided\": {\"on\": \"2026-10-01\", \"chose\": \"A, with B's row\"} -- and falls back to the guess where it is missing, saying it guessed. An optional \"areas\" list does the same for grouping (Light strips, Plain words, Wall screens); a collection can be in two. Both are written by whoever draws the collection, in the same commit as the pick.\n\nNothing else changes for a collection. The index is built in memory on each request from the files on disk, so the viewer still needs nothing installed and cannot drift from the canvases.",
+      "page": "viewer"
+    },
+    {
+      "id": "today",
+      "x": 0,
+      "y": 960,
+      "w": 680,
+      "text": "TODAY -- WHAT THE VIEWER DOES WITH WHAT IT HAS\n\nCaptured from this checkout at 1440 x 900: the front page, the strip controller's canvas as it opens, and the same collection after pressing r. Seven things, each marked.\n\nThe canvas and the read view are good ideas held back by small things: the canvas opens at fit, where no note can be read, and read is one column with nothing to jump to. The front page is where the time goes: thirty-nine cards in folder order, a third of them titled with a folder name, saying how many boards each holds and never what was decided.",
+      "page": "viewer"
+    },
+    {
+      "id": "a",
+      "x": 1560,
+      "y": 2040,
+      "w": 680,
+      "text": "A -- EVERY COLLECTION READS LIKE A DOCUMENT\n\nThe front page is a table of contents: three recent collections as pictures, then every collection one line, grouped by area, saying what won and when. Search is the field at the top and narrows the same page: the boards it found as a strip of pictures, the notes as sentences with the words marked, grouped by collection with its decision beside it.\n\nInside, the collection is the printer page: an outline down the side made of the canvas's pages and boards, the decision in one sentence at the top with a jump to the winner, then each board at 620 px with its note beside it at reading size, For and Against set apart. Canvas is a switch in the bar, and c opens the same board on it.\n\nFOR: it is the shape that was asked for, and it suits what an old collection is opened for, which is the argument. The notes are the reason the boards exist and this is the only direction where they are the main thing on the screen. Light mode matters most here, because it is the most text.\n\nAGAINST: the most work. The layout has to hold up across 39 collections whose notes run from two lines to thirty-nine notes on one canvas. A board at 620 px is 43% -- enough to recognize, not enough to judge spacing, so full size is a keypress away rather than the default.",
+      "page": "viewer"
+    },
+    {
+      "id": "kept",
+      "x": 3120,
+      "y": 2040,
+      "w": 680,
+      "page": "viewer",
+      "text": "C'S CANVAS, KEPT BEHIND A'S SWITCH\n\nThe canvas is still how a collection is drawn and arranged, so it is not left as it was. Three fixes from C: it opens on the board that won, at a zoom where that board and its neighbor can be seen, rather than at fit; the pages are one menu rather than a row of tabs that wraps; and a click on a board opens its note in a drawer at a size you can read. The minimap is new here: on a canvas opened close up it is how you know where you are."
+    },
+    {
+      "id": "pick",
+      "x": 0,
+      "y": 1700,
+      "w": 680,
+      "text": "RECOMMENDATION -- A, WITH C'S CANVAS\n\nA, because what is lost today is the argument rather than the pictures: a collection is opened months later to remember why, and A is the only direction that sets the why out in order at a size you can read. It is also the shape that was named as working.\n\nWith C's three canvas fixes behind A's Canvas switch -- open on the winner, the page menu, the note drawer -- because the canvas is still how a collection is drawn and arranged, and it should not be left as it is.\n\nNot B. It finds things best and reads them worst, and with search on every page A finds them well enough.\n\nSomething else is a real answer: say what it is, and it is drawn here first.",
+      "page": "viewer"
+    },
+    {
+      "id": "b",
+      "x": 0,
+      "y": 2040,
+      "w": 680,
+      "text": "B -- A LIBRARY WITH A SIDEBAR THAT NEVER LEAVES\n\nLike a photo library or a file browser: recent collections, the areas of the house, and decided or not, down the left on every page. Each collection card shows the board that won rather than the first one drawn, with Today, A, B and C under it, the winner marked. Search is at the top of the sidebar and fills the main pane with boards first, because a board is what you recognize, then notes.\n\nInside, one board at a time at 50%, the page's other boards in a strip under it, its note in a column on the right, and the arrow keys walk the page.\n\nFOR: the best at finding. Everything is one click from everywhere, the board you are looking at is the largest of any direction, and the shape is familiar.\n\nAGAINST: reading a collection's case is one board, one note, one click at a time; the argument is spread across clicks instead of laid out in order. Three columns at 1440 leave the board 720 px wide, and the sidebar spends 280 px on every page, which is tight on a 1280 laptop.",
+      "page": "viewer-rejected"
+    },
+    {
+      "id": "c",
+      "x": 1560,
+      "y": 960,
+      "w": 680,
+      "text": "C -- KEEP IT, AND ADD WHAT IT IS MISSING\n\nThe pages stay the pages: the grid of cards, and the canvas as the way into a collection. Cmd-K opens a search over whichever page you are on, with pages, boards and notes as three groups. Cards come newest first and say Chosen or Open and what won, and the bar gets the theme switch.\n\nInside, the canvas gets three fixes: it opens on the board that won at a zoom where you can see it, not at fit; the pages are one menu instead of a row of tabs that wraps; and clicking a board opens its note in a drawer at a size you can read.\n\nFOR: the smallest change, perhaps a day, and nothing to relearn. The canvas stays where you see the arrangement as it was drawn.\n\nAGAINST: it fixes finding only when you know a word to type. Browsing is still a wall of cards with no grouping, and reading a collection's case is still clicking board to board across a canvas.",
+      "page": "viewer-rejected"
+    },
+    {
+      "id": "away-why",
+      "x": -620,
+      "y": 0,
+      "w": 500,
+      "page": "elsewhere",
+      "text": "WHY THIS PAGE EXISTS\n\nAsked on 5 October 2026, the same afternoon the viewer was built: a session working on some UI asked for a pick on \"boards/bridge-light\", and it could not be found. Not by browsing and not by searching.\n\nIt was not lost. It was in another checkout. Six worktrees share this repository on this machine, each on its own branch, and a session draws its boards in its own one. The viewer reads the design/ it was started in, so a collection drawn anywhere else does not exist to it until the branch is merged -- which is after the pick, because the pick is what the session is waiting for.\n\nIts index.html had also kept the heading of the collection it was copied from, so even served from the right place it was listed as a second \"The strip controller on the wall\". Searching folder names and refusing two collections of one name were fixed straight away; they are not what this page is about."
+    },
+    {
+      "id": "away-today",
+      "x": 0,
+      "y": 960,
+      "w": 680,
+      "page": "elsewhere",
+      "text": "TODAY -- THE FRONT PAGE AND A SEARCH, FROM THIS CHECKOUT\n\nCaptured from the viewer as built, on development. Five checkouts sit beside it. git says what is in them that development has not got: on puck-split-repos, design/bridge-light/, new, four boards and a note headed TO PICK; on made-up-house-names, three changed files in design/printers/. The other three have nothing in design/.\n\nThe search is the worse half. It does not say nothing; it says sixteen places in eight collections, because every word is somewhere, and none of them is the one asked about."
+    },
+    {
+      "id": "away-a",
+      "x": 1560,
+      "y": 960,
+      "w": 680,
+      "page": "elsewhere",
+      "text": "A -- WAITING, AT THE TOP OF THE FRONT PAGE\n\nThe front page opens with a band: From other checkouts, a card for each collection that is new or changed in one, with the branch it is on and the checkout it is in. A new collection with nothing decided on it says Waiting for you, in the accent, and Pick one opens it. When nothing waits anywhere the band is not drawn, so the page is the page it is today. Search covers every checkout; a collection whose name matches comes first, and the notes that merely have the words are folded under it.\n\nFOR: it answers the question the request actually asks -- is something waiting for me? -- without a click, and the answer is the first thing on the page. A pick that has been made since shows Chosen in the same place, so the band is also where you see that the session heard you.\n\nAGAINST: work in progress sits above work that is settled, and a branch with a dozen changed collections would make the band long. It wants a limit -- the newest few, and a count."
+    },
+    {
+      "id": "away-b",
+      "x": 0,
+      "y": 960,
+      "w": 680,
+      "page": "elsewhere-rejected",
+      "text": "B -- IN THEIR PLACE, WITH THE BRANCH BESIDE THEM\n\nNothing is set apart. A collection from another checkout is listed where it would be if it were here -- in its area, by its date, in Lately if it is new -- with its branch in a small mono label. A collection changed elsewhere keeps its own row and says also on the other branch. Elsewhere is a filter beside Open and Decided.\n\nFOR: one list, one way of reading it. Once the branch is merged the row stays exactly where it was and only loses its label.\n\nAGAINST: nothing says waiting. The bridge light reads Open, like twenty other collections that are open because nobody has looked at them in a month, and the person asked to pick has to know to look for a mono label. It answers where is it, not is anything waiting."
+    },
+    {
+      "id": "away-c",
+      "x": 1560,
+      "y": 960,
+      "w": 680,
+      "page": "elsewhere-rejected",
+      "text": "C -- ONE CHECKOUT AT A TIME, FROM A SWITCHER\n\nA switcher beside the name lists every checkout, the branch it is on, how far ahead it is, and what it has in design/ that this one has not. A dot on the switcher says something is waiting in one of them. Picking one shows that checkout's boards whole, the way its own viewer would, with a line across the top saying where you are and the way back.\n\nFOR: the most honest picture -- that checkout as it is, nothing merged that is not merged -- and a branch with forty changed collections is no harder to show than one with one.\n\nAGAINST: a menu you have to know to open, and a dot is easy to miss. Search still covers only the checkout you are looking at, so \"bridge light\" from development still finds the wrong sixteen."
+    },
+    {
+      "id": "away-open",
+      "x": 0,
+      "y": 2560,
+      "w": 1440,
+      "page": "elsewhere",
+      "text": "OPENED, FROM ANOTHER CHECKOUT -- WHICHEVER WINS\n\nA collection that is not here yet opens as any other does, read in order, with one line at the top saying where it lives, how far ahead its branch is, and where a pick made here goes: back to the session working in that checkout. The viewer does not answer the session; it says plainly that the answer is given there. While nothing on the collection is decided, the pick comes first on the page, the boards side by side, because that is the one thing the person was asked."
+    },
+    {
+      "id": "away-how",
+      "x": -620,
+      "y": 1600,
+      "w": 500,
+      "page": "elsewhere",
+      "text": "HOW IT WOULD KNOW\n\ngit worktree list --porcelain gives every checkout and the branch it is on, read when the page is drawn, never kept -- a checkout changed branch between the request and the search. For each, git diff --name-status development...<branch> -- design/ says what that branch has changed in design/ since it left, and git status -- design/ in that checkout adds what is not committed yet. One call each, kept for a minute.\n\nThe files are served from the checkout they live in, under its folder's name, so a board's own links keep working. Waiting means new, with no decision on any page -- the same reading of DECIDED notes and not-chosen pages the rest of the viewer already does."
+    },
+    {
+      "id": "away-pick",
+      "x": 3120,
+      "y": 0,
+      "w": 500,
+      "page": "elsewhere",
+      "text": "TO PICK -- A, B OR C, OR SOMETHING ELSE\n\nRecommended: A. The request that started this was is there something for me to look at, and A is the only one that answers it on arrival, and goes away when the answer is no. B is the better long-term list and could be A's second half -- the band for what waits, the label on the row for everything else elsewhere. C is the most faithful and the easiest to miss.\n\nSomething else is a real answer: say it in words and it is drawn here first."
+    }
+  ],
+  "reading": [
+    "why",
+    "Today.dc.html",
+    "today",
+    "ContentsA.dc.html",
+    "ReadA.dc.html",
+    "a",
+    "CanvasC.dc.html",
+    "kept",
+    "data",
+    "pick",
+    "LibraryB.dc.html",
+    "BoardB.dc.html",
+    "b",
+    "SpotlightC.dc.html",
+    "c",
+    "away-why",
+    "TodayElsewhere.dc.html",
+    "away-today",
+    "WaitingA.dc.html",
+    "away-a",
+    "InPlaceB.dc.html",
+    "away-b",
+    "SwitchC.dc.html",
+    "away-c",
+    "ElsewhereOpen.dc.html",
+    "away-open",
+    "away-how",
+    "away-pick"
+  ],
+  "launch": {
+    "view": "canvas",
+    "page": "viewer"
+  }
+}

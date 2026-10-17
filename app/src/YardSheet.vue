@@ -93,9 +93,9 @@ const foot = computed(() => done.value
 .yard-rows { list-style: none; margin: 18px 0 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
 .yard-row {
   width: 100%; display: grid; grid-template-columns: 30px 1fr auto; gap: 12px; align-items: center; text-align: left;
-  padding: 12px 14px; border-radius: 18px; border: 0; color: var(--ink); background: rgba(255, 255, 255, 0.04);
+  padding: 12px 14px; border-radius: 18px; border: 0; color: var(--ink); background: rgba(var(--wash-rgb), 0.04);
 }
-.yard-row.tapped { background: rgba(255, 255, 255, 0.08); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14); }
+.yard-row.tapped { background: rgba(var(--wash-rgb), 0.08); box-shadow: inset 0 0 0 1px rgba(var(--wash-rgb), 0.14); }
 .yard-row:disabled { opacity: 1; }
 .yard-dot { width: 22px; height: 22px; border-radius: 50%; }
 .yard-name { display: block; font-size: 17px; font-weight: 500; }

@@ -1,0 +1,24 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>Paper</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500&family=Plus+Jakarta+Sans:wght@200;300;400;500&display=swap">
+<link rel="stylesheet" href="scene.css">
+</head>
+<body>
+<div class="board"></div>
+<script src="scene.js"></script>
+<script>
+/* A: a light page that does not change with the hour. Off-white behind everything, white cards,
+   dark ink. The sky is not thrown away: it moves into the one card that is about it, so the
+   weather becomes a window onto the real sky at the real hour, and the only dark thing on a bright
+   wall at night is that window. */
+const PAGE = 'linear-gradient(180deg, #f6f3ee, #eeeae3)'
+window.Look = (s) => ({
+  page: PAGE,
+  weather: 'window',
+  vars: { ...Scene.LIGHT },
+})
+Scene.init({ tag: 'A — Paper: one light page, the sky in a window' })
+</script>
+</body>
+</html>

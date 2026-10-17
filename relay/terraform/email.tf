@@ -47,17 +47,12 @@ locals {
 }
 
 # Routing on, and the MX and SPF records it needs at the apex. The wildcard in dns.tf is an A record
-# for house names and does not meet these.
-resource "cloudflare_email_routing_settings" "this" {
-  count   = local.email_on ? 1 : 0
-  zone_id = data.cloudflare_zone.this.id
-}
-
+# for house names and does not meet these. This one resource turns routing on as well. There is no
+# cloudflare_email_routing_settings beside it: in provider 5.25 to 5.27 that resource cannot read its
+# own result back (support_subaddress, cloudflare/terraform-provider-cloudflare#7301).
 resource "cloudflare_email_routing_dns" "this" {
   count   = local.email_on ? 1 : 0
   zone_id = data.cloudflare_zone.this.id
-
-  depends_on = [cloudflare_email_routing_settings.this]
 }
 
 # Each mailbox mail may go to. An account-level object: one verification covers every zone.
@@ -83,7 +78,7 @@ resource "cloudflare_email_routing_rule" "forward" {
     value = each.value
   }]
 
-  depends_on = [cloudflare_email_routing_settings.this, cloudflare_email_routing_address.to]
+  depends_on = [cloudflare_email_routing_dns.this, cloudflare_email_routing_address.to]
 }
 
 resource "cloudflare_email_routing_catch_all" "this" {
@@ -98,7 +93,7 @@ resource "cloudflare_email_routing_catch_all" "this" {
     value = var.email_catch_all
   }]
 
-  depends_on = [cloudflare_email_routing_settings.this, cloudflare_email_routing_address.to]
+  depends_on = [cloudflare_email_routing_dns.this, cloudflare_email_routing_address.to]
 }
 
 output "email_addresses" {

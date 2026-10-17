@@ -1,0 +1,207 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap">
+  <style>
+    /* THE VIEWER'S OWN TOKENS -- not the panel's. Light and dark are the viewer's chrome only: the boards it
+       shows are the spec and keep the colors they were drawn in, so in light mode a wall board is still a
+       dark rectangle on paper. The accent is the panel's lamp, darkened in light mode until it reads as text. */
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: "Instrument Sans", -apple-system, "SF Pro Text", system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    .ui { position: absolute; inset: 0; overflow: hidden; background: var(--bg); color: var(--ink); font-size: 14px; line-height: 1.5; }
+    .ui.dark {
+      --bg: #0d0e11; --pane: #121317; --surface: #17191e; --raise: #20232a; --scrim: rgba(5,6,8,.72);
+      --ink: #f1eee8; --ink-2: #b9b5ad; --ink-3: #7f7d77; --line: rgba(241,238,232,.08); --line-2: rgba(241,238,232,.16);
+      --accent-rgb: 233,184,114; --accent: rgb(var(--accent-rgb)); --accent-text: #e9b872; --accent-ink: #2a1c07;
+      --ok-rgb: 116,198,157; --ok: rgb(var(--ok-rgb)); --hl: rgba(233,184,114,.3);
+      --shadow: 0 30px 70px -36px rgba(0,0,0,.95); --pop: 0 40px 120px -20px rgba(0,0,0,.9);
+    }
+    .ui.light {
+      --bg: #f6f4ef; --pane: #eeebe4; --surface: #ffffff; --raise: #e9e5dd; --scrim: rgba(40,34,24,.34);
+      --ink: #1c1b18; --ink-2: #55524b; --ink-3: #8b877e; --line: rgba(28,27,24,.09); --line-2: rgba(28,27,24,.17);
+      --accent-rgb: 192,138,53; --accent: rgb(var(--accent-rgb)); --accent-text: #875811; --accent-ink: #fff;
+      --ok-rgb: 47,138,92; --ok: rgb(var(--ok-rgb)); --hl: rgba(233,184,114,.5);
+      --shadow: 0 22px 50px -28px rgba(60,45,20,.38); --pop: 0 40px 100px -30px rgba(60,45,20,.45);
+    }
+    .abs { position: absolute; }
+    .cap { font-size: 11.5px; letter-spacing: .11em; text-transform: uppercase; color: var(--ink-3); font-weight: 500; }
+    .dim { color: var(--ink-3); }
+    .num { font-variant-numeric: tabular-nums; }
+    mark { background: var(--hl); color: inherit; border-radius: 3px; padding: 0 2px; }
+    svg.i { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+    .kbd { font-size: 11.5px; color: var(--ink-3); border: 1px solid var(--line-2); border-radius: 5px; padding: 0 6px; line-height: 19px; font-variant-numeric: tabular-nums; }
+
+    .search { display: flex; align-items: center; gap: 10px; height: 38px; padding: 0 10px 0 13px; border-radius: 10px;
+              background: var(--surface); border: 1px solid var(--line-2); color: var(--ink-3); cursor: text; }
+    .search .q { flex: 1; color: var(--ink); white-space: nowrap; overflow: hidden; }
+    .search .ph { flex: 1; color: var(--ink-3); white-space: nowrap; overflow: hidden; }
+    .search.on { border-color: rgba(var(--accent-rgb),.6); box-shadow: 0 0 0 3px rgba(var(--accent-rgb),.14); }
+
+    .seg { display: inline-flex; padding: 3px; gap: 2px; border-radius: 9px; background: var(--raise); }
+    .seg > span { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 9px; border-radius: 7px; color: var(--ink-3); cursor: pointer; font-size: 13px; white-space: nowrap; }
+    .seg > span.on { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,.18); }
+
+    .chip { display: inline-flex; align-items: center; gap: 6px; height: 22px; padding: 0 8px; border-radius: 6px; font-size: 12px; font-weight: 500; white-space: nowrap; }
+    .chip i { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+    .chip.chosen { color: var(--ok); background: rgba(var(--ok-rgb),.13); }
+    .chip.open { color: var(--accent-text); background: rgba(var(--accent-rgb),.13); }
+    .chip.no { color: var(--ink-3); background: var(--raise); }
+
+    /* a real board, drawn small: the board's own file in a frame, scaled -- never a screenshot that can go stale */
+    .th { position: relative; overflow: hidden; border-radius: 7px; background: var(--raise); border: 1px solid var(--line); flex: none; }
+    .th iframe { position: absolute; left: 0; top: 0; border: 0; transform-origin: 0 0; pointer-events: none; }
+    .th.won { border-color: rgba(var(--ok-rgb),.8); box-shadow: 0 0 0 2px rgba(var(--ok-rgb),.35); }
+    .th.lost { opacity: .5; }
+
+    /* the dashed chips are the board's own: flip what it shows, as on every board here */
+    .try { position: absolute; right: 16px; bottom: 14px; z-index: 40; display: flex; align-items: center; gap: 6px; padding: 6px 8px 6px 12px;
+           border-radius: 999px; background: rgba(12,13,16,.86); border: 1px dashed rgba(255,255,255,.22); font-size: 12px; color: #b9b5ad; }
+    .flip { padding: 3px 10px; border-radius: 999px; border: 1px dashed rgba(255,255,255,.22); cursor: pointer; white-space: nowrap; }
+    .flip.on { border-style: solid; border-color: rgba(233,184,114,.7); color: #e9b872; background: rgba(233,184,114,.08); }
+
+    .top { position: absolute; left: 0; right: 0; top: 0; height: 60px; display: flex; align-items: center; gap: 16px; padding: 0 24px;
+           border-bottom: 1px solid var(--line); background: var(--bg); z-index: 5; }
+    .mark { display: flex; align-items: center; gap: 10px; font-weight: 500; font-size: 15px; }
+    .mark b { width: 22px; height: 22px; border-radius: 6px; background: var(--accent); display: block; position: relative; }
+    .mark b::after { content: ''; position: absolute; left: 6px; top: 6px; width: 10px; height: 10px; border-radius: 2px; background: var(--bg); opacity: .9; }
+    .col { position: absolute; left: 200px; width: 1040px; }
+    h1.big { margin: 0; font-size: 40px; line-height: 1.1; font-weight: 400; letter-spacing: -.03em; }
+    .pills { display: flex; gap: 6px; }
+    .pills span { height: 30px; padding: 0 12px; border-radius: 999px; display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--ink-2); border: 1px solid var(--line-2); cursor: pointer; }
+    .pills span.on { background: var(--ink); color: var(--bg); border-color: transparent; }
+    .card .t { font-size: 15px; font-weight: 500; margin-top: 12px; }
+    .card .m { display: flex; align-items: center; gap: 8px; margin-top: 6px; font-size: 13px; color: var(--ink-3); }
+    .area { display: flex; align-items: baseline; gap: 10px; padding-bottom: 8px; border-bottom: 1px solid var(--line-2); }
+    .area b { font-size: 13px; font-weight: 600; }
+    .row { display: grid; grid-template-columns: 1fr auto auto 54px; align-items: center; gap: 12px; height: 35px; border-bottom: 1px solid var(--line); font-size: 14px; }
+    .row .n { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .row .w { font-size: 12.5px; color: var(--ink-3); white-space: nowrap; }
+    .row .d { font-size: 12.5px; color: var(--ink-3); text-align: right; font-variant-numeric: tabular-nums; }
+    .fade { position: absolute; left: 0; right: 0; bottom: 0; height: 110px; background: linear-gradient(transparent, var(--bg)); pointer-events: none; }
+    .br { display: inline-flex; align-items: center; gap: 5px; height: 22px; padding: 0 8px; border-radius: 6px; font: 12px ui-monospace, "SF Mono", Menlo, monospace; color: var(--ink-2); background: var(--raise); white-space: nowrap; }
+    .shot { display: block; border-radius: 7px; border: 1px solid var(--line); object-fit: cover; background: #0c0d10; }
+    .chip.wait { color: var(--accent-ink); background: var(--accent); }
+
+    .away { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .ac { display: grid; grid-template-columns: 160px 1fr; gap: 16px; padding: 14px; border-radius: 12px; background: var(--surface); border: 1px solid var(--line); }
+    .ac.wait { border-color: rgba(var(--accent-rgb),.55); box-shadow: 0 0 0 3px rgba(var(--accent-rgb),.10); }
+    .ac .t { font-size: 15px; font-weight: 500; }
+    .ac .c { display: flex; gap: 6px; align-items: center; margin-top: 8px; flex-wrap: wrap; }
+    .ac .m { font-size: 12.5px; color: var(--ink-3); margin-top: 8px; line-height: 1.5; }
+    .ac .go { font-size: 13px; color: var(--accent-text); font-weight: 500; margin-top: 8px; display: inline-flex; gap: 4px; align-items: center; }
+    .grp { display: flex; align-items: center; gap: 10px; margin: 0 0 12px; font-size: 13px; color: var(--ink-3); flex-wrap: wrap; }
+    .grp b { color: var(--ink); font-weight: 500; font-size: 14px; }
+    .hit { display: grid; grid-template-columns: 22px 1fr; gap: 12px; padding: 12px 14px; border-radius: 10px; }
+    .hit.sel { background: var(--surface); box-shadow: inset 0 0 0 1px var(--line-2); }
+    .hit .h { font-size: 14px; font-weight: 500; }
+    .hit .x { font-size: 13.5px; color: var(--ink-2); margin-top: 3px; }
+    .bt { display: grid; gap: 7px; font-size: 12.5px; color: var(--ink-2); }
+    .bt b { color: var(--ink); font-weight: 500; }
+  </style>
+</helmet>
+<div class="{{ui}}">
+  <div class="top">
+    <span class="mark" style="width: 220px;"><b></b>Artboards</span>
+    <span class="{{searchCls}}" style="width: 560px; margin: 0 auto;"><svg class="i" width="16" height="16" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+      <sc-if value="{{notSearching}}"><span class="ph" onClick="{{toSearch}}">Search 478 boards and 496 notes, here and in 5 other checkouts</span><span class="kbd">&#8984;K</span></sc-if>
+      <sc-if value="{{searching}}"><span class="q">bridge light</span><span onClick="{{toWaiting}}" style="display: flex; cursor: pointer;"><svg class="i" width="15" height="15" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></span></sc-if>
+    </span>
+    <span style="width: 220px; display: flex; justify-content: flex-end;"><span class="seg"><span class="{{t.auto}}" onClick="{{t.toAuto}}"><svg class="i" width="15" height="15" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="12" rx="2"/><path d="M8 20h8M12 16v4"/></svg></span><span class="{{t.light}}" onClick="{{t.toLight}}"><svg class="i" width="15" height="15" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg></span><span class="{{t.dark}}" onClick="{{t.toDark}}"><svg class="i" width="15" height="15" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 0 1 9.5 4a8 8 0 1 0 10.5 10.5z"/></svg></span></span></span>
+  </div>
+
+  <sc-if value="{{notSearching}}">
+    <div class="col" style="top: 92px; display: flex; align-items: flex-end; justify-content: space-between;">
+      <div><h1 class="big">The artboards</h1>
+        <p style="margin: 8px 0 0; color: var(--ink-2); font-size: 15px;">Every screen drawn before it was built, with the case for each. Newest first.</p></div>
+      <div class="pills"><span class="on">All 42</span><span>Open 20</span><span>Decided 22</span></div>
+    </div>
+
+    <div class="col" style="top: 196px; display: flex; align-items: baseline; gap: 12px;"><span class="cap">From other checkouts</span><span class="dim" style="font-size: 13px;">2 of the 5 beside this one have boards that are not here yet</span></div>
+    <div class="col away" style="top: 222px;">
+      <div class="{{bridgeCard}}">
+        <img class="shot" src="shots/bridge-light-HubA.jpg" style="width: 160px; height: 100px;" alt="">
+        <div>
+          <div class="t">The bridge light</div>
+          <div class="c"><sc-if value="{{waiting}}"><span class="chip wait">Waiting for you</span></sc-if><sc-if value="{{decided}}"><span class="chip chosen"><i></i>Chosen 5 Oct &middot; A</span></sc-if><span class="br">puck-split-repos</span></div>
+          <div class="m">New &middot; 4 boards &middot; in home-hub-a, 7 commits ahead</div>
+          <sc-if value="{{waiting}}"><span class="go">Pick one <svg class="i" width="14" height="14" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></span></sc-if>
+        </div>
+      </div>
+      <div class="ac">
+        <div class="th " style="width: 160px; height: 100px;"><iframe src="../printers/AddAsking.dc.html" width="1440" height="900" loading="lazy" scrolling="no" style="left: 0.0px; top: 0.0px; transform: scale(0.1111);"></iframe></div>
+        <div>
+          <div class="t">Printers on the wall</div>
+          <div class="c"><span class="chip no">Changed</span><span class="br">made-up-house-names</span></div>
+          <div class="m">3 files &middot; in home-hub-names &middot; &ldquo;Made-up names in place of a real house and its Wi-Fi&rdquo;</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="col cap" style="top: 384px;">Lately, here</div>
+    <div class="col" style="top: 408px; display: grid; grid-template-columns: repeat(3, 330px); gap: 25px;">
+      <div class="card"><div class="th " style="width: 330px; height: 190px;"><iframe src="../artboards/ContentsA.dc.html" width="1440" height="900" loading="lazy" scrolling="no" style="left: 13.0px; top: 0.0px; transform: scale(0.2111);"></iframe></div><div class="t">The artboard viewer</div><div class="m"><span class="chip chosen"><i></i>Chosen</span>A, with C&rsquo;s canvas &middot; 5 Oct</div></div>
+      <div class="card"><div class="th " style="width: 330px; height: 190px;"><iframe src="../houses/Today.dc.html" width="390" height="844" loading="lazy" scrolling="no" style="left: 121.1px; top: 0.0px; transform: scale(0.2251);"></iframe></div><div class="t">Houses</div><div class="m"><span class="chip open">Partly</span>B &middot; 3 Oct</div></div>
+      <div class="card"><div class="th " style="width: 330px; height: 190px;"><iframe src="../away/Today.dc.html" width="1440" height="900" loading="lazy" scrolling="no" style="left: 13.0px; top: 0.0px; transform: scale(0.2111);"></iframe></div><div class="t">Away</div><div class="m"><span class="chip chosen"><i></i>Chosen</span>2 Oct</div></div>
+    </div>
+    <div class="col" style="top: 690px; display: grid; grid-template-columns: 1fr 1fr; gap: 40px;">
+      <div><div class="area"><b>Phones and away</b><span class="dim">6</span></div>
+        <div class="row"><span class="n">Houses</span><span class="w">B</span><span class="chip open">Partly</span><span class="d">3 Oct</span></div>
+        <div class="row"><span class="n">Away</span><span class="w"></span><span class="chip chosen">Chosen</span><span class="d">2 Oct</span></div></div>
+      <div><div class="area"><b>Plain words</b><span class="dim">8</span></div>
+        <div class="row"><span class="n">Words: strips and the roofline</span><span class="w"></span><span class="chip chosen">Chosen</span><span class="d">2 Oct</span></div>
+        <div class="row"><span class="n">Words: history</span><span class="w"></span><span class="chip open">Open</span><span class="d">2 Oct</span></div></div>
+    </div>
+    <div class="fade"></div>
+  </sc-if>
+
+  <sc-if value="{{searching}}">
+    <div class="col" style="top: 88px; font-size: 15px; color: var(--ink-2);"><b style="color: var(--ink); font-weight: 500;">bridge light</b> is a collection in another checkout, and 16 other places mention the words</div>
+    <div class="col" style="top: 136px;">
+      <div class="grp"><b>The bridge light</b><span class="chip wait">Waiting for you</span><span class="br">puck-split-repos</span><span>in home-hub-a &middot; not here yet</span></div>
+      <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; padding-bottom: 16px;">
+        <div class="bt"><img class="shot" src="shots/bridge-light-Today.jpg" style="width: 100%; height: 150px;" alt=""><span><b>Today</b> &mdash; green means your wall switches</span></div>
+        <div class="bt"><img class="shot" src="shots/bridge-light-HubA.jpg" style="width: 100%; height: 150px;" alt=""><span><b>A</b> &mdash; it reached the hub</span></div>
+        <div class="bt"><img class="shot" src="shots/bridge-light-StripB.jpg" style="width: 100%; height: 150px;" alt=""><span><b>B</b> &mdash; it can hear the strip it is for</span></div>
+        <div class="bt"><img class="shot" src="shots/bridge-light-QuietC.jpg" style="width: 100%; height: 150px;" alt=""><span><b>C</b> &mdash; dark, unless something is wrong</span></div>
+      </div>
+      <div class="hit sel"><span style="color: var(--accent-text); padding-top: 2px;"><svg class="i" width="16" height="16" viewBox="0 0 24 24"><path d="M6 3h9l4 4v14H6z"/><path d="M9 11h7M9 15h7M9 7h3"/></svg></span><div><div class="h">To pick</div><div class="x">A, B or C &mdash; or something else, described in words; the answer has been outside the drawn set before.</div></div></div>
+      <div class="grp" style="margin-top: 26px;"><b>Elsewhere in the words</b><span>16 places in 8 collections &middot; every word somewhere, not the phrase</span><span style="color: var(--accent-text);">Show them</span></div>
+    </div>
+  </sc-if>
+<div class="try"><span>Theme</span><sc-for list="{{themeFlips}}" as="f"><span class="{{f.cls}}" onClick="{{f.go}}">{{f.label}}</span></sc-for><span style="margin-left: 10px;">Showing</span><sc-for list="{{viewFlips}}" as="f"><span class="{{f.cls}}" onClick="{{f.go}}">{{f.label}}</span></sc-for></div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"theme": {"editor": "enum", "options": ["Auto", "Light", "Dark"], "default": "Dark", "section": "The viewer"}, "view": {"editor": "enum", "options": ["Waiting", "Since decided", "Searching"], "default": "Waiting", "section": "The viewer"}}'>
+
+const VIEWS = ["Waiting", "Since decided", "Searching"]
+/* A -- WAITING, AT THE TOP. The front page opens with what is in the other checkouts and not here yet:
+   a card each, the branch it is on, and Waiting for you where a collection is new and nothing on it
+   says what was picked. When nothing is waiting anywhere, the band is not drawn at all. Search covers
+   the other checkouts too, and a collection whose name matches comes before the notes that only have
+   the words. Flip Showing for the same afternoon after A was picked, and for the search. */
+class Component extends DCLogic {
+  renderVals() {
+
+    const theme = this.state.theme || this.props.theme || 'Dark'
+    const view = this.state.view || this.props.view || VIEWS[0]
+    const go = (k, v) => () => this.setState({ [k]: v })
+    const flips = (key, cur, opts) => opts.map(o => ({ label: o, cls: o === cur ? 'flip on' : 'flip', go: go(key, o) }))
+    const t = { auto: theme === 'Auto' ? 'on' : '', light: theme === 'Light' ? 'on' : '', dark: theme === 'Dark' ? 'on' : '',
+                toAuto: go('theme', 'Auto'), toLight: go('theme', 'Light'), toDark: go('theme', 'Dark') }
+    const base = { ui: 'ui ' + (theme === 'Light' ? 'light' : 'dark'), t,
+                   themeFlips: flips('theme', theme, ['Auto', 'Light', 'Dark']), viewFlips: flips('view', view, VIEWS) }
+    const searching = view === 'Searching', waiting = view === 'Waiting'
+    return { ...base, searching, notSearching: !searching, waiting, decided: view === 'Since decided',
+             bridgeCard: waiting ? 'ac wait' : 'ac', searchCls: searching ? 'search on' : 'search',
+             toSearch: go('view', 'Searching'), toWaiting: go('view', 'Waiting') }
+  }
+}
+</script>
+</body>
+</html>

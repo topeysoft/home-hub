@@ -29,7 +29,7 @@ class LockedHouseTests(ApiTest):
 
     def admit(self):
         """A phone that belongs to the house, as its cookie."""
-        phone, token = self.hub.phones.with_code("Temi's phone")
+        phone, token = self.hub.phones.with_code("Jordan's phone")
         self.client.cookies.set(COOKIE, token)
         return phone
 
@@ -91,13 +91,13 @@ class JoiningTests(ApiTest):
         self.code = self.lock_the_house("4821")
 
     def test_the_code_typed_on_the_phone_itself_puts_it_in_and_sets_its_cookie(self):
-        r = self.client.post("/phones/code", json={"code": self.code, "name": "Temi's phone"})
+        r = self.client.post("/phones/code", json={"code": self.code, "name": "Jordan's phone"})
         self.assertEqual(r.status_code, 200)
         self.assertIn(COOKIE, r.cookies)
         self.assertEqual(self.client.get("/home").status_code, 200)     # the cookie carries on
 
     def test_the_cookie_is_not_readable_by_the_page_and_is_not_marked_secure_over_plain_http(self):
-        r = self.client.post("/phones/code", json={"code": self.code, "name": "Temi's phone"})
+        r = self.client.post("/phones/code", json={"code": self.code, "name": "Jordan's phone"})
         set_cookie = r.headers["set-cookie"]
         self.assertIn("HttpOnly", set_cookie)
         self.assertIn("SameSite=lax", set_cookie)
@@ -195,7 +195,7 @@ class JoiningTests(ApiTest):
         self.assertEqual(len(self.client.get("/phones").json()["phones"]), 2)
 
     def test_removing_a_phone_puts_it_out_at_once(self):
-        joined = self.client.post("/phones/code", json={"code": self.code, "name": "Temi's phone"}).json()
+        joined = self.client.post("/phones/code", json={"code": self.code, "name": "Jordan's phone"}).json()
         self.assertEqual(self.client.get("/home").status_code, 200)
         self.hub.phones.remove(joined["phone"]["id"])
         self.assertEqual(self.client.get("/home").status_code, 401)
@@ -323,7 +323,7 @@ class AwayGateTests(ApiTest):
         self.lock_the_house("4821")
 
     def admit(self, remote=False):
-        phone, token = self.hub.phones.with_code("Temi's phone")
+        phone, token = self.hub.phones.with_code("Jordan's phone")
         if remote: self.hub.phones.set_remote(phone["id"], True)
         self.client.cookies.set(COOKIE, token)
         return phone

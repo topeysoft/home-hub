@@ -8,6 +8,7 @@ from hub import onboarding
 class FakeHA:
     def __init__(self, domains=("nest",), existing=(), flows=()):
         self.domains, self.existing, self.created, self.flows = list(domains), list(existing), [], list(flows)
+        self.ignored = []
     async def send(self, type_, **kw):
         if type_ == "config_entries/flow/progress": return self.flows
         if type_ == "application_credentials/config":
@@ -15,6 +16,7 @@ class FakeHA:
         if type_ == "application_credentials/list": return [{"domain": d} for d in self.existing]
         if type_ == "application_credentials/create": self.created.append(kw); self.existing.append(kw["domain"]); return {}
         if type_ == "manifest/get": return {"name": {"nest": "Google Nest"}.get(kw["integration"], kw["integration"])}
+        if type_ == "config_entries/ignore_flow": self.ignored.append(kw["flow_id"]); return {}
         raise AssertionError(type_)
 
 
@@ -139,3 +141,28 @@ class FlowListTests(unittest.IsolatedAsyncioTestCase):
         add = onboarding.Onboarding(FakeHub(Mute()))
         self.assertEqual(await add.sign_ins(), [])
         self.assertEqual(await add.discovered(), [])
+
+
+class TheHubsOwnRadiosAreNotFoundNearby(unittest.IsolatedAsyncioTestCase):
+    """A Zigbee or Z-Wave stick is the hub's to run. HA offering it to its own integrations put a stick the hub
+    was already running under Found nearby, for ever, with Set up answering "already part of the house"."""
+
+    def flow(self, flow_id, handler, source, name):
+        return {"flow_id": flow_id, "handler": handler, "context": {"source": source, "title_placeholders": {"name": name}}}
+
+    async def test_a_stick_is_not_offered_and_a_zigbee_one_is_not_offered_again(self):
+        ha = FakeHA(flows=[self.flow("f1", "zha", "usb", "HubZ ZigBee Com Port"),
+                           self.flow("f2", "homeassistant_sky_connect", "usb", "SONOFF Zigbee 3.0 USB Dongle Plus"),
+                           self.flow("f3", "zwave_js", "usb", "HubZ Z-Wave Com Port"),
+                           self.flow("f4", "cast", "zeroconf", "Living Room TV")])
+        rows = await onboarding.Onboarding(FakeHub(ha)).discovered()
+        self.assertEqual([r["handler"] for r in rows], ["cast"])
+        self.assertEqual(sorted(ha.ignored), ["f1", "f2"], "Z-Wave is hidden, never ignored")
+
+    async def test_a_hub_that_cannot_say_ignore_still_hides_it(self):
+        class Refuses(FakeHA):
+            async def send(self, type_, **kw):
+                if type_ == "config_entries/ignore_flow": raise RuntimeError("no")
+                return await super().send(type_, **kw)
+        rows = await onboarding.Onboarding(FakeHub(Refuses(flows=[self.flow("f1", "zha", "usb", "HubZ")]))).discovered()
+        self.assertEqual(rows, [])

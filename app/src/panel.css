@@ -28,6 +28,15 @@
   --live: rgb(var(--live-rgb));
   --danger-rgb: 224, 138, 138;
   --danger: rgb(var(--danger-rgb));
+  /* the same three as TEXT. On a dark page they are the colors themselves; a light page needs them
+     deeper to be read, while a chip filled with the color is fine as it is (see the light block) */
+  --lamp-text: var(--lamp);
+  --live-text: var(--live);
+  --danger-text: var(--danger);
+  /* what a hairline, a track, a hover or a quiet fill is drawn in ON THE PAGE: white over the dark
+     sky, ink over the light one. Not for anything drawn on a picture -- a camera frame, artwork, a
+     dial -- which is dark in either shade and keeps its white. */
+  --wash-rgb: 255, 255, 255;
 
   /* the glass's own body, and the channels behind it: a card that wants to sit heavier or lighter
      than the standard sheet mixes its own strength rather than inventing a second gray */
@@ -46,11 +55,10 @@
   /* The same ink, for the few things that sit on an OBJECT rather than on a
      card. A card holds a distance from the sky and flips to dark type when it
      passes the sky on the way up; a drawn object carries its own lighting and
-     does not. A thermostat's dial is a dark disc at every hour, so the reading
-     on it has to stay light while the card around it flips -- and it cannot ask
-     for --ink, because the card it is on is one of the surfaces that redeclares
-     that. This resolves here, where --ink still means what it says, and the
-     computed value is what inherits down. */
+     does not. Something drawn dark at every hour keeps its reading light while
+     the card around it flips -- and it cannot ask for --ink, because the card it
+     is on is one of the surfaces that redeclares that. This resolves here, where
+     --ink still means what it says, and the computed value is what inherits down. */
   --ink-lit: var(--ink);
 
   --r-lg: 22px;
@@ -72,6 +80,135 @@
 }
 .shell[data-ambient='night'] {
   --glow: rgba(110, 130, 190, 0.11);
+}
+
+/* ---------- light (design/appearance/, B, decided 7 October) ----------
+   Light or dark is each screen's own pick (shade.ts), and lands on <html>. Everything else follows
+   from the tokens: the sky is held up into the light by sky.ts, the cards and panes by tone.ts, and
+   what is left is the ink and the surfaces, here. The ink is dark and never flips back. The signal
+   colors keep their fills -- an amber chip with dark ink on it reads on white as well as on black --
+   and give their TEXT a deeper shade, because the pastels were chosen to be ink on a dark field and
+   wash out on a light one. */
+:root[data-shade='light'] {
+  --bg: #e7eaf3;
+  --bg-2: #f1f2f7;
+  --live-rgb: 52, 150, 104;
+  --danger-rgb: 206, 96, 92;
+  --lamp-text: #8a5a14;
+  --live-text: #2a7a52;
+  --danger-text: #a8423c;
+  --surface-rgb: 255, 255, 255;
+  --surface: rgba(var(--surface-rgb), 0.66);
+  --surface-hi: rgba(30, 27, 36, 0.06);
+  --surface-press: rgba(30, 27, 36, 0.11);
+  --edge: rgba(30, 27, 36, 0.1);
+  --edge-hi: rgba(30, 27, 36, 0.18);
+  --ink: #1e1b24;
+  --ink-2: #57546a;
+  --muted: #74707e;
+  /* a drawn object is dark at every hour in either shade, so what sits on it stays light */
+  --ink-lit: #f1eee8;
+  --wash-rgb: 30, 27, 36;
+}
+:root[data-shade='light'] .sky-veil,
+:root[data-shade='light'] .look-mini-veil {
+  display: none;
+}
+/* What was dark air on a dark page. A bar or a column laid over the sky is frost in light; the dim
+   behind a sheet is the sky's own shadow, not black, which on a pale page reads as dirt. */
+:root[data-shade='light'] .rail {
+  background: rgba(255, 255, 255, 0.5);
+}
+:root[data-shade='light'] .house-doors {
+  background: rgba(255, 255, 255, 0.4);
+}
+:root[data-shade='light'] .sheet-back {
+  background: oklch(0.4 0.04 265 / 0.28);
+}
+/* A sheet, and what the command box says above itself, were drawn as dark glass for a dark page;
+   with the ink turned dark they hid their own words. */
+:root[data-shade='light'] :is(.sheet, .bottombar .say-hint, .bottombar .say-note, .bottombar .say-answer, .bottombar .drafts) {
+  background: rgba(var(--surface-rgb), 0.94);
+  box-shadow: 0 40px 100px -30px rgba(var(--wash-rgb), 0.35);
+}
+:root[data-shade='light'] .house-veil {
+  background: oklch(0.4 0.04 265 / 0.22);
+}
+/* A card that is a picture with a sheet over its foot -- the player, the printer -- is one thing in
+   light: the picture stays dark and the sheet is the same light glass, so two of them side by side
+   read as a pair. The printer's sheet was drawn dark for a dark page. (The player's dark rim was its
+   ::after outweighing glass's; it now wears the rim every card does, further down.) */
+:root[data-shade='light'] .print-sheet {
+  border-color: transparent;
+  background: var(--glass-sweep, none), var(--glass, var(--surface));
+  backdrop-filter: blur(var(--glass-blur, 26px)) saturate(var(--glass-sat, 1.4)) brightness(var(--glass-br, 1.03));
+  box-shadow: var(--glass-inner, none), var(--glass-drop, none);
+}
+:root[data-shade='light'] .print-chip {
+  color: var(--ink-lit);
+}
+/* A room whose picture is what is playing -- album art, blurred into a wash -- is a light card in
+   light, like the rooms beside it: the art colors its top and fades into the card where the words
+   are. A camera's frame is a photograph and stays dark (the list above). */
+:root[data-shade='light'] .room-cell.shot:has(> .room-cell-art) .room-cell-veil {
+  background: linear-gradient(rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.6) 46%, rgba(255, 255, 255, 0.92) 100%);
+}
+:root[data-shade='light'] .room-cell.shot:has(> .room-cell-art) :is(.room-cell-chip, .room-cell-knob, .room-cell-pill) {
+  background: rgba(var(--wash-rgb), 0.08);
+}
+/* the resting clock is dark type on a light sky: a dark halo behind it only smudges it */
+:root[data-shade='light'] .idle {
+  text-shadow: 0 1px 30px rgba(255, 255, 255, 0.55);
+}
+/* What stays dark in either shade -- a camera's picture, a printer's glass over its camera, a
+   card wearing its own shot or artwork, the question that hands out a key -- keeps the dark page's ink,
+   so the words on it are written exactly as they are after dark. :where() leaves the specificity
+   at :root's, so a surface that sets its own ink (the ask pane) still wins. */
+:root[data-shade='light']
+  :where(
+    .tile.camera,
+    .viewer,
+    .rig-still,
+    .finder,
+    .room-cell.shot:not(:has(> .room-cell-art)),
+    .shell:not([data-face='glass']) .bento .tile.media,
+    .room-share-card,
+    .ask-pane .opened-panel
+  ) {
+  --bg: #0c0d10;
+  --bg-2: #111318;
+  --ink: var(--ink-lit);
+  --ink-2: #b9b5ad;
+  --muted: #7f7d77;
+  --card-ink: var(--ink-lit);
+  --card-ink-2: #b9b5ad;
+  --lamp-text: var(--lamp);
+  --live-text: var(--live);
+  --danger-text: var(--danger);
+  --surface-hi: rgba(255, 255, 255, 0.08);
+  --surface-press: rgba(255, 255, 255, 0.13);
+  --edge: rgba(255, 255, 255, 0.1);
+  --edge-hi: rgba(255, 255, 255, 0.18);
+  --wash-rgb: 255, 255, 255;
+  color: var(--ink);
+}
+@media (min-width: 861px) {
+  /* a room's playing card at full size is its artwork under a dark veil */
+  :root[data-shade='light'] :where(.tiles > .tile.media[data-size='full']) {
+    --ink: var(--ink-lit);
+    --ink-2: #b9b5ad;
+    --muted: #7f7d77;
+    --surface-hi: rgba(255, 255, 255, 0.08);
+    --surface-press: rgba(255, 255, 255, 0.13);
+    --wash-rgb: 255, 255, 255;
+    color: var(--ink);
+  }
+}
+/* the pale pink these were written in is ink for a dark page */
+:root[data-shade='light'] .phones .button.warn,
+:root[data-shade='light'] .things .button.warn,
+:root[data-shade='light'] .opened-kind-one.danger {
+  color: var(--danger-text);
 }
 
 /* ---------- base ---------- */
@@ -235,7 +372,7 @@ input:focus-visible {
 .tile,
 .scene,
 .back,
-.banner,
+.reach-band,
 .offline-icon,
 .recent-icon,
 .button.ghost {
@@ -286,7 +423,7 @@ input:focus-visible {
      is the half of it that never reached the cards. */
   --card-ink: var(--ink);
   --card-ink-2: var(--ink-2);
-  --card-lamp-ink: var(--lamp);
+  --card-lamp-ink: var(--lamp-text);
 }
 [data-face='glass'] .look-mini-card.lit,
 [data-face='glass'] .tile.light {
@@ -471,7 +608,7 @@ input:focus-visible {
   color: var(--ink-2);
 }
 .rail-weather svg {
-  color: var(--lamp);
+  color: var(--lamp-text);
 }
 .rail-nav {
   flex: 1;
@@ -573,6 +710,9 @@ input:focus-visible {
 .link.up::before {
   background: var(--live);
 }
+.link.out::before {
+  background: var(--lamp);
+}
 
 /* ---------- stage ---------- */
 .stage {
@@ -634,7 +774,7 @@ input:focus-visible {
   background: var(--surface-press);
 }
 .error {
-  color: var(--danger);
+  color: var(--danger-text);
   margin: 0 0 16px;
 }
 .empty {
@@ -747,14 +887,14 @@ input:focus-visible {
   white-space: nowrap;
 }
 .room-card.active .room-card-activity {
-  color: var(--lamp);
+  color: var(--lamp-text);
 }
 .room-card.attention:not(.empty) {
   border-style: dashed;
   border-color: rgba(var(--lamp-rgb), 0.45);
 }
 .room-card.attention:not(.empty) .room-card-activity {
-  color: var(--lamp);
+  color: var(--lamp-text);
 }
 @media (min-width: 861px) {
   /* the rail already lists every room here, so the grid is a glance, not the way around */
@@ -1080,7 +1220,7 @@ input:focus-visible {
   column-gap: 13px;
   padding: 13px 15px;
   border-radius: 17px;
-  background: rgba(255, 255, 255, 0.055);
+  background: rgba(var(--wash-rgb), 0.055);
   border-color: transparent;
 }
 /* No badge under the icon in the card. A filled square beside four rows reads as
@@ -1105,16 +1245,16 @@ input:focus-visible {
 /* the scene the room is in is said in the icon, not in a second card color:
    four tinted rows and one plain one is a card with a hole in it */
 .scenes-stacked .scene.active {
-  background: rgba(255, 255, 255, 0.055);
+  background: rgba(var(--wash-rgb), 0.055);
   border-color: transparent;
 }
 .scenes-stacked .scene.active .scene-icon,
 .scenes-stacked .scene.done .scene-icon {
   background: none;
-  color: var(--lamp);
+  color: var(--lamp-text);
 }
 .scenes-stacked .scene.done .scene-icon {
-  color: var(--live);
+  color: var(--live-text);
 }
 
 /* Everything below is the WALL panel's room, and only that.
@@ -1235,6 +1375,14 @@ input:focus-visible {
     color: var(--card-ink-2, var(--muted));
     opacity: 0.7;
   }
+/* the pin that says why an off thing is on Home: kept there from its pane (design/home-keep/KeepB) */
+.tile-maker.tile-always {
+  display: inline-grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+}
   .tiles > .tile[data-size='third'] .tile-maker {
     display: none;
   }
@@ -1325,7 +1473,7 @@ input:focus-visible {
      amber stops meaning anything -- the boards set every one of these lines in the
      card's quiet ink and let the paint say which lamp is doing the work. */
   .tiles > .tile.light.on[data-size] > .tile-body > .tile-state {
-    color: var(--card-ink-2, rgba(255, 255, 255, 0.78));
+    color: var(--card-ink-2, rgba(var(--wash-rgb), 0.78));
   }
 
   /* a thermostat at a third is the number and what the house is doing with it.
@@ -1583,7 +1731,7 @@ input:focus-visible {
   border-color: rgba(var(--lamp-rgb), 0.32);
 }
 .reading.on svg {
-  color: var(--lamp);
+  color: var(--lamp-text);
 }
 .reading.dead {
   opacity: 0.55;
@@ -1676,6 +1824,23 @@ input:focus-visible {
   color: var(--lamp-ink);
 }
 .tile.on .tile-state {
+  color: var(--ink-2);
+}
+/* a change that never reached the hub (design/out-of-reach/): the card keeps its place, drained, and says so */
+.tile.unreached {
+  border-color: rgba(var(--lamp-rgb), 0.22);
+  box-shadow: inset 0 0 0 999px rgba(12, 13, 16, 0.22);
+}
+.tile-said {
+  display: block;
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--ink);
+}
+.tile-why {
+  display: block;
+  margin-top: 2px;
+  font-size: 13.5px;
   color: var(--ink-2);
 }
 /* a switch seeing motion through its own sensor (units.ts): its one line says so, in the room's ink rather than muted */
@@ -1992,14 +2157,14 @@ input:focus-visible {
   display: block;
   height: 4px;
   border-radius: 2px;
-  background: var(--card-track, rgba(255, 255, 255, 0.16));
+  background: var(--card-track, rgba(var(--wash-rgb), 0.16));
   margin-top: 9px;
 }
 .tile-bar i {
   display: block;
   height: 4px;
   border-radius: 2px;
-  background: var(--card-ink-2, rgba(255, 255, 255, 0.6));
+  background: var(--card-ink-2, rgba(var(--wash-rgb), 0.6));
 }
 
 /* camera */
@@ -2120,7 +2285,7 @@ input:focus-visible {
     border-color: rgba(var(--lamp-rgb), 0.5);
   }
   .rail-tail .rail-add.attention svg {
-    color: var(--lamp);
+    color: var(--lamp-text);
   }
   .rail-tail .rail-add .rail-name {
     display: none;
@@ -2243,7 +2408,7 @@ input:focus-visible {
   color: var(--ink-2);
 }
 .home-next svg {
-  color: var(--lamp);
+  color: var(--lamp-text);
 }
 
 /* everything on across the house, one chip each; a tap quiets it */
@@ -2268,7 +2433,13 @@ input:focus-visible {
   color: var(--ink-2);
 }
 .onnow-chip.kept .onnow-place {
-  color: var(--lamp);
+  color: var(--lamp-text);
+}
+/* Always here (onhome.ts): a thing this screen keeps, while it is off. Not faded like a chip that was just
+   tapped -- it is meant to be here -- only its icon is out. */
+.onnow-chip.unlit .onnow-icon {
+  background: var(--surface-hi);
+  color: var(--ink-2);
 }
 .onnow-leave-active {
   transition: opacity 0.26s ease, transform 0.26s ease;
@@ -2536,36 +2707,94 @@ input:focus-visible {
   transform: translate(-50%, 10px);
 }
 
-.banner {
-  display: inline-flex;
+.reach-band {
+  position: fixed;
+  left: 40px;
+  right: 40px;
+  bottom: calc(26px + env(safe-area-inset-bottom));
+  z-index: 47;
+  min-height: 72px;
+  display: flex;
   align-items: center;
-  gap: 10px;
-  margin-bottom: 18px;
-  padding: 9px 14px;
-  border-radius: var(--r-sm);
+  gap: 16px;
+  padding: 12px 14px;
+  border-radius: var(--r-lg);
   background:
     linear-gradient(rgba(var(--lamp-rgb), 0.12), rgba(var(--lamp-rgb), 0.12)),
     var(--surface);
-  border: 1px solid rgba(var(--lamp-rgb), 0.25);
-  color: var(--ink-2);
+  border: 1px solid rgba(var(--lamp-rgb), 0.28);
+  box-shadow: 0 20px 50px -20px rgba(0, 0, 0, 0.8);
+  color: var(--ink);
+}
+.reach-band-icon {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  background: rgba(var(--lamp-rgb), 0.9);
+  color: var(--lamp-ink);
+}
+.reach-band-text {
+  min-width: 0;
+}
+.reach-band-text b {
+  display: block;
+  font-size: 17px;
+  font-weight: 500;
+  line-height: 23px;
+}
+.reach-band-text small {
+  display: block;
   font-size: 14px;
+  line-height: 20px;
+  color: var(--ink-2);
 }
-.banner svg {
-  color: var(--lamp);
-  animation: spin 2.4s linear infinite;
+.reach-band-act {
+  flex: none;
+  margin-left: auto;
+  height: 44px;
+  padding: 0 20px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid var(--edge);
+  color: var(--ink);
+  font-size: 15px;
+  font-weight: 500;
+  white-space: nowrap;
 }
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
+.reach-band-act svg {
+  color: var(--ink-2);
+}
+@media (max-width: 860px) {
+  .reach-band {
+    left: 16px;
+    right: 16px;
+    bottom: calc(16px + env(safe-area-inset-bottom));
+    flex-wrap: wrap;
+    align-items: flex-start;
+    padding: 16px;
+  }
+  .reach-band-text {
+    flex: 1 1 0;
+  }
+  .reach-band-act {
+    flex: 1 0 100%;
+    justify-content: center;
+    margin-left: 0;
   }
 }
-.banner-enter-active,
-.banner-leave-active {
-  transition: opacity 0.3s var(--ease);
+.toast.over-band {
+  bottom: calc(118px + env(safe-area-inset-bottom));
 }
-.banner-enter-from,
-.banner-leave-to {
-  opacity: 0;
+/* What is shown may be old: the room as it was, hushed, under the band */
+.stage.hushed {
+  filter: saturate(0.12) brightness(0.6);
+  transition: filter 0.6s var(--ease);
 }
 
 .offline {
@@ -2624,11 +2853,19 @@ input:focus-visible {
   border-radius: 50%;
   display: grid;
   place-items: center;
-  background: rgba(255, 255, 255, 0.14);
-  color: #fff;
+  background: rgba(var(--wash-rgb), 0.14);
+  color: var(--ink);
   backdrop-filter: blur(10px);
 }
 .round:active {
+  background: rgba(var(--wash-rgb), 0.26);
+}
+/* the viewer's buttons sit on the camera's own picture, which is dark in either shade */
+.viewer-actions .round {
+  background: rgba(255, 255, 255, 0.14);
+  color: #fff;
+}
+.viewer-actions .round:active {
   background: rgba(255, 255, 255, 0.26);
 }
 
@@ -2789,10 +3026,10 @@ input:focus-visible {
   color: var(--ink);
 }
 .idle-fact + .idle-fact {
-  border-left: 1px solid rgba(255, 255, 255, 0.22);
+  border-left: 1px solid rgba(var(--wash-rgb), 0.22);
 }
 .idle-fact.live {
-  color: var(--lamp);
+  color: var(--lamp-text);
 }
 .idle-fact-value {
   display: flex;
@@ -3165,7 +3402,7 @@ input:focus-visible {
   border: 1px solid rgba(var(--lamp-rgb), 0.35);
 }
 .chosen > svg {
-  color: var(--lamp);
+  color: var(--lamp-text);
 }
 .chosen-text {
   display: flex;
@@ -3234,7 +3471,7 @@ input:focus-visible {
   border-color: rgba(var(--lamp-rgb), 0.5);
 }
 .tile.arming .tile-state {
-  color: var(--lamp);
+  color: var(--lamp-text);
 }
 
 /* ---------- first run ---------- */
@@ -3288,7 +3525,7 @@ input:focus-visible {
   place-items: center;
   background: var(--surface);
   border: 1px solid var(--edge-hi);
-  color: var(--lamp);
+  color: var(--lamp-text);
   margin-bottom: 26px;
   backdrop-filter: var(--frost);
 }
@@ -3372,7 +3609,7 @@ input:focus-visible {
 .setup-note svg {
   flex: none;
   margin-top: 2px;
-  color: var(--lamp);
+  color: var(--lamp-text);
 }
 .setup-note.plain {
   display: block;
@@ -3392,6 +3629,85 @@ input:focus-visible {
   color: var(--muted);
   font-size: 14px;
 }
+/* ---------- a screen joining a house that has a hub (design/companion/, C) ---------- */
+.screen-code {
+  max-width: 280px;
+  font-size: 30px;
+  padding-block: 18px;
+}
+.screen-trail {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin: 0 0 14px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.screen-trail b {
+  font-weight: 500;
+  color: var(--ink-2);
+}
+.screen-trail-ok {
+  display: inline-flex;
+  color: var(--live-text);
+}
+.screen-trail-now {
+  color: var(--ink);
+}
+.screen-rooms {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+.screen-room-tile {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 10px;
+  min-height: 104px;
+  padding: 18px 18px 16px;
+  border-radius: var(--r-md);
+  background: var(--surface);
+  border: 1px solid var(--edge);
+  backdrop-filter: var(--frost);
+  color: var(--ink);
+  text-align: left;
+}
+.screen-room-tile.on {
+  background: rgba(var(--lamp-rgb), 0.14);
+  border-color: rgba(var(--lamp-rgb), 0.7);
+}
+.screen-room-tile.new {
+  background: transparent;
+  border-style: dashed;
+}
+.screen-room-tile.new .screen-room-name {
+  color: var(--ink-2);
+}
+.screen-room-name {
+  font-size: 17px;
+  font-weight: 500;
+}
+.screen-room-line {
+  font-size: 13px;
+  color: var(--muted);
+}
+.screen-room-input {
+  width: 100%;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--edge-hi);
+  color: var(--ink);
+  font: inherit;
+  font-size: 17px;
+  padding: 2px 0 6px;
+  outline: none;
+}
+@media (max-width: 560px) {
+  .screen-rooms {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
 .setup-foot {
   margin: 22px 0 0;
   font-size: 13px;
@@ -3409,7 +3725,7 @@ input:focus-visible {
   width: min(100%, 640px);
   padding: 18px 20px 20px;
   border-radius: var(--r-lg);
-  background: rgba(255, 255, 255, 0.035);
+  background: rgba(var(--wash-rgb), 0.035);
   border: 1px solid var(--edge-hi);
 }
 .address-row {
@@ -3432,7 +3748,7 @@ input:focus-visible {
   height: 50px;
   padding: 0 14px;
   border-radius: 0 14px 14px 0;
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(var(--wash-rgb), 0.03);
   border: 1px solid var(--edge);
   color: var(--ink-2);
   font-size: 17px;
@@ -3445,10 +3761,10 @@ input:focus-visible {
   font-size: 14px;
 }
 .address-said.ok {
-  color: var(--live);
+  color: var(--live-text);
 }
 .address-said.no {
-  color: var(--danger);
+  color: var(--danger-text);
 }
 .address-picks {
   display: flex;
@@ -3595,7 +3911,7 @@ a.button {
   display: grid;
   place-items: center;
   background: var(--surface-hi);
-  color: var(--lamp);
+  color: var(--lamp-text);
 }
 
 /* fields: the few forms the product has */
@@ -3619,7 +3935,7 @@ a.button {
 }
 .field-err {
   font-size: 13px;
-  color: var(--danger);
+  color: var(--danger-text);
 }
 /* A field the house already knows the answer to. It sits where the input would, at the input's own
    height so the row below does not jump, and is deliberately not drawn as a box: a settled fact, not
@@ -3938,12 +4254,12 @@ select.input {
   color: var(--muted);
 }
 .drop.has svg {
-  color: var(--live);
+  color: var(--live-text);
 }
 .field-hint.warn {
   display: block;
   margin: -6px 0 14px;
-  color: var(--lamp);
+  color: var(--lamp-text);
   font-size: 13.5px;
 }
 .copy-row {
@@ -4012,6 +4328,12 @@ select.input {
   --ink-2: var(--act-ink-2, #cfcbc3);
   --muted: var(--act-ink-2, #cfcbc3);
   --surface-hi: var(--act-chip, rgba(255, 255, 255, 0.16));
+  /* --bg too, because a chosen chip is --ink on --bg: once this card is pale enough to flip its ink
+     dark, a --bg left at the page's dark made "Cool" dark on dark. And `color` itself, which this card
+     only inherited -- already computed from the page's ink -- so its name stayed light on a pale card
+     (reported 9 October, a phone in dark mode by day). */
+  --bg: var(--act-bg, #0c0d10);
+  color: var(--ink);
 }
 /* A holding thermostat has to say so here too. `.tile.on .tile-icon` up at the
    top of this file paints every lit tile's badge in --lamp, and the rule this
@@ -4382,10 +4704,10 @@ select.input {
 /* On right now: the one word on this line a person can act on without moving, because they can look
    up and see which lamp is lit. Lit like the lamp it is describing. */
 .sort-live {
-  color: var(--lamp);
+  color: var(--lamp-text);
 }
 .sort-dead {
-  color: var(--danger);
+  color: var(--danger-text);
 }
 /* What came of a blink: on the row it belongs to rather than in a toast over the list it came from,
    and across the row for the same reason the forgetting question is -- in the name's own column this
@@ -4683,7 +5005,7 @@ select.input {
   white-space: nowrap;
 }
 .door.attention .door-hint {
-  color: var(--lamp);
+  color: var(--lamp-text);
 }
 .door > .flip {
   display: none;
@@ -4782,6 +5104,12 @@ select.input {
   letter-spacing: 0.3em;
   font-size: 24px;
   max-width: 260px;
+}
+/* The house's passcode is typed on a wall somebody may be standing behind, so it shows as dots. Masked by
+   the stylesheet rather than type=password, which would have phones offer to save it and suggest a password
+   of letters for a code of digits. A device's sticker code is not a secret and stays readable. */
+.code-input.secret {
+  -webkit-text-security: disc;
 }
 .sheet.code {
   width: min(100%, 440px);
@@ -4957,7 +5285,7 @@ select.input {
   transition: background 0.18s var(--ease);
 }
 .why-line svg {
-  color: var(--lamp);
+  color: var(--lamp-text);
 }
 .why-line:active {
   background: var(--surface-press);
@@ -5080,7 +5408,7 @@ select.input {
   align-items: center;
   gap: 16px;
   padding: 14px 18px;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-top: 1px solid rgba(var(--wash-rgb), 0.06);
 }
 .sig-row:first-child {
   border-top: 0;
@@ -5095,10 +5423,10 @@ select.input {
   margin: 0;
 }
 .sig-tried {
-  color: var(--live);
+  color: var(--live-text);
 }
 .sig-tried.sig-bad {
-  color: var(--danger);
+  color: var(--danger-text);
 }
 .sig-try {
   white-space: nowrap;
@@ -5110,7 +5438,7 @@ select.input {
   height: 12px;
   border-radius: 3px;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(var(--wash-rgb), 0.1);
   filter: drop-shadow(0 0 6px var(--c));
   mask-image: repeating-linear-gradient(90deg, #000 0 4px, transparent 4px 7px);
 }
@@ -5219,8 +5547,8 @@ select.input {
   border-radius: var(--r-md);
   text-align: left;
   color: var(--ink);
-  background: rgba(255, 255, 255, 0.035);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.07);
+  background: rgba(var(--wash-rgb), 0.035);
+  box-shadow: inset 0 0 0 1px rgba(var(--wash-rgb), 0.07);
   transition: background 0.18s var(--ease);
 }
 .sig-way:active {
@@ -5276,7 +5604,7 @@ select.input {
   gap: 12px;
   align-items: start;
   padding: 11px 0;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-top: 1px solid rgba(var(--wash-rgb), 0.06);
 }
 .sig-steps > li:first-child {
   border-top: 0;
@@ -5292,18 +5620,18 @@ select.input {
 }
 .sig-steps > li.st-ok .sig-mark {
   background: rgba(var(--live-rgb), 0.18);
-  color: var(--live);
+  color: var(--live-text);
 }
 .sig-steps > li.st-no .sig-mark {
   background: rgba(var(--danger-rgb), 0.18);
-  color: var(--danger);
+  color: var(--danger-text);
 }
 .sig-steps > li.st-skip .sig-mark {
   background: var(--surface-hi);
   color: var(--muted);
 }
 .sig-steps > li.st-wait .sig-mark {
-  box-shadow: inset 0 0 0 1.5px rgba(255, 255, 255, 0.2);
+  box-shadow: inset 0 0 0 1.5px rgba(var(--wash-rgb), 0.2);
 }
 .sig-steps > li.st-wait .sig-step {
   color: var(--muted);
@@ -5429,7 +5757,7 @@ select.input {
 .routines-note {
   text-transform: none;
   letter-spacing: 0;
-  color: var(--lamp);
+  color: var(--lamp-text);
 }
 .nudge.quiet {
   cursor: default;
@@ -5557,7 +5885,7 @@ select.input {
   max-width: 60ch;
 }
 .say-answer svg {
-  color: var(--lamp);
+  color: var(--lamp-text);
   flex: 0 0 auto;
   margin-top: 3px;
 }
@@ -5674,7 +6002,7 @@ select.input {
   color: var(--ink-2);
 }
 .suggest-lede svg {
-  color: var(--lamp);
+  color: var(--lamp-text);
   flex: 0 0 auto;
 }
 .suggest-bar .button {
@@ -5692,7 +6020,7 @@ select.input {
   color: var(--ink-2);
 }
 .suggest-line svg {
-  color: var(--lamp);
+  color: var(--lamp-text);
   flex: 0 0 auto;
 }
 .suggest-line b {
@@ -5817,7 +6145,7 @@ select.input {
   font-weight: 500;
 }
 .phones-me {
-  color: var(--lamp);
+  color: var(--lamp-text);
   font-weight: 400;
 }
 .phones-sub {
@@ -5880,7 +6208,7 @@ select.input {
   text-decoration-color: var(--ink-2);
 }
 .things-a.warn {
-  color: var(--danger);
+  color: var(--danger-text);
   text-decoration-color: rgba(var(--danger-rgb), 0.45);
 }
 .things-a.still {
@@ -5900,7 +6228,7 @@ select.input {
   gap: 14px;
   padding: 11px 10px;
   border-radius: var(--r-sm);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid rgba(var(--wash-rgb), 0.05);
 }
 .things-rows li:last-child {
   border-bottom: 0;
@@ -6078,7 +6406,7 @@ select.input {
 }
 .tile.alarm.on .tile-state,
 .tile.alarm.on .tile-name {
-  color: var(--danger);
+  color: var(--danger-text);
 }
 .tile.plain:active,
 .tile.light:active,
@@ -6764,6 +7092,13 @@ select.input {
   transform: translateY(100%);
   transition: transform 0.28s var(--ease);
 }
+/* That foot is near-black, which is a pane on a dark page and a pane fading to soot on a light one,
+   with the history at the bottom of it written in dark ink. In light a pane is the milk glass tone.ts
+   draws for it. :where() keeps this under the ask pane, which is dark on purpose, and the flat face. */
+:root[data-shade='light'] :where(.opened-panel),
+:root[data-shade='light'] :where(.house-panel)::before {
+  background: var(--pane, rgba(var(--surface-rgb), 0.9));
+}
 .opened.shown .opened-panel {
   transform: translateY(0);
   transition-duration: 0.38s;
@@ -6907,11 +7242,11 @@ select.input {
    inside edit so it is never under somebody who opened the pane to turn a lamp off.
    design/forget/OnTheThing.dc.html. */
 .opened-kind-say.end {
-  color: var(--danger);
+  color: var(--danger-text);
   text-decoration-color: rgba(var(--danger-rgb), 0.45);
 }
 .opened-kind-say.end:hover {
-  color: var(--danger);
+  color: var(--danger-text);
   text-decoration-color: var(--danger);
 }
 .opened-kind-one.danger {
@@ -7805,7 +8140,7 @@ select.input {
   font-weight: 600;
   letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: rgba(255, 255, 255, 0.86);
+  color: rgba(var(--wash-rgb), 0.86);
   max-width: calc(100% - 32px);
   overflow: hidden;
   white-space: nowrap;
@@ -7848,13 +8183,13 @@ select.input {
   height: 3px;
   margin-bottom: 18px;
   border-radius: 3px;
-  background: rgba(255, 255, 255, 0.24);
+  background: rgba(var(--wash-rgb), 0.24);
 }
 [data-face='glass'] .wall-stage .bento .tile.media .media-bar i {
   position: relative;
   height: 3px;
   border-radius: 3px;
-  background: rgba(255, 255, 255, 0.95);
+  background: rgba(var(--wash-rgb), 0.95);
 }
 [data-face='glass'] .wall-stage .bento .tile.media .media-bar i::after {
   content: '';
@@ -7872,7 +8207,7 @@ select.input {
   width: 44px;
   height: 44px;
   background: none;
-  color: rgba(255, 255, 255, 0.88);
+  color: rgba(var(--wash-rgb), 0.88);
 }
 [data-face='glass'] .wall-stage .bento .tile.media .ctl.primary {
   width: 56px;
@@ -7899,7 +8234,7 @@ select.input {
   margin-top: 16px;
   padding: 0;
   gap: 12px;
-  color: rgba(255, 255, 255, 0.62);
+  color: rgba(var(--wash-rgb), 0.62);
 }
 [data-face='glass'] .wall-stage .bento .tile.media .vol .vol-ic {
   display: none;
@@ -7915,8 +8250,8 @@ select.input {
   height: 22px;
   background: linear-gradient(
       90deg,
-      rgba(255, 255, 255, 0.9) var(--v),
-      rgba(255, 255, 255, 0.2) var(--v)
+      rgba(var(--wash-rgb), 0.9) var(--v),
+      rgba(var(--wash-rgb), 0.2) var(--v)
     )
     center / 100% 4px no-repeat;
   border-radius: 4px;
@@ -8166,6 +8501,8 @@ select.input {
   display: grid;
   place-items: center;
   aspect-ratio: 1;
+  /* the ring is drawn in currentColor (art.ts), so it is the same ink as the number it goes round */
+  color: var(--ink);
   padding: 0 26px;
   /* never wider or taller than the slot it was given: the bento card fixes its
      own height to the rail's row, so a dial that sized itself purely from the
@@ -8305,7 +8642,7 @@ select.input {
   color: var(--muted);
 }
 .tab.active {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(var(--wash-rgb), 0.1);
   color: var(--ink);
   font-weight: 500;
 }
@@ -8390,7 +8727,7 @@ select.input {
 }
 /* the one door to everything that is not a light or a door: This house */
 .rail-house.attention .rail-sub {
-  color: var(--lamp);
+  color: var(--lamp-text);
 }
 /* the bar along the bottom: the command box on the left, the household on the
    right, floating over the sky as drawn -- no ground of its own, the way the
@@ -8557,7 +8894,7 @@ select.input {
      not a filter: a filter here would form a backdrop root and take the box's
      own frost away at the instant it opened, which is the trap this file has
      already walked into twice -- on the rail and on the room behind a pane. */
-  background-color: rgba(255, 255, 255, 0.028);
+  background-color: rgba(var(--wash-rgb), 0.028);
 }
 /* the words follow the width rather than being stretched by it */
 [data-face='glass'] .bottombar .say-box input,
@@ -8702,7 +9039,7 @@ select.input {
   opacity: 0.7;
 }
 .person.add {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(var(--wash-rgb), 0.1);
   color: var(--ink-2);
 } /* the last circle, as drawn: one more person */
 .person.add:active {
@@ -8720,7 +9057,7 @@ select.input {
   white-space: nowrap;
 }
 .people-state.in {
-  color: var(--live);
+  color: var(--live-text);
 }
 .household-line {
   font-size: 13.5px;
@@ -8917,6 +9254,12 @@ select.input {
     rgba(12, 13, 16, 0.88)
   );
 }
+/* On glass the ::after above is every card's rim (the masked 1.4px edge near the top of this sheet), and this
+   media rule outweighs that one, so it painted the TV card's rim with its dark gradient: invisible on the dark
+   look, two dark lines down the card on the light one. Glass gets the rim it gives every other card. */
+[data-face='glass'] .bento .tile.media::after {
+  background: var(--glass-rim);
+}
 .bento .tile.media .media-art {
   position: absolute;
   inset: 0;
@@ -9075,18 +9418,8 @@ select.input {
   position: relative;
   z-index: 1;
   font-size: clamp(22px, 33cqh, 52px);
-  /* The reading is ON the dial now, not on the card, so it takes the DIAL's ink
-     and not the card's. art.ts paints that face dark at every hour -- a dial is
-     a dark disc in a lit room and in a dark one -- while the card underneath is
-     painted at a distance from the sky and flips to dark type by late morning.
-     Left on the card's answer this came out near-black on a near-black disc at
-     noon, with the card around it perfectly legible. Same shape as the glass
-     face redeclaring --card-ink: the surface moved, so what sits on it moves. */
-  color: var(--ink-lit);
-}
-.bento .tile.climate .clim-unit {
-  color: var(--ink-lit);
-  opacity: 0.66;
+  /* The card's ink, like any reading on a card: the ring around it is drawn in that ink too (art.ts),
+     so there is no dark glass to keep a light number for -- which is what --ink-lit was doing here. */
 }
 .bento .tile.climate .clim-doing {
   grid-column: 1 / -1;
@@ -9581,7 +9914,7 @@ select.input {
   height: 28px;
   padding: 0 11px;
   border-radius: 999px;
-  background: var(--card-hi, rgba(255, 255, 255, 0.07));
+  background: var(--card-hi, rgba(var(--wash-rgb), 0.07));
   font-size: 13px;
   color: var(--card-ink-2, var(--ink-2));
   font-variant-numeric: tabular-nums;
@@ -9631,7 +9964,7 @@ select.input {
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background: var(--card-hi, rgba(255, 255, 255, 0.06));
+  background: var(--card-hi, rgba(var(--wash-rgb), 0.06));
   color: var(--card-ink-2, var(--ink-2));
 }
 .room-cell[data-size='row'] > .room-cell-chip {
@@ -9726,7 +10059,7 @@ select.input {
   margin-top: 5px;
   height: 4px;
   border-radius: 2px;
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(var(--wash-rgb), 0.2);
   overflow: hidden;
 }
 .room-cell[data-size='half'] > .room-cell-foot > .room-cell-bar {
@@ -9738,6 +10071,14 @@ select.input {
   border-radius: 2px;
   background: rgba(255, 236, 200, 0.9);
 }
+/* lamplight drawn in cream reads on a dark card and vanishes on a pale one */
+:root[data-shade='light'] .room-cell.lit:not(.shot:not(:has(> .room-cell-art))) .room-cell-mark,
+:root[data-shade='light'] .room-cell:not(.shot:not(:has(> .room-cell-art))) .room-cell-lamp svg {
+  color: var(--lamp-text);
+}
+:root[data-shade='light'] .room-cell:not(.shot:not(:has(> .room-cell-art))) .room-cell-bar i {
+  background: var(--lamp);
+}
 
 /* ---------- the one thing a card can do without going into the room ---------- */
 .room-cell-knob,
@@ -9747,7 +10088,7 @@ select.input {
   border: 0;
   cursor: pointer;
   color: var(--card-ink, var(--ink));
-  background: var(--card-press, rgba(255, 255, 255, 0.12));
+  background: var(--card-press, rgba(var(--wash-rgb), 0.12));
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -9781,7 +10122,7 @@ select.input {
   font-weight: 500;
 }
 .room-cell-pill.ghost {
-  background: var(--card-hi, rgba(255, 255, 255, 0.08));
+  background: var(--card-hi, rgba(var(--wash-rgb), 0.08));
 }
 .room-cell-knob:active,
 .room-cell-play:active,
@@ -9989,7 +10330,7 @@ select.input {
   margin-top: 28px;
   border-radius: 32px;
   border: 1px solid var(--edge);
-  background: rgba(255, 255, 255, 0.035);
+  background: rgba(var(--wash-rgb), 0.035);
   padding: 26px;
   display: flex;
   min-height: 340px;
@@ -10040,7 +10381,7 @@ select.input {
   line-height: 23px;
 }
 .pane-why.roof-wrong {
-  color: var(--danger);
+  color: var(--danger-text);
 }
 @media (max-height: 860px) and (min-width: 861px) {
   .pane-body.pane-roof {
@@ -10087,7 +10428,7 @@ select.input {
   color: var(--ink-2);
 }
 .room-share.open {
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(var(--wash-rgb), 0.06);
 }
 .room-share-dot {
   width: 6px;
@@ -10206,7 +10547,7 @@ select.input {
 .wx-hour-bar {
   width: 3px;
   border-radius: 2px;
-  background: rgba(255, 255, 255, 0.34);
+  background: rgba(var(--wash-rgb), 0.34);
 }
 .wx-hour-bar.wet {
   background: rgb(122, 176, 232);
@@ -10214,6 +10555,11 @@ select.input {
 .wx-hour.wet .wx-hour-t,
 .wx-day-s {
   color: rgb(122, 176, 232);
+}
+/* the rain's pale blue is ink for a dark page */
+:root[data-shade='light'] .wx-hour.wet .wx-hour-t,
+:root[data-shade='light'] .wx-day-s {
+  color: color-mix(in srgb, rgb(122, 176, 232) 35%, var(--ink));
 }
 .wx-hour-k {
   font-size: 11.5px;
@@ -10265,7 +10611,7 @@ select.input {
   position: relative;
   height: 5px;
   border-radius: 3px;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(var(--wash-rgb), 0.1);
 }
 .wx-day-bar i {
   position: absolute;
@@ -10352,7 +10698,7 @@ select.input {
 /* a verb that is on without being the primary one: a camera's floodlight */
 .opened-acts .ctl.lit {
   background: rgba(var(--lamp-rgb), 0.18);
-  color: var(--lamp);
+  color: var(--lamp-text);
 }
 
 /* ---- a control's own children must not take the gesture off it ----
@@ -10405,7 +10751,7 @@ select.input {
   gap: 13px;
   border-radius: var(--r-lg);
   border: 1px solid var(--edge);
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(var(--wash-rgb), 0.05);
   color: var(--ink);
   font: inherit;
   font-size: 17px;
@@ -10422,7 +10768,7 @@ select.input {
 }
 .rig-btn:hover,
 .rig-big:hover {
-  background: rgba(255, 255, 255, 0.09);
+  background: rgba(var(--wash-rgb), 0.09);
 }
 .rig-btn:disabled,
 .rig-big:disabled {
@@ -10437,7 +10783,7 @@ select.input {
    and no more than that: this is a button saying what the next tap does, not an alert */
 .rig-big.arming {
   border-color: rgba(var(--lamp-rgb), 0.5);
-  color: var(--lamp);
+  color: var(--lamp-text);
 }
 .rig-btn.wide {
   justify-content: center;
@@ -10476,7 +10822,7 @@ select.input {
   flex: 1 1 auto;
   min-height: 200px;
   border-radius: 84px;
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(var(--wash-rgb), 0.06);
   border: 1px solid var(--edge);
   overflow: hidden;
   touch-action: none;
@@ -10518,7 +10864,7 @@ select.input {
   right: 0;
   display: grid;
   place-items: center;
-  color: rgba(255, 255, 255, 0.3);
+  color: rgba(var(--wash-rgb), 0.3);
   pointer-events: none;
 }
 .rig-end.top {
@@ -10589,7 +10935,7 @@ select.input {
 .rig-auto.on {
   background: var(--ink);
   border-color: transparent;
-  color: #1d1a22;
+  color: var(--bg);
 }
 .rig-auto-sub {
   font-size: 13.5px;
@@ -10597,7 +10943,7 @@ select.input {
   color: var(--ink-2);
 }
 .rig-auto.on .rig-auto-sub {
-  color: rgba(29, 26, 34, 0.66);
+  color: color-mix(in srgb, var(--bg) 66%, transparent);
 }
 .rig-auto-tick {
   margin-left: auto;
@@ -10694,7 +11040,7 @@ select.input {
   border-radius: 50%;
   box-shadow:
     0 0 0 3px var(--pane-ring, rgba(12, 13, 24, 0.8)),
-    0 0 0 5px rgba(255, 255, 255, 0.85);
+    0 0 0 5px rgba(var(--wash-rgb), 0.85);
 }
 .rig-tune-text {
   display: flex;
@@ -10776,7 +11122,7 @@ select.input {
   aspect-ratio: 1;
   border-radius: 20px;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(var(--wash-rgb), 0.05);
   display: grid;
   place-items: center;
 }
@@ -10788,7 +11134,7 @@ select.input {
 .rig-bar {
   height: 6px;
   border-radius: 3px;
-  background: rgba(255, 255, 255, 0.16);
+  background: rgba(var(--wash-rgb), 0.16);
   overflow: hidden;
 }
 .rig-bar i {
@@ -10815,7 +11161,7 @@ select.input {
   flex: 1 1 0;
   height: 44px;
   border-radius: var(--r-lg);
-  background: rgba(255, 255, 255, 0.07);
+  background: rgba(var(--wash-rgb), 0.07);
   border: 1px solid var(--edge);
   touch-action: none;
   cursor: pointer;
@@ -10826,7 +11172,7 @@ select.input {
   top: 0;
   bottom: 0;
   border-radius: var(--r-lg);
-  background: rgba(255, 255, 255, 0.2);
+  background: rgba(var(--wash-rgb), 0.2);
 }
 .rig-slider-knob {
   position: absolute;
@@ -10961,7 +11307,7 @@ select.input {
   left: 20px;
   font-size: 17px;
   font-weight: 500;
-  color: var(--lamp);
+  color: var(--lamp-text);
   transform: translateY(50%);
 }
 .rig-scale-now i {
@@ -11000,7 +11346,7 @@ select.input {
   max-height: 330px;
   border-radius: 10px 10px 4px 4px;
   border: 1px solid var(--edge-hi);
-  background: linear-gradient(100deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.05) 62%);
+  background: linear-gradient(100deg, rgba(var(--wash-rgb), 0.12), rgba(var(--wash-rgb), 0.05) 62%);
   box-shadow: inset -18px 0 28px -26px rgba(0, 0, 0, 0.8);
 }
 .rig-door-panel {
@@ -11008,8 +11354,8 @@ select.input {
   left: 20px;
   right: 44px;
   border-radius: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(var(--wash-rgb), 0.16);
+  background: rgba(var(--wash-rgb), 0.03);
 }
 .rig-door-panel.top {
   top: 20px;
@@ -11026,7 +11372,7 @@ select.input {
   width: 17px;
   height: 17px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.45);
+  background: rgba(var(--wash-rgb), 0.45);
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
 }
 .rig-jamb {
@@ -11036,8 +11382,8 @@ select.input {
   bottom: 0;
   width: 12px;
   border-radius: 4px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(255, 255, 255, 0.09);
+  border: 1px solid rgba(var(--wash-rgb), 0.14);
+  background: rgba(var(--wash-rgb), 0.09);
 }
 .rig-bolt {
   position: absolute;
@@ -11063,7 +11409,7 @@ select.input {
   height: 104px;
   margin-top: 14px;
   border-radius: 52px;
-  background: rgba(255, 255, 255, 0.07);
+  background: rgba(var(--wash-rgb), 0.07);
   border: 1px solid var(--edge);
   overflow: hidden;
   touch-action: none;
@@ -11219,7 +11565,7 @@ select.input {
   flex: 1 1 0;
   border-radius: var(--r-lg);
   border: 1px solid var(--edge);
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(var(--wash-rgb), 0.04);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -11238,7 +11584,7 @@ select.input {
 .rig-speed-bar {
   width: 8px;
   border-radius: 4px;
-  background: rgba(255, 255, 255, 0.22);
+  background: rgba(var(--wash-rgb), 0.22);
 }
 .rig-speed.on .rig-speed-bar {
   background: var(--lamp);
@@ -11260,7 +11606,7 @@ select.input {
   height: 66px;
   border-radius: 20px;
   border: 1px solid var(--edge);
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(var(--wash-rgb), 0.04);
   color: var(--ink-2);
   font: inherit;
   font-size: 15.5px;
@@ -11269,7 +11615,7 @@ select.input {
   transition: background 0.15s var(--ease);
 }
 .rig-when:hover {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(var(--wash-rgb), 0.08);
 }
 .rig-when:disabled {
   opacity: 0.45;
@@ -11278,7 +11624,7 @@ select.input {
 .rig-when.said {
   border-style: dashed;
   cursor: default;
-  color: var(--lamp);
+  color: var(--lamp-text);
 }
 
 /* ---- the ones that only watch ---- */
@@ -11301,13 +11647,13 @@ select.input {
   color: var(--ink-2);
 }
 .rig-sense-now.on {
-  color: var(--lamp);
+  color: var(--lamp-text);
 }
 .rig-strip {
   position: relative;
   height: 74px;
   border-radius: var(--r-md);
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(var(--wash-rgb), 0.05);
   border: 1px solid var(--edge);
   overflow: hidden;
 }
@@ -11864,7 +12210,7 @@ button.reading[data-held] {
   height: 252px;
   margin-bottom: 18px;
   border-radius: 20px;
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(var(--wash-rgb), 0.03);
   border: 1px solid var(--edge);
   overflow: hidden;
 }
@@ -11995,7 +12341,7 @@ button.reading[data-held] {
 .bridge-bar {
   height: 6px;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(var(--wash-rgb), 0.1);
   overflow: hidden;
   margin-bottom: 20px;
 }
@@ -12060,7 +12406,7 @@ button.reading[data-held] {
   gap: 2px;
   padding: 16px 10px 14px;
   border-radius: 18px;
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(var(--wash-rgb), 0.03);
   border: 1px solid var(--edge);
   text-align: center;
 }
@@ -12220,6 +12566,79 @@ button.reading[data-held] {
   font-size: 14.5px;
   color: var(--ink);
 }
+/* New devices opened from the end of an add: what it brought first, what was waiting below and quieter
+   (design/arrived/JustAdded.dc.html) */
+.sort-group {
+  list-style: none;
+  margin: 6px 0 2px;
+  font-size: 12.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.sort-group.before {
+  margin-top: 22px;
+}
+.sort-row.before {
+  opacity: 0.6;
+}
+.sort-arriving {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 0 14px;
+  font-size: 15px;
+  color: var(--ink-2);
+}
+/* beat four for a few things at once (design/arrived/GuessC.dc.html): what one add brought, a row a thing */
+.arrived-from {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 18px 0 10px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.arrived-row {
+  margin-bottom: 12px;
+  padding: 16px 18px;
+  border-radius: var(--r-lg);
+  border: 1px solid var(--edge);
+  background: rgba(var(--wash-rgb), 0.035);
+}
+.arrived-row .label {
+  margin: 16px 0 10px;
+}
+.arrived-top {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.arrived-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--r-md);
+  background: var(--surface-hi);
+  display: grid;
+  place-items: center;
+  color: var(--ink-2);
+  flex: none;
+}
+.arrived-name {
+  flex: 1;
+  min-width: 0;
+}
+.arrived-name b {
+  display: block;
+  font-weight: 500;
+  font-size: 17px;
+}
+.arrived-name small {
+  display: block;
+  margin-top: 1px;
+  font-size: 13.5px;
+  color: var(--muted);
+}
 .press-rooms .chip-btn.ghost {
   color: var(--muted);
 }
@@ -12240,7 +12659,7 @@ button.reading[data-held] {
   align-items: center;
   padding: 20px;
   border-radius: 20px;
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(var(--wash-rgb), 0.03);
   border: 1px solid var(--edge);
   margin-bottom: 18px;
 }
@@ -12303,17 +12722,17 @@ button.reading[data-held] {
    Nothing else on the page takes it, so the eye lands on the only rows with
    buttons. The words are the brain's: see HappenedPage.vue. */
 .happened-live {
-  color: var(--lamp);
+  color: var(--lamp-text);
 }
 .happened-warm {
   background: var(--lamp-glow);
-  color: var(--lamp);
+  color: var(--lamp-text);
 }
 /* What the page just did, kept in the row it did it to. Nothing vanishes under a
    tap: re-reading from the brain would take the finding away mid-tap, and the
    heading and everything under it would jump up the screen. */
 .happened-did {
-  color: var(--live);
+  color: var(--live-text);
 }
 /* The half with nothing to do about it. .recent centers its three columns, which
    is right for one line; these sentences run to two on a phone, so the icon and
@@ -12401,7 +12820,7 @@ button.reading[data-held] {
   padding: 3px 9px;
   border-radius: 999px;
   background: var(--lamp-glow);
-  color: var(--lamp);
+  color: var(--lamp-text);
   font-size: 12px;
   vertical-align: 1px;
 }
@@ -12444,13 +12863,13 @@ button.reading[data-held] {
 }
 .tile.light.held .tile-icon {
   background: rgba(var(--lamp-rgb), 0.12);
-  color: var(--lamp);
+  color: var(--lamp-text);
 }
 .held-state {
   display: block;
   font-size: 15px;
   font-weight: 500;
-  color: var(--lamp);
+  color: var(--lamp-text);
 }
 .held-why {
   display: block;
@@ -12489,7 +12908,7 @@ button.reading[data-held] {
   padding: 0 16px;
   border-radius: 14px;
   border: 1px solid var(--edge);
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(var(--wash-rgb), 0.04);
 }
 .held-supply.now {
   border-color: rgba(var(--lamp-rgb), 0.5);
@@ -12507,7 +12926,7 @@ button.reading[data-held] {
   color: var(--ink);
 }
 .held-supply.now .held-supply-v {
-  color: var(--lamp);
+  color: var(--lamp-text);
 }
 .held-step {
   display: flex;
@@ -12519,7 +12938,7 @@ button.reading[data-held] {
   padding: 0 22px;
   border-radius: 24px;
   border: 1px solid var(--edge);
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(var(--wash-rgb), 0.05);
 }
 .held-step-icon {
   display: grid;
@@ -12528,8 +12947,8 @@ button.reading[data-held] {
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.08);
-  color: var(--lamp);
+  background: rgba(var(--wash-rgb), 0.08);
+  color: var(--lamp-text);
 }
 .held-step b {
   display: block;
@@ -12554,7 +12973,7 @@ button.reading[data-held] {
   background: rgba(var(--lamp-rgb), 0.08);
 }
 .notes li.note-held .recent-icon {
-  color: var(--lamp);
+  color: var(--lamp-text);
 }
 
 /* ---------- a look for the roofline, said (design/roofline/SaidC.dc.html) ----------
@@ -12588,12 +13007,12 @@ button.reading[data-held] {
   border: 0;
   font: inherit;
   color: var(--ink);
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(var(--wash-rgb), 0.08);
 }
 .say-look-word.on {
   background: rgba(var(--lamp-rgb), 0.16);
   box-shadow: inset 0 0 0 1px rgba(var(--lamp-rgb), 0.5);
-  color: var(--lamp);
+  color: var(--lamp-text);
 }
 .say-look-comma {
   color: var(--muted);
@@ -12605,7 +13024,7 @@ button.reading[data-held] {
   color: var(--ink-2);
 }
 .say-look-live {
-  color: var(--live);
+  color: var(--live-text);
 }
 .say-look .draft-actions {
   flex-direction: row;
@@ -12718,7 +13137,7 @@ button.reading[data-held] {
   min-height: calc(43% + 2px);
   padding: 16px 18px;
   border-radius: 24px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(var(--wash-rgb), 0.14);
   background: linear-gradient(rgba(52, 56, 66, 0.86), rgba(28, 30, 36, 0.92));
   display: flex;
   flex-direction: column;
@@ -12736,7 +13155,7 @@ button.reading[data-held] {
   width: 44px;
   height: 44px;
   border-radius: var(--r-sm);
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(var(--wash-rgb), 0.06);
   border: 1px solid var(--edge);
   color: var(--ink-2);
   overflow: hidden;
@@ -12800,7 +13219,7 @@ button.reading[data-held] {
   margin-top: 14px;
   border-radius: 3px;
   overflow: hidden;
-  background: rgba(255, 255, 255, 0.16);
+  background: rgba(var(--wash-rgb), 0.16);
 }
 .print-bar i {
   position: absolute;
@@ -12848,7 +13267,7 @@ button.reading[data-held] {
   font: inherit;
   font-size: 13.5px;
   color: var(--ink);
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(var(--wash-rgb), 0.08);
   cursor: pointer;
 }
 .print-answer.primary {
@@ -12869,7 +13288,7 @@ button.reading[data-held] {
   color: var(--ink-3, var(--muted));
 }
 .print-finished svg {
-  color: var(--live);
+  color: var(--live-text);
 }
 /* a phone's: the camera on the left, how far and when on the right (design/printers/PhoneB) */
 .print-card.compact {
@@ -13030,7 +13449,7 @@ button.reading[data-held] {
   padding: 12px 16px;
   border-radius: var(--r-md);
   border: 1px solid var(--edge);
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(var(--wash-rgb), 0.04);
 }
 .print-temp small {
   font-size: 12.5px;
@@ -13065,11 +13484,11 @@ button.reading[data-held] {
   font: inherit;
   font-size: 16px;
   color: var(--ink);
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(var(--wash-rgb), 0.08);
   cursor: pointer;
 }
 .print-act.cancel {
-  color: var(--danger);
+  color: var(--danger-text);
 }
 .print-act.primary {
   border-color: transparent;
@@ -13134,7 +13553,7 @@ button.reading[data-held] {
   padding: 12px 22px 12px 12px;
   border-radius: 20px;
   border: 1px solid var(--edge);
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(var(--wash-rgb), 0.05);
 }
 .print-job .print-thumb {
   width: 52px;
@@ -13266,16 +13685,16 @@ button.reading[data-held] {
   padding: 14px;
   border-radius: 20px;
   border: 1px solid var(--edge);
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(var(--wash-rgb), 0.05);
 }
 .printer-row.allowed {
   border-color: rgba(var(--live-rgb), 0.4);
-  background: linear-gradient(rgba(var(--live-rgb), 0.08), rgba(var(--live-rgb), 0.08)), rgba(255, 255, 255, 0.03);
+  background: linear-gradient(rgba(var(--live-rgb), 0.08), rgba(var(--live-rgb), 0.08)), rgba(var(--wash-rgb), 0.03);
 }
 .printer-row.waiting {
   padding: 22px 22px 22px;
   border-color: rgba(var(--lamp-rgb), 0.5);
-  background: linear-gradient(rgba(var(--lamp-rgb), 0.07), rgba(var(--lamp-rgb), 0.07)), rgba(255, 255, 255, 0.04);
+  background: linear-gradient(rgba(var(--lamp-rgb), 0.07), rgba(var(--lamp-rgb), 0.07)), rgba(var(--wash-rgb), 0.04);
   box-shadow: 0 0 46px -14px rgba(var(--lamp-rgb), 0.35);
 }
 .printer-icon {
@@ -13289,12 +13708,12 @@ button.reading[data-held] {
   color: var(--lamp-ink);
 }
 .printer-icon.plain {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(var(--wash-rgb), 0.08);
   color: var(--ink-2);
 }
 .printer-row.allowed .printer-icon {
   background: rgba(var(--live-rgb), 0.18);
-  color: var(--live);
+  color: var(--live-text);
 }
 .printer-text {
   flex: 1;
@@ -13343,7 +13762,7 @@ button.reading[data-held] {
 }
 .printer-ring circle {
   fill: none;
-  stroke: rgba(255, 255, 255, 0.14);
+  stroke: rgba(var(--wash-rgb), 0.14);
   stroke-width: 2.5;
 }
 .printer-ring circle.left {
@@ -13610,7 +14029,7 @@ button.reading[data-held] {
   }
   .finish-count {
     font-size: 13px;
-    color: var(--lamp);
+    color: var(--lamp-text);
   }
   .finish-bar {
     height: 4px;
@@ -13637,7 +14056,7 @@ button.reading[data-held] {
     color: var(--ink);
   }
   .finish-step > svg:first-child {
-    color: var(--lamp);
+    color: var(--lamp-text);
   }
   .finish-step > svg:last-child:not(:first-child) {
     color: var(--ink-3);
@@ -13646,7 +14065,7 @@ button.reading[data-held] {
     color: var(--muted);
   }
   .finish-step.done > svg:first-child {
-    color: var(--live);
+    color: var(--live-text);
   }
   .finish-step.done span {
     text-decoration: line-through;
@@ -13718,4 +14137,286 @@ button.reading[data-held] {
   grid-template-columns: auto 1fr auto;
   border: 1px solid var(--edge);
   border-radius: var(--r-md);
+}
+
+/* A car charging (design/charger/CardA): the panel's green, not a lamp's amber -- charging the car is
+   not a light being on. Read-only, so nothing here changes on a press. */
+.tile.plain.charger.on {
+  border-color: rgba(var(--live-rgb), .45);
+  box-shadow: 0 0 0 1px rgba(var(--live-rgb), .16), 0 24px 50px -32px rgba(0, 0, 0, .85);
+}
+.tile.plain.charger.on .tile-state,
+.tile.plain.charger.on .tile-icon { color: var(--live); }
+.nudge.charging .nudge-icon { background: var(--live); color: #0b2216; }
+
+/* ---------- the house's power (design/energy/, B with C's sun) ----------
+   PowerPane.vue, on the device pane's frame, and the band's line for the power going out. The picture is
+   drawn in a 700 x 400 box that keeps its shape, so the circles placed in percentages land where the lines
+   in power-lines end. */
+.nudge.power-out {
+  border-color: rgba(var(--danger-rgb), 0.45);
+  background: linear-gradient(rgba(var(--danger-rgb), 0.12), rgba(var(--danger-rgb), 0.12)), var(--surface);
+}
+.nudge.power-out .nudge-icon { background: var(--danger); color: #2a0e0e; }
+.power-big-unit {
+  margin-left: 12px;
+  font-size: 22px;
+  letter-spacing: 0;
+  color: var(--muted);
+}
+.power-rig { flex-direction: column; gap: 14px; container-type: inline-size; }
+.power-flow {
+  position: relative;
+  flex: 0 0 auto;
+  width: 100%;
+  aspect-ratio: 700 / 400;
+}
+.power-lines { position: absolute; inset: 0; width: 100%; height: 100%; }
+.power-line {
+  fill: none;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-dasharray: 2 8;
+  vector-effect: non-scaling-stroke;
+}
+.power-line.to-house { stroke: var(--lamp); }
+.power-line.to-battery { stroke: var(--live); }
+.power-line.to-grid { stroke: var(--muted); }
+.power-line.power-still { opacity: 0.18; }
+.power-amount {
+  position: absolute;
+  font-size: 14px;
+  font-weight: 500;
+  white-space: nowrap;
+  transform: translateX(-50%);
+}
+.power-amount.at-house { left: calc(50% + 36px); top: 29%; }
+.power-amount.at-battery { left: 23%; top: 9%; }
+.power-amount.at-grid { left: 77%; top: 9%; }
+.power-node {
+  position: absolute;
+  width: 170px;
+  text-align: center;
+  transform: translateX(-50%);
+}
+.power-node.power-sun { left: 50%; top: calc(13% - 44px); }
+.power-node.power-house { left: 50%; top: 42%; }
+.power-node.power-battery { left: 15.7%; top: 42%; }
+.power-node.power-grid { left: 84.3%; top: 42%; }
+.power-node.power-car { left: 50%; top: 75%; width: 240px; }
+.power-orb {
+  width: 76px;
+  height: 76px;
+  margin: 0 auto;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: rgba(var(--wash-rgb), 0.07);
+  border: 1px solid var(--edge);
+  color: var(--ink-2);
+}
+.power-node.power-sun .power-orb { width: 88px; height: 88px; }
+.power-node.power-sun.up .power-orb {
+  background: var(--lamp);
+  color: var(--lamp-ink);
+  border-color: transparent;
+  box-shadow: 0 0 40px -6px rgba(var(--lamp-rgb), 0.6);
+}
+.power-node.power-house .power-orb { color: var(--ink); }
+.power-node.power-battery .power-orb {
+  color: var(--live);
+  background: conic-gradient(rgba(var(--live-rgb), 0.4) 0 var(--charge), rgba(var(--wash-rgb), 0.05) var(--charge) 100%);
+}
+.power-node.power-grid .power-orb { color: var(--muted); }
+.power-node.power-grid.out .power-orb { color: var(--danger); border-color: rgba(var(--danger-rgb), 0.5); }
+.power-node.power-car .power-orb { width: 56px; height: 56px; }
+.power-node b { display: block; margin-top: 10px; font-size: 15px; font-weight: 500; }
+.power-node small { display: block; font-size: 13px; color: var(--muted); }
+.power-reserve {
+  margin: auto 0 0;
+  padding: 0 4px;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 15px;
+  color: var(--ink-2);
+}
+.power-reserve .opened-fact-k { margin: 0; }
+.power-reserve b { color: var(--ink); font-weight: 500; }
+.power-node .power-narrow { display: none; }
+/* A phone's rig is too narrow for the picture's circles and their words to keep apart, so there they are two
+   columns of circles, each with its words, and the lines between them are left out. */
+@container (max-width: 520px) {
+  .power-flow {
+    aspect-ratio: auto;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px 12px;
+  }
+  .power-lines,
+  .power-amount { display: none; }
+  .power-node,
+  .power-node.power-car {
+    position: static;
+    width: auto;
+    transform: none;
+  }
+  .power-node .power-orb,
+  .power-node.power-sun .power-orb,
+  .power-node.power-car .power-orb { width: 56px; height: 56px; }
+  .power-node .power-narrow { display: block; }
+}
+.power-day-chart { position: relative; flex: 1 1 auto; min-width: 0; }
+.power-day-chart svg { display: block; width: 100%; height: 44px; overflow: visible; }
+.power-day-sun { fill: rgba(var(--lamp-rgb), 0.28); stroke: var(--lamp); stroke-width: 2; vector-effect: non-scaling-stroke; }
+.power-day-house { fill: none; stroke: var(--ink); stroke-width: 1.6; vector-effect: non-scaling-stroke; }
+.power-day-now { stroke: rgba(var(--wash-rgb), 0.4); stroke-dasharray: 3 3; vector-effect: non-scaling-stroke; }
+.power-day-ticks { position: relative; height: 18px; margin-top: 6px; }
+.power-day-ticks span {
+  position: absolute;
+  transform: translateX(-50%);
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+/* ---------- the wall's keyboard (design/keyboard/, C) ----------
+   Keys.vue, mounted only on the wall unit, which has no keyboard of its own. Docked along the bottom on the panel's
+   glass; the page moves up by --keys-lift so the field stays in view. Sized off the screen's height so a key is a
+   finger at arm's length on a 10-inch wall and still fits a smaller test screen. */
+html[data-wall-keys] .shell {
+  translate: 0 calc(var(--keys-lift, 0px) * -1);
+  transition: translate 0.28s var(--ease);
+}
+.wallkeys {
+  --wk-gap: 10px;
+  --wk-h: clamp(44px, 6.9vh, 72px);
+  --wk-w: min(92px, calc((100vw - 48px - 9 * var(--wk-gap)) / 10));
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 200;
+  padding: 18px 0 22px;
+  background: rgba(var(--surface-rgb), 0.82);
+  backdrop-filter: var(--frost);
+  -webkit-backdrop-filter: var(--frost);
+  border-top: 1px solid var(--edge);
+  border-radius: var(--r-lg) var(--r-lg) 0 0;
+  box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.35);
+  touch-action: none;
+  user-select: none;
+}
+.wallkeys-rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--wk-gap);
+}
+.wallkeys-row {
+  display: flex;
+  justify-content: center;
+  gap: var(--wk-gap);
+}
+.wallkey {
+  flex: 0 0 var(--wk-w);
+  height: var(--wk-h);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--r-sm);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: var(--surface-hi);
+  color: var(--ink);
+  font: inherit;
+  font-size: calc(var(--wk-h) * 0.38);
+}
+.wallkey:active {
+  background: var(--surface-press);
+}
+.wallkey.mod {
+  background: rgba(255, 255, 255, 0.045);
+  color: var(--ink-2);
+  font-size: calc(var(--wk-h) * 0.27);
+}
+.wallkey.mod.on {
+  background: var(--surface-press);
+  color: var(--ink);
+}
+.wallkey.wide {
+  flex-basis: calc(var(--wk-w) * 1.5 + var(--wk-gap) / 2);
+}
+.wallkey.space {
+  flex-basis: calc(var(--wk-w) * 6 + var(--wk-gap) * 5);
+}
+.wallkey.go {
+  background: var(--ink);
+  color: var(--bg);
+  border: 0;
+  font-weight: 600;
+  font-size: calc(var(--wk-h) * 0.29);
+}
+.wallkey.wider {
+  flex-basis: calc(var(--wk-w) * 2.5 + var(--wk-gap));
+}
+.wallkey svg {
+  width: calc(var(--wk-h) * 0.42);
+  height: calc(var(--wk-h) * 0.42);
+}
+.wallkeys-rows.pad .wallkey {
+  flex-basis: min(150px, 28vw);
+}
+.wallkeys-chips {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: var(--wk-gap);
+  margin: 0 24px 14px;
+}
+.wallkeys-chip {
+  height: calc(var(--wk-h) * 0.7);
+  padding: 0 18px;
+  border-radius: 999px;
+  border: 1px solid rgba(var(--lamp-rgb), 0.35);
+  background: rgba(var(--lamp-rgb), 0.14);
+  color: var(--ink);
+  font: inherit;
+  font-size: calc(var(--wk-h) * 0.27);
+}
+.wallkeys-chip.quiet {
+  border-color: var(--edge);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--ink-2);
+}
+.wallkeys-enter-active,
+.wallkeys-leave-active {
+  transition: transform 0.28s var(--ease);
+}
+.wallkeys-enter-from,
+.wallkeys-leave-to {
+  transform: translateY(100%);
+}
+
+/* The wall awake: nothing loops behind the frosted cards (Sky.vue, held). The sky's drift and the command orb's
+   blooms rest until the wall does; at rest there is little glass and everything moves again. */
+.shell[data-held] .sky-bloom,
+.shell[data-held] .say-orb .orb-cool,
+.shell[data-held] .say-orb .orb-warm {
+  animation-play-state: paused;
+}
+
+/* The wall is touched, not pointed at: a mouse plugged in for setting it up shows no arrow on the panel. */
+html[data-wall],
+html[data-wall] * {
+  cursor: none !important;
+}
+
+/* Whatever is scrolling on the wall drops its frost until it stops (App.vue): glass moving under a finger is the
+   one thing the wall's GPU cannot redraw at 60 fps, and in motion the difference cannot be seen. */
+html[data-wall] [data-moving] *,
+html[data-wall] [data-moving] *::before,
+html[data-wall] [data-moving] *::after {
+  /* the standard property only: with the -webkit- one beside it the build's minifier keeps just the prefixed
+     copy, which this Chromium ignores, and the rule ships empty */
+  backdrop-filter: none !important;
 }

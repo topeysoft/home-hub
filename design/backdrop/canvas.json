@@ -1,4 +1,6 @@
 {
+  "name": "Behind the cards",
+  "areas": ["Wall screens"],
   "artboards": [
     {
       "file": "Today.dc.html",

@@ -1,0 +1,48 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>B, it joins the house it finds</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="companion.css">
+<style>
+  body[data-at="code"] [data-when]:not([data-when~="code"]) { display: none; }
+  body[data-at="asked"] [data-when]:not([data-when~="asked"]) { display: none; }
+  body[data-at="open"] [data-when]:not([data-when~="open"]) { display: none; }
+</style>
+</head>
+<body data-at="code">
+<div class="wall"><div class="sun"></div><div class="land"></div>
+  <div class="col">
+    <div class="mark" style="background: rgba(var(--lamp-rgb), .16); color: var(--lamp); border-color: rgba(var(--lamp-rgb), .3);"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v9.5h13V10"/></svg></div>
+    <h1 data-when="code asked">This screen is for Maple Court.</h1>
+    <h1 data-when="open">This screen is part of Maple Court.</h1>
+
+    <p class="lede" data-when="code">Its hub is on this Wi&#8209;Fi. Type the house passcode to finish.</p>
+    <div class="code" data-when="code"><span>&bull;</span><span>&bull;</span><span class="at"></span><span></span></div>
+    <div class="actions" data-when="code"><span class="cta" style="opacity: .5">Continue</span><span class="ghost">Ask from another screen</span></div>
+
+    <p class="lede" data-when="asked">Asked. Say yes on a phone or another screen in the house, and this one opens by itself.</p>
+    <div data-when="asked">
+      <div class="card" style="display: flex; gap: 16px; align-items: center; max-width: 520px;">
+        <span class="dot"></span>
+        <span style="flex: 1;"><span class="t1" style="display:block">Waiting for a yes</span><span class="t2">Jordan&rsquo;s phone and the kitchen screen were told</span></span>
+      </div>
+      <p class="foot"><span class="link">Type the passcode instead</span></p>
+    </div>
+
+    <p class="lede" data-when="open">Maple Court has no passcode, so there was nothing to type. Opening the house&hellip;</p>
+    <p class="status" data-when="open"><span class="dot live"></span> Joined just now</p>
+
+    <p class="foot" data-when="code asked">Not this house? <span class="link">Start a new one on this screen</span></p>
+  </div>
+
+  <div class="flips"><span style="padding: 0 6px;">Showing</span>
+    <span class="flip on" data-to="code">the passcode</span><span class="flip" data-to="asked">asked another screen</span><span class="flip" data-to="open">no passcode set</span></div>
+</div>
+<script>
+  document.querySelectorAll('.flip').forEach(f => f.addEventListener('click', () => {
+    document.body.dataset.at = f.dataset.to
+    document.querySelectorAll('.flip').forEach(g => g.classList.toggle('on', g === f))
+  }))
+</script>
+</body>
+</html>

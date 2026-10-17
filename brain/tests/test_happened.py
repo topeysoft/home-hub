@@ -170,9 +170,9 @@ class WhoChangedWhat(ApiTest):
 
     def test_a_rename_reads_as_a_sentence_with_a_person_in_front_of_it(self):
         api = __import__("hub.api", fromlist=["api"])
-        api.hub.log.add("home", "light.ceiling", "Ceiling light", "Reading lamp", source="user", who="Temi's iPhone")
+        api.hub.log.add("home", "light.ceiling", "Ceiling light", "Reading lamp", source="user", who="Jordan's iPhone")
         rows = self.client.get("/happened/changes").json()["rows"]
-        self.assertEqual((rows[0]["who"], rows[0]["text"]), ("Temi's iPhone", "renamed Ceiling light to Reading lamp."))
+        self.assertEqual((rows[0]["who"], rows[0]["text"]), ("Jordan's iPhone", "renamed Ceiling light to Reading lamp."))
         self.assertTrue(rows[0]["named"])
 
     def test_the_house_acting_on_its_own_says_so_rather_than_naming_anybody(self):
@@ -190,7 +190,7 @@ class WhoChangedWhat(ApiTest):
 
     def test_turning_a_light_on_is_not_a_change_to_the_house(self):
         api = __import__("hub.api", fromlist=["api"])
-        api.hub.log.add("action", "light.ceiling", None, "off", source="user", who="Temi's iPhone")
+        api.hub.log.add("action", "light.ceiling", None, "off", source="user", who="Jordan's iPhone")
         api.hub.log.add("state", "light.ceiling", "on", "off", source="device")
         self.assertEqual(self.client.get("/happened/changes").json()["rows"], [])
 
@@ -336,10 +336,10 @@ class NothingIsDroppedQuietly(ApiTest):
         """AGENTS.md section 5: no household ever reads Home Assistant's vocabulary. A device the
         house has since forgotten leaves only its id, so the id is turned back into words."""
         self.add("home", "light.frontyard_light", "forgotten")
-        self.add("home", "switch.holts_summit_alarm_siren", "alarm", detail={"shown_as": True})
+        self.add("home", "switch.cedar_falls_alarm_siren", "alarm", detail={"shown_as": True})
         for t in self.texts():
             self.assertNotRegex(t, r"\b[a-z_]+\.[a-z0-9_]+\b", t)
-        self.assertIn("set Holts summit alarm siren to show as an alarm.", self.texts())
+        self.assertIn("set Cedar falls alarm siren to show as an alarm.", self.texts())
 
     def test_a_shared_device_is_named_from_where_its_id_actually_is(self):
         """The row is ("share", "device", <id>, "shared"): the id is in `old`. Reading it off

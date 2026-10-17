@@ -1,0 +1,75 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>Choosing it</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600&display=swap">
+<style>
+/* Where the choice lives on a phone: the Look page, in the light page it is asking about. The
+   question is the Bench's (astromech-screen 8b2dde5): each phone picks for itself, following the
+   phone unless told otherwise, and never changes the wall screen, which keeps its own. */
+* { box-sizing: border-box; }
+body { margin: 0; background: #0c0d10; font-family: "Plus Jakarta Sans", -apple-system, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+.phone { width: 390px; height: 844px; position: relative; overflow: hidden; background: linear-gradient(180deg, #f6f3ee, #eeeae3); color: #1e1b24; }
+.sb { height: 47px; display: flex; align-items: center; justify-content: space-between; padding: 0 30px 0 34px; font-size: 16px; font-weight: 600; }
+.top { display: flex; align-items: center; gap: 10px; padding: 6px 20px 0; height: 52px; }
+.back { width: 40px; height: 40px; border-radius: 50%; background: #fff; border: 1px solid rgba(30,27,36,.08); display: grid; place-items: center; box-shadow: 0 1px 2px rgba(30,27,36,.05); }
+.top h1 { margin: 0; font-size: 24px; font-weight: 400; letter-spacing: -.02em; }
+.lede { margin: 10px 20px 0; font-size: 15px; line-height: 1.45; color: #6e6a73; }
+.label { margin: 26px 20px 10px; font-size: 12px; letter-spacing: .1em; text-transform: uppercase; color: #8c8890; font-weight: 500; }
+.opts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; padding: 0 20px; }
+.opt { background: #fff; border: 1px solid rgba(30,27,36,.07); border-radius: 18px; padding: 10px 10px 12px; box-shadow: 0 1px 2px rgba(30,27,36,.05), 0 12px 28px -18px rgba(30,27,36,.26); }
+.opt.on { outline: 2px solid #1e1b24; outline-offset: -1px; }
+.mini { height: 86px; border-radius: 11px; position: relative; overflow: hidden; }
+.mini i { position: absolute; border-radius: 4px; }
+.mini.light { background: #f1ede6; }
+.mini.light i { background: #fff; box-shadow: 0 1px 3px rgba(30,27,36,.14); }
+.mini.light i.lit { background: linear-gradient(160deg, oklch(.90 .095 82), oklch(.82 .12 70)); }
+.mini.dark { background: linear-gradient(180deg, rgb(10,14,34), rgb(38,34,74) 60%, rgb(90,60,70)); }
+.mini.dark i { background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.14); }
+.mini.dark i.lit { background: rgba(233,184,114,.55); }
+.mini.both { background: none; }
+.mini.both > div { position: absolute; inset: 0; }
+.mini.both > div:last-child { clip-path: polygon(100% 0, 100% 100%, 0 100%); }
+.name { margin-top: 9px; font-size: 14px; font-weight: 500; display: flex; align-items: center; gap: 6px; line-height: 1.2; }
+.tick { width: 16px; height: 16px; border-radius: 50%; background: #1e1b24; color: #fff; display: grid; place-items: center; flex: none; }
+.hint { margin: 12px 20px 0; font-size: 13.5px; line-height: 1.45; color: #6e6a73; }
+.rows { margin: 0 20px; background: #fff; border-radius: 18px; border: 1px solid rgba(30,27,36,.07); box-shadow: 0 1px 2px rgba(30,27,36,.05); }
+.row { display: flex; align-items: center; gap: 12px; padding: 14px 16px; }
+.row + .row { border-top: 1px solid rgba(30,27,36,.07); }
+.row .t { flex: 1; } .row b { display: block; font-weight: 500; font-size: 15px; } .row small { display: block; color: #6e6a73; font-size: 13px; margin-top: 2px; }
+.feels { opacity: .55; }
+</style>
+</head>
+<body>
+<div class="phone">
+  <div class="sb"><span>9:41</span><span style="display:flex;gap:6px;align-items:center"><svg width="18" height="12" viewBox="0 0 18 12"><rect x="0" y="8" width="3" height="4" rx="1" fill="#1e1b24"/><rect x="5" y="5.5" width="3" height="6.5" rx="1" fill="#1e1b24"/><rect x="10" y="3" width="3" height="9" rx="1" fill="#1e1b24"/><rect x="15" y="0" width="3" height="12" rx="1" fill="#1e1b24"/></svg><svg width="26" height="13" viewBox="0 0 26 13"><rect x=".5" y=".5" width="22" height="12" rx="3.5" fill="none" stroke="#1e1b24" opacity=".4"/><rect x="2" y="2" width="17" height="9" rx="2" fill="#1e1b24"/><rect x="23.5" y="4.5" width="1.5" height="4" rx=".7" fill="#1e1b24" opacity=".4"/></svg></span></div>
+  <div class="top"><span class="back"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 5l-7 7 7 7"/></svg></span><h1>Look</h1></div>
+  <p class="lede">Everyone sees what you pick here, on every screen in the house. Light or dark is the one thing each screen picks for itself.</p>
+
+  <div class="label">This phone</div>
+  <div class="opts">
+    <div class="opt on">
+      <div class="mini both">
+        <div class="mini light"><i style="left:8px;top:10px;width:30px;height:30px"></i><i class="lit" style="left:42px;top:10px;width:30px;height:30px"></i><i style="left:8px;top:44px;width:64px;height:32px"></i></div>
+        <div class="mini dark"><i style="left:8px;top:10px;width:30px;height:30px"></i><i class="lit" style="left:42px;top:10px;width:30px;height:30px"></i><i style="left:8px;top:44px;width:64px;height:32px"></i></div>
+      </div>
+      <div class="name">Same as phone <span class="tick"><svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg></span></div>
+    </div>
+    <div class="opt">
+      <div class="mini light"><i style="left:8px;top:10px;width:30px;height:30px"></i><i class="lit" style="left:42px;top:10px;width:30px;height:30px"></i><i style="left:8px;top:44px;width:64px;height:32px"></i></div>
+      <div class="name">Light</div>
+    </div>
+    <div class="opt">
+      <div class="mini dark"><i style="left:8px;top:10px;width:30px;height:30px"></i><i class="lit" style="left:42px;top:10px;width:30px;height:30px"></i><i style="left:8px;top:44px;width:64px;height:32px"></i></div>
+      <div class="name">Dark</div>
+    </div>
+  </div>
+  <p class="hint">Only this phone. The wall screen is set on the wall screen.</p>
+
+  <div class="label">Feel</div>
+  <div class="rows feels">
+    <div class="row"><span class="t"><b>Calm</b><small>Paper cards laid on the sky, following the light through the day.</small></span></div>
+    <div class="row"><span class="t"><b>Nightfall</b><small>Dark and quiet, with the evening sky behind everything.</small></span></div>
+  </div>
+</div>
+</body>
+</html>

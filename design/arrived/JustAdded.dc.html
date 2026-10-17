@@ -1,0 +1,131 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Instrument Sans", -apple-system, "SF Pro Text", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      /* the panel's own tokens -- app/src/panel.css -- and the two pane inks it computes */
+      --bg: #0c0d10; --surface-rgb: 26,28,34; --surface: rgba(var(--surface-rgb),.68); --surface-hi: rgba(255,255,255,.08);
+      --edge: rgba(255,255,255,.1); --edge-hi: rgba(255,255,255,.18);
+      --ink: #f1eee8; --ink-2: #b9b5ad; --muted: #7f7d77;
+      --ink-3: oklch(0.68 0.01 242); --ink-4: oklch(0.76 0.006 242);
+      --lamp-rgb: 233,184,114; --lamp: rgb(var(--lamp-rgb)); --lamp-ink: #2a1c07;
+      --live-rgb: 116,198,157; --live: rgb(var(--live-rgb));
+      --r-lg: 22px; --r-md: 16px; --r-sm: 12px;
+    }
+    .screen { position: relative; width: 1440px; height: 900px; overflow: hidden; background: var(--bg); color: var(--ink); font-size: 17px; line-height: 1.4; }
+    .abs { position: absolute; }
+    .dsp { font-weight: 400; letter-spacing: -.025em; }
+    svg.i { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+    /* the glass the bar and the round buttons are made of (.tabs, .back, .topbar-add) */
+    .glass { background-image: linear-gradient(112deg, transparent 26%, rgba(255,255,255,.11) 45%, rgba(255,255,255,.02) 56%, transparent 64%),
+                               linear-gradient(148deg, oklch(0.545 0.014 242 / .34), oklch(0.475 0.012 242 / .12) 46%, oklch(0.505 0.014 242 / .24));
+             box-shadow: inset 0 -46px 56px -48px rgba(22,43,68,.9), 0 23px 53px -26px rgba(17,35,60,.58), 0 2px 10px rgba(17,35,60,.37); }
+    .round { position: absolute; border-radius: 50%; display: grid; place-items: center; color: var(--ink-2); }
+    .tab { display: inline-flex; align-items: center; gap: 10px; height: 44px; padding: 0 22px; border-radius: 999px; font-size: 15.5px; color: var(--ink-2); }
+    .tab.on { background: rgba(255,255,255,.1); color: var(--ink); font-weight: 500; }
+    /* a card in a room, at night: the tile's glass (.tile-body is 17 18 15) */
+    .tile { position: absolute; border-radius: 24px; background: rgba(var(--surface-rgb),.62); border: 1px solid var(--edge);
+            box-shadow: 0 24px 50px -32px rgba(0,0,0,.85); padding: 17px 18px 15px; overflow: hidden; }
+    .tile .tn { display: flex; align-items: center; gap: 11px; font-size: 16px; font-weight: 500; letter-spacing: -.005em; }
+    .tile .tn svg { color: var(--ink-2); }
+    .tile .ts { position: absolute; left: 18px; right: 18px; bottom: 15px; font-size: 14.5px; color: var(--ink-2); }
+    .tile.lit { background: linear-gradient(165deg, rgba(246,226,192,.94), rgba(var(--lamp-rgb),.8) 75%); border-color: rgba(255,240,214,.5); box-shadow: 0 0 40px -10px rgba(var(--lamp-rgb),.35), 0 24px 50px -32px rgba(0,0,0,.85); }
+    .tile.lit .tn svg { color: var(--lamp-ink); }
+    .row { display: flex; align-items: center; gap: 10px; height: 34px; padding: 0 12px; border-radius: 12px; font-size: 14.5px;
+           border: 1px solid var(--edge); background: rgba(255,255,255,.04); }
+    .row.on { background: rgba(var(--lamp-rgb),.9); color: var(--lamp-ink); border-color: transparent; font-weight: 500; }
+    .row .v { margin-left: auto; color: var(--muted); }
+    .row.on .v { color: var(--lamp-ink); }
+    .scene { height: 62px; border-radius: 16px; border: 1px solid var(--edge); background: rgba(255,255,255,.035); display: flex; align-items: center; gap: 14px; padding: 0 16px; }
+    .scene b { display: block; font-weight: 400; font-size: 16.5px; }
+    .scene small { display: block; font-size: 13px; color: var(--muted); }
+    /* the room's own line of chips (.why-line, .reading) */
+    .chipline { display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 14px 0 12px; border-radius: 999px; font-size: 13.5px;
+                color: var(--ink-2); background: rgba(255,255,255,.08); border: 1px solid var(--edge); white-space: nowrap; }
+    .chipline .ask { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
+    .reading { display: inline-flex; align-items: center; gap: 8px; height: 39px; padding: 0 14px 0 11px; border-radius: 999px; font-size: 14px; color: var(--ink-2);
+               background: rgba(var(--surface-rgb),.68); border: 1px solid var(--edge); white-space: nowrap; }
+    .reading b { color: var(--ink); font-weight: 500; }
+
+    .sheet2 { position: absolute; left: 0; top: 100px; width: 1440px; height: 800px; border-radius: 34px 34px 0 0; overflow: hidden;
+              background: linear-gradient(rgba(26,28,34,.86), rgba(16,17,21,.96)); box-shadow: inset 0 1.4px 0 rgba(255,255,255,.4); }
+    .side { position: absolute; left: 0; top: 0; width: 320px; height: 800px; border-right: 1px solid var(--edge); }
+    .door { display: flex; align-items: center; gap: 14px; height: 56px; padding: 0 12px; margin: 0 20px 8px; border-radius: 14px; }
+    .door .di { width: 36px; height: 36px; border-radius: 10px; background: rgba(255,255,255,.08); display: grid; place-items: center; color: var(--ink-2); flex: none; }
+    .door b { display: block; font-weight: 400; font-size: 15.5px; }
+    .door small { display: block; font-size: 13px; color: var(--muted); }
+    .door.on { background: rgba(255,255,255,.08); }
+    .door.on .di { background: var(--ink); color: var(--bg); }
+    .main { position: absolute; left: 321px; top: 0; right: 0; height: 800px; }
+    .h1 { position: absolute; left: 48px; top: 26px; font-size: 44px; letter-spacing: -.03em; line-height: 52px; }
+    .rule { position: absolute; left: 0; right: 0; top: 86px; border-top: 1px solid var(--edge); }
+    .col { position: absolute; left: 48px; top: 108px; width: 760px; }
+    .ok { display: flex; align-items: center; gap: 12px; font-size: 26px; letter-spacing: -.01em; }
+    .ok i { width: 36px; height: 36px; border-radius: 10px; background: rgba(var(--live-rgb),.9); color: #0c2a1b; display: grid; place-items: center; }
+    .desc { margin: 14px 0 0; font-size: 15px; line-height: 1.5; color: var(--ink-2); }
+    .desc b { color: var(--ink); font-weight: 500; }
+    .lab { margin: 22px 0 10px; font-size: 12.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+    .cb { display: inline-flex; align-items: center; gap: 7px; padding: 10px 16px; border-radius: 999px; background: rgba(var(--surface-rgb),.68); border: 1px solid var(--edge); color: var(--ink-2); font-size: 15px; white-space: nowrap; }
+    .cb.on { background: var(--ink); color: var(--bg); border-color: transparent; font-weight: 500; }
+    .cb.s { padding: 7px 13px; font-size: 14px; }
+    .field { display: flex; align-items: center; height: 52px; padding: 0 16px; border-radius: 14px; background: rgba(255,255,255,.05); border: 1px solid var(--edge); font-size: 17px; }
+    .field small { margin-left: auto; font-size: 13px; color: var(--muted); }
+    .acts { display: flex; gap: 10px; }
+    .b1 { display: inline-flex; align-items: center; height: 48px; padding: 0 22px; border-radius: 999px; background: var(--ink); color: var(--bg); font-size: 16.5px; font-weight: 500; }
+    .b2 { display: inline-flex; align-items: center; height: 48px; padding: 0 20px; border-radius: 999px; background: rgba(255,255,255,.08); border: 1px solid var(--edge); color: var(--ink); font-size: 16.5px; }
+    .thing { border-radius: 22px; border: 1px solid var(--edge); background: rgba(255,255,255,.035); padding: 16px 18px; }
+    .thing .top { display: flex; align-items: center; gap: 14px; }
+    .ti { width: 44px; height: 44px; border-radius: 14px; background: rgba(255,255,255,.08); display: grid; place-items: center; color: var(--ink-2); flex: none; }
+    .thing b { font-weight: 500; font-size: 17px; }
+    .thing small { display: block; font-size: 13.5px; color: var(--muted); margin-top: 1px; }
+    .came { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); margin-bottom: 10px; }
+    .new { outline: 1.5px dashed rgba(var(--lamp-rgb),.75); outline-offset: 5px; }
+    .dots { display: flex; gap: 6px; }
+    .dots i { width: 22px; height: 4px; border-radius: 2px; background: rgba(255,255,255,.16); }
+    .dots i.on { background: var(--ink); }
+    .note { position: absolute; border: 1px dashed rgba(255,255,255,.24); border-radius: 18px; padding: 14px 16px; background: rgba(8,9,12,.86);
+            font-size: 13.5px; line-height: 1.5; color: var(--ink-2); }
+    .note b { color: var(--ink); font-weight: 500; }
+    .note .cap { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .note p { margin: 6px 0 0; }
+  </style>
+</helmet>
+<!-- WHATEVER IS PICKED -- New devices, when it is still where a thing lands, opens on what was just added. -->
+<div class="screen">
+  <div class="abs" style="inset: 0; background: linear-gradient(rgb(16,18,28), rgb(26,26,40));"></div>
+  <span class="round glass" style="left: 40px; top: 112px; width: 44px; height: 44px;"><svg class="i" width="22" height="22" viewBox="0 0 24 24" stroke-width="1.8" style=""><path d="M15 5l-7 7 7 7"/></svg></span>
+  <div class="abs" style="left: 98px; top: 104px;"><div style="font-size: 56px; letter-spacing: -.025em; line-height: 57px;">New devices</div>
+    <div style="margin-top: 10px; font-size: 18px; color: var(--ink-2);">Check each name and say which room it lives in. It moves there on its own.</div></div>
+  <div class="abs new" style="left: 40px; top: 230px; width: 760px;">
+    <div class="came" style="font-size: 12.5px; letter-spacing: .12em; text-transform: uppercase;">Just added &middot; came with Kitchen lights</div>
+    <div class="thing" style="margin-bottom: 10px; padding: 12px 14px;"><div class="top"><span class="ti" style="width: 38px; height: 38px;"><svg class="i" width="18" height="18" viewBox="0 0 24 24" stroke-width="1.8" style=""><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10.5c.7.7 1 1.5 1 2.5h6c0-1 .3-1.8 1-2.5A6 6 0 0 0 12 3z"/></svg></span>
+      <div class="field" style="flex: 1; height: 42px; font-size: 15.5px;">Hue lamp 1</div><span class="cb s" style="color: var(--muted);">Which room?</span></div></div><div class="thing" style="margin-bottom: 10px; padding: 12px 14px;"><div class="top"><span class="ti" style="width: 38px; height: 38px;"><svg class="i" width="18" height="18" viewBox="0 0 24 24" stroke-width="1.8" style=""><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10.5c.7.7 1 1.5 1 2.5h6c0-1 .3-1.8 1-2.5A6 6 0 0 0 12 3z"/></svg></span>
+      <div class="field" style="flex: 1; height: 42px; font-size: 15.5px;">Hue lamp 2</div><span class="cb s" style="color: var(--muted);">Which room?</span></div></div><div class="thing" style="margin-bottom: 10px; padding: 12px 14px;"><div class="top"><span class="ti" style="width: 38px; height: 38px;"><svg class="i" width="18" height="18" viewBox="0 0 24 24" stroke-width="1.8" style=""><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-4 10.5c.7.7 1 1.5 1 2.5h6c0-1 .3-1.8 1-2.5A6 6 0 0 0 12 3z"/></svg></span>
+      <div class="field" style="flex: 1; height: 42px; font-size: 15.5px;">Hue lamp 3</div><span class="cb s" style="color: var(--muted);">Which room?</span></div></div>
+    <div style="font-size: 13.5px; color: var(--muted); padding-left: 4px;">and 4 more from Kitchen lights</div>
+  </div>
+  <div class="abs" style="left: 40px; top: 560px; width: 760px; opacity: .55;">
+    <div class="came" style="font-size: 12.5px; letter-spacing: .12em; text-transform: uppercase;">Waiting from before</div>
+    <div class="thing" style="padding: 12px 14px;"><div class="top"><span class="ti" style="width: 38px; height: 38px;"></span><div class="field" style="flex: 1; height: 42px; font-size: 15.5px;">Smart plug</div><span class="cb s" style="color: var(--muted);">Which room?</span></div></div>
+  </div>
+  <div class="note" style="left: 860px; top: 230px; width: 540px;">
+    <span class="cap">Not in question</span>
+    <p>New devices stays for what arrives unwatched, and for an add too big for one screen -- an account that brings a dozen lamps. When it is opened from the end of an add, what that add brought is first, under what brought it, and the rows already waiting are below and quieter.</p>
+    <p>And it waits for them. Its devices arrive over the next minute is a promise; the group says Arriving&hellip; until they do, rather than showing a list without them.</p>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

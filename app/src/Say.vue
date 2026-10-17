@@ -180,7 +180,7 @@ async function doIt() {
            it; everywhere else the box keeps its sparkle (panel.css). -->
       <span class="say-orb" aria-hidden="true"><i class="orb-cool"></i><i class="orb-warm"></i></span>
       <Icon name="sparkle" :size="18" />
-      <input ref="field" v-model="text" :disabled="busy" @focus="focused = true" @blur="focused = false" :placeholder="room ? 'Tell this room…' : 'Tell the house…'" aria-label="Tell the house" enterkeyhint="send" autocomplete="off" autocapitalize="off" spellcheck="false" />
+      <input ref="field" v-model="text" :disabled="busy" @focus="focused = true" @blur="focused = false" :placeholder="room ? 'Tell this room…' : 'Tell the house…'" aria-label="Tell the house" enterkeyhint="send" data-keys="command" :data-room="room ?? undefined" autocomplete="off" autocapitalize="off" spellcheck="false" />
       <button class="button small" type="submit" :class="{ busy }" :disabled="!text.trim()">{{ busy ? 'Doing…' : 'Go' }}</button>
     </form>
     <!-- the ring, once per sentence. A sibling of the box and not a child of it:

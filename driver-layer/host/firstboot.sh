@@ -9,11 +9,19 @@
 #   1. On a Pi 5: bring the bootloader current and make sure PCIe is on, so an NVMe on any base works.
 #   2. On a Pi 5 that booted from SD with an empty NVMe attached: copy itself to the NVMe and reboot
 #      from it (HUB_AUTO_NVME=0 in /etc/home-hub.conf turns this off).
-#   3. Run install.sh, which does everything a hand install would.
+#   3. On a unit with its own screen, in a house that already has a hub: become that hub's screen and
+#      stop there -- no second house (design/companion/, C). HUB_ROLE=hub in /etc/home-hub.conf skips
+#      the look. HUB_ROLE=screen makes any display the screen (an HDMI monitor too), looks for ten
+#      minutes instead of twenty seconds, and never installs a hub: finding none, it tries again at
+#      the next start.
+#   4. Run install.sh, which does everything a hand install would.
+#   5. On a unit with its own screen: startup/install.sh, the splash and the panel full screen.
 set -euo pipefail
-MARK=/var/lib/home-hub/firstboot.done
+MARK=${HUB_FIRSTBOOT_MARK:-/var/lib/home-hub/firstboot.done}
+CONF=${HUB_CONF:-/etc/home-hub.conf}
 DIR="${HOME_HUB_DIR:-/opt/home-hub}"
-[ -f /etc/home-hub.conf ] && . /etc/home-hub.conf
+# shellcheck disable=SC1090
+[ -f "$CONF" ] && . "$CONF"
 [ -f "$MARK" ] && exit 0
 mkdir -p "$(dirname "$MARK")"
 log() { printf '[home-hub] %s\n' "$*"; }
@@ -44,11 +52,61 @@ if is_pi5; then
   fi
 fi
 
+# The wall, on its DSI connector. A monitor on HDMI is somebody's desk, not the product's face --
+# unless this unit was told it is a screen.
+screen_here() {
+  { [ "${HUB_ROLE:-}" = screen ] || grep -qsx connected "${HUB_DRM:-/sys/class/drm}"/card*-DSI-*/status; } && [ -x "$DIR/startup/install.sh" ]
+}
+set_conf() { { grep -v "^$1=" "$CONF" 2>/dev/null || true; echo "$1=\"$2\""; } > "$CONF.new" && mv "$CONF.new" "$CONF"; }
+
+if screen_here && [ "${HUB_ROLE:-}" != hub ]; then
+  command -v avahi-browse >/dev/null 2>&1 || apt-get install -y --no-install-recommends avahi-utils >/dev/null 2>&1 || true
+  log "a screen of its own: is there already a hub on this Wi-Fi?"
+  [ "${HUB_ROLE:-}" = screen ] && export FIND_FOR=600
+  if HUB=$("$DIR/startup/find-hub.sh"); then
+    log "found the house's hub at $HUB: this unit is its screen, not a second house"
+    # Its own name on the network, never the hub's. avahi makes a second one screen-2.
+    hostnamectl set-hostname screen 2>/dev/null || echo screen > /etc/hostname
+    sed -i "s/127\.0\.1\.1.*/127.0.1.1\tscreen/" /etc/hosts 2>/dev/null || true
+    # A unit that was a hub before stops being one: nothing may bring its house back (the watchdog does,
+    # every few minutes), and nothing may announce it as a hub, or another screen could join it.
+    if systemctl list-unit-files 'home-hub-*' >/dev/null 2>&1; then
+      # shellcheck disable=SC2046
+      systemctl disable --now $(systemctl list-unit-files 'home-hub-*.timer' 'home-hub-*.path' --no-legend 2>/dev/null | awk '{print $1}') >/dev/null 2>&1 || true
+    fi
+    if [ -f "$DIR/driver-layer/docker-compose.yml" ] && command -v docker >/dev/null 2>&1; then
+      (cd "$DIR/driver-layer" && docker compose down >/dev/null 2>&1) || true
+    fi
+    if [ -f "${HUB_AVAHI:-/etc/avahi/services}/home-hub.service" ]; then
+      rm -f "${HUB_AVAHI:-/etc/avahi/services}/home-hub.service"
+      systemctl reload-or-restart avahi-daemon >/dev/null 2>&1 || true
+    fi
+    set_conf HUB_ROLE screen
+    set_conf ELYIR_READY_URL "$HUB/alive"
+    set_conf ELYIR_PANEL_URL "$HUB/?screen=1"
+    HOME_HUB_DIR="$DIR" "$DIR/startup/install.sh" || log "could not set up the screen"
+    touch "$MARK"
+    log "done: the house's hub asks this screen in"
+    exit 0
+  fi
+  if [ "${HUB_ROLE:-}" = screen ]; then
+    # Told it is a screen: becoming a second hub beside the house's real one is the one thing it must not do.
+    log "no hub found on this Wi-Fi. This unit is set to be a screen, so it will look again at the next start"
+    exit 1
+  fi
+  log "no hub found: this unit will run the house"
+fi
+
 log "installing the hub"
 if [ -x "$DIR/install.sh" ]; then
   HOME_HUB_DIR="$DIR" "$DIR/install.sh"
 else
   curl -fsSL https://raw.githubusercontent.com/topeysoft/home-hub/main/install.sh | HOME_HUB_DIR="$DIR" bash
+fi
+# A unit with a screen of its own starts the way every Elyir product does.
+if screen_here; then
+  log "a screen of its own: Elyir's startup"
+  HOME_HUB_DIR="$DIR" "$DIR/startup/install.sh" || log "could not set up the screen's startup; the hub is unaffected"
 fi
 touch "$MARK"
 log "done"

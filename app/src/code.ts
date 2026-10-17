@@ -40,7 +40,7 @@ export async function request(url: string, init: RequestInit = {}): Promise<Resp
     const code = saved()
     const headers = withToken(new Headers(init.headers ?? {}))
     if (code) headers.set('X-Hub-Code', code)
-    return fetch(apiUrl(url), { ...init, headers }).catch(() => { throw Object.assign(new Error(NOT_ANSWERING), { plain: true }) })   // the hub's name at home when it answers, else this page's own (door.ts)
+    return fetch(apiUrl(url), { ...init, headers }).catch(() => { throw Object.assign(new Error(NOT_ANSWERING), { plain: true, unreached: true }) })   // the hub's name at home when it answers, else this page's own (door.ts)
   }
   let r = await go(), wrong = false
   for (let tries = 0; r.status === 401 && tries < 4; tries++) {

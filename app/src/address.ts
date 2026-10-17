@@ -14,7 +14,7 @@ export const ZONE = 'elyir.app'
 /** The setup step appears only when the service is offering and the house has no address yet. */
 export const offersOutside = (a: AddressState | null | undefined) => !!a && a.offer.open && !a.house
 
-/** What goes where the address becomes a house, from what somebody typed: Temi's House -> temis-house. */
+/** What goes where the address becomes a house, from what somebody typed: Jordan's House -> jordans-house. */
 export function cleanName(typed: string) {
   return typed.trim().toLowerCase().replace(/['’]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 30).replace(/-+$/, '')
 }

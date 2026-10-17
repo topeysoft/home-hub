@@ -53,7 +53,7 @@ def onboard(url):
     client_id = f"{url}/"
     password = secrets.token_urlsafe(16)
     code, r = req(f"{url}/api/onboarding/users", {
-        "client_id": client_id, "name": "Temi", "username": "temi",
+        "client_id": client_id, "name": "Jordan", "username": "jordan",
         "password": password, "language": "en"})
     if code != 200: sys.exit(f"user step failed: {code} {r}")
     auth_code = r["auth_code"]
@@ -71,8 +71,8 @@ def onboard(url):
     # long-lived token via websocket
     import websocket_min as ws  # noqa  (tiny helper below)
     llt = ws.long_lived_token(url, access, "home-hub brain")
-    env_write({"HA_URL": url, "HA_USER": "temi", "HA_PASSWORD": password, "HA_TOKEN": llt, "HA_REFRESH_TOKEN": refresh})
-    print(f"owner 'temi' created; credentials and token saved to {ENV}")
+    env_write({"HA_URL": url, "HA_USER": "jordan", "HA_PASSWORD": password, "HA_TOKEN": llt, "HA_REFRESH_TOKEN": refresh})
+    print(f"owner 'jordan' created; credentials and token saved to {ENV}")
     return llt
 
 

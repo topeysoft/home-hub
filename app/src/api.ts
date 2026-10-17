@@ -476,6 +476,18 @@ export type AskState = 'waiting' | 'allowed' | 'refused' | 'expired' | 'failed'
 export type PrinterAsk = { id: string; name: string; state: AskState; title: string; detail: string; until: number | null }
 export type Printers = { printers: Printer[]; found: FoundPrinter[]; asking: Record<string, AskState>; asks?: PrinterAsk[] }
 export async function getPrinters(): Promise<Printers> { const r = await request('/printers'); if (!r.ok) await fail(r); return r.json() }
+
+/* THE HOUSE'S OWN POWER (brain/hub/power.py, design/energy/): the sun on the roof, the house, the battery and the
+   grid, in kW. `battery` is into the battery and `grid` is from the grid, so a negative is the battery giving and
+   the house sending power away. `spare`, `out_since` and `back` are the brain's judgments, and the band's lines. */
+export type Power = {
+  solar: number | null; house: number | null; battery: number | null; grid: number | null
+  charge: number | null; reserve: number | null; grid_up: boolean | null; left: number | null; has_battery: boolean
+  spare: boolean; out_since: number | null; back: { at: number; lasted: number } | null
+}
+export type PowerDay = { made: number | null; used: number | null; peak: number | null; since: number; curve: { at: number; solar: number | null; house: number | null }[] }
+export async function getPower(): Promise<Power | null> { const r = await request('/power'); if (!r.ok) await fail(r); return r.json() }
+export async function getPowerDay(): Promise<PowerDay | null> { const r = await request('/power/day'); if (!r.ok) await fail(r); return r.json() }
 export const lookForPrinters = () => post<Printers>('/printers/look')
 export const askPrinter = (id: string) => post<Printers>(`/printers/${encodeURIComponent(id)}/add`)
 export async function stopAsking(id: string): Promise<Printers> {
@@ -532,6 +544,7 @@ export async function getDeviceKinds(id: string): Promise<Kinds> {
 }
 /** A fan with a light in it: which part is the tile. 'fan' is the default and clears the record (docs/units.md). */
 export const setDeviceLead = (id: string, lead: 'fan' | 'light') => post<{ ok: boolean; leads: string }>(`/devices/${encodeURIComponent(id)}/lead`, { lead })
+export const setDeviceHome = (id: string, show: 'never' | 'on') => post<{ ok: boolean; show: string }>(`/devices/${encodeURIComponent(id)}/home`, { show })
 /** Say what a thing is. The driver's own word puts it back. */
 export const setDeviceKind = (id: string, kind: string | null) => post<{ ok: boolean; kind: string }>(`/devices/${encodeURIComponent(id)}/kind`, { kind })
 /* Every service the house has signed into: how it stands, and how much of the house came in with it.
@@ -542,8 +555,12 @@ export async function getAccounts(): Promise<Account[]> {
 }
 export async function removeAccount(id: string) { const r = await request(`/accounts/${encodeURIComponent(id)}`, { method: 'DELETE' }); if (!r.ok) await fail(r) }
 
-/* The end of a thing's life in the house: off whatever brought it, and out of the model with it. */
-export async function forgetDevice(id: string) { const r = await request(`/devices/${encodeURIComponent(id)}`, { method: 'DELETE' }); if (!r.ok) await fail(r) }
+/* The end of a thing's life in the house: off whatever brought it, and out of the model with it.
+   `kept_by` names an account that would not let it go: it has left the house and is still on that account. */
+export async function forgetDevice(id: string): Promise<{ kept_by?: string }> {
+  const r = await request(`/devices/${encodeURIComponent(id)}`, { method: 'DELETE' }); if (!r.ok) await fail(r)
+  return r.json().catch(() => ({}))
+}
 export const setFan = (id: string, minutes: number) => post<{ ok: boolean; fan_until: number | null }>(`/devices/${encodeURIComponent(id)}/fan`, { minutes })
 /** On now, off again in `minutes`; 0 cancels the timer and leaves it on. A plug, a lamp, a heater. */
 export const runFor = (id: string, minutes: number) => post<{ ok: boolean; off_at: number | null }>(`/devices/${encodeURIComponent(id)}/timer`, { minutes })
@@ -784,7 +801,7 @@ let live: WebSocket | null = null
 export function kickStream() { live?.close() }
 
 /** Live updates from the brain. Reconnects with backoff; reports link state. */
-export function connect(on: { device: (d: Device) => void; home: (h: Home) => void; ambient: (a: Ambient) => void; status: (s: Status) => void; intent: (i: Intent) => void; drafts: (d: Routine[]) => void; presence: (p: Presence) => void; phones: () => void; share: () => void; signals: (t: TryBrief | null) => void; roofline?: (r: Roofline) => void; printers?: (p: Printers) => void; link: (up: boolean) => void }) {
+export function connect(on: { device: (d: Device) => void; home: (h: Home) => void; ambient: (a: Ambient) => void; status: (s: Status) => void; intent: (i: Intent) => void; drafts: (d: Routine[]) => void; presence: (p: Presence) => void; phones: () => void; share: () => void; signals: (t: TryBrief | null) => void; roofline?: (r: Roofline) => void; printers?: (p: Printers) => void; power?: (p: Power | null) => void; link: (up: boolean) => void }) {
   let delay = 1000, ws: WebSocket | null = null, closed = false
   const open = () => {
     ws = live = new WebSocket(wsUrl('/stream'), wsProtocols())   // the token rides as a subprotocol, never in the URL (door.ts)
@@ -803,6 +820,7 @@ export function connect(on: { device: (d: Device) => void; home: (h: Home) => vo
       else if (m.type === 'signals') on.signals(m.trying ?? null)   // a try moved on, or a row was switched; the brief is for the band
       else if (m.type === 'roofline') on.roofline?.(m.roofline)   // its evenings, its look, the way round, a box gone dark
       else if (m.type === 'printers') on.printers?.(m.printers)   // the whole printer status: what each is doing, found, asking
+      else if (m.type === 'power') on.power?.(m.power)   // the sun, the battery and the grid: at once when the band changes, else every ten seconds
     }
     ws.onclose = () => { on.link(false); if (!closed) setTimeout(open, delay = Math.min(delay * 2, 15000)) }
     ws.onerror = () => ws?.close()
@@ -824,6 +842,13 @@ export type Spoken = { url: string; text: string }
 type Answered = { spoken?: string; speak?: Spoken }
 export const say = (text: string, room?: string | null, spoken = false) =>
   post<Said>('/say', { text, room: room ?? undefined, ...(spoken ? { spoken: true } : {}) })
+/* What the sentence being typed could finish as, in the house's words: the wall keyboard's row above its letters
+   (design/keyboard/, C). Read-only; every sentence is one the grammar runs. */
+export async function complete(text: string, room?: string | null): Promise<string[]> {
+  const q = new URLSearchParams({ text, ...(room ? { room } : {}) })
+  const r = await request(`/say/complete?${q}`); if (!r.ok) return []
+  return (await r.json()).sentences ?? []
+}
 /* Names and rooms for things under New devices: proposed by the house, then the assistant; nothing moves until Use is tapped. */
 export type Suggestion = { id: string; name: string; room: string; why: string; source: 'house' | 'assistant' }
 export async function getSuggestions(): Promise<{ items: Suggestion[]; assistant: boolean }> {
@@ -836,7 +861,7 @@ export const qrUrl = (text: string) => `/qr.svg?text=${encodeURIComponent(text)}
 
 /* The phones that belong to the house, once it has a code. A phone gets in by typing the code, or by asking and being
    allowed from a screen that is already in; the hub keeps a hash and the phone a cookie, so removing one is instant. */
-export type Phone = { id: string; name: string; kind: 'wall' | 'phone' | null; joined: number; expires: number | null; remote: boolean; last_seen: number | null; how: 'code' | 'wall' | 'setup'; me: boolean; moved?: boolean; in_app?: boolean }
+export type Phone = { id: string; name: string; kind: 'wall' | 'phone' | 'screen' | null; joined: number; expires: number | null; remote: boolean; last_seen: number | null; how: 'code' | 'wall' | 'setup'; me: boolean; moved?: boolean; in_app?: boolean; room?: string | null }
 export type Ask = { id: string; name: string; kind: string | null; asked: number }
 export type Me = { locked: boolean; paired: boolean; home: string; phone: Phone | null; away?: boolean; lan?: string | null; address?: string | null }
 export async function getMe(): Promise<Me> { const r = await fetch(apiUrl('/phones/me'), { headers: withToken(new Headers()) }); if (!r.ok) await fail(r); return r.json() }
@@ -848,9 +873,10 @@ export async function claimMove(code: string): Promise<{ token: string; phone: P
 }
 export const letOut = (id: string, remote: boolean) => post<Phone>(`/phones/${encodeURIComponent(id)}/remote`, { remote })
 export async function getPhones(): Promise<{ phones: Phone[]; asks: Ask[] }> { const r = await request('/phones'); if (!r.ok) await fail(r); return r.json() }
-export const askToJoin = (name: string) => post<Ask>('/phones/ask', { name })
+export const askToJoin = (name: string, kind?: 'screen') => post<Ask>('/phones/ask', { name, kind })
 export async function claimJoin(id: string): Promise<{ state: 'waiting' | 'allowed' | 'gone'; phone?: Phone }> { const r = await fetch(`/phones/claim/${encodeURIComponent(id)}`); if (!r.ok) await fail(r); return r.json() }
-export const joinWithCode = (code: string, name: string) => post<{ ok: boolean; phone: Phone }>('/phones/code', { code, name })
+export const joinWithCode = (code: string, name: string, kind?: 'screen') => post<{ ok: boolean; phone: Phone }>('/phones/code', { code, name, kind })
+export const placeScreen = (room: string) => post<{ room: string; phone: Phone | null }>('/phones/me/room', { room })
 export const allowPhone = (id: string, span: 'day' | 'weekend' | 'keep') => post<Phone>(`/phones/asks/${encodeURIComponent(id)}/allow`, { span })
 export async function denyPhone(id: string) { const r = await request(`/phones/asks/${encodeURIComponent(id)}`, { method: 'DELETE' }); if (!r.ok) await fail(r) }
 export async function removePhone(id: string) { const r = await request(`/phones/${encodeURIComponent(id)}`, { method: 'DELETE' }); if (!r.ok) await fail(r) }

@@ -12,11 +12,15 @@
  */
 import { onMounted, onUnmounted, ref, watch } from 'vue'
 import { store } from './store'
+import { shade } from './shade'
 import { clamp, lerp, mix, palette, rgb, starAlpha, wxOf, type RGB, type Wx } from './sky'
 
 /* quiet: the interface is up, so the sun and moon stay softer and the moon keeps to the open sky above the stage,
    clear of the rail and the headline; at rest and during setup they have the whole screen */
-const props = defineProps<{ quiet?: boolean }>()
+/* held: the wall is awake, with its frosted cards over this canvas. A moving sky makes every pane re-blur each
+   frame, more than the wall's GPU can do (measured on a Pi 5: the GPU 98% busy and 15 frames a second; held, 38%
+   and 60). So it is drawn once and again only when the hour or the weather changes, and moves at rest. */
+const props = defineProps<{ quiet?: boolean; held?: boolean }>()
 
 const canvas = ref<HTMLCanvasElement | null>(null)
 
@@ -59,7 +63,8 @@ function draw(t: number, dt: number) {
   if (!ctx || !W || !H) return
   const { elevation: el, azimuth: az, phase, hour, month, condition } = store.sky
   const wx = wxOf(condition)
-  const [top, mid, hor] = palette(el, wx)
+  const held = shade.value === 'light'
+  const [top, mid, hor] = palette(el, wx, shade.value)
   const horizon = H * .8, m = Math.min(W, H)
 
   /* sky */
@@ -72,7 +77,7 @@ function draw(t: number, dt: number) {
   if (starA > 0) {
     ctx.fillStyle = '#fff'
     for (const s of stars) {
-      ctx.globalAlpha = starA * (.55 + .45 * Math.sin(t * s.w + s.p))
+      ctx.globalAlpha = starA * (held ? .5 : 1) * (.55 + .45 * Math.sin(t * s.w + s.p))
       ctx.fillRect(s.x * W, s.y * H, s.r, s.r)
     }
     ctx.globalAlpha = 1
@@ -121,7 +126,7 @@ function draw(t: number, dt: number) {
     ctx.beginPath(); ctx.arc(mx, my, r, 0, 6.29); ctx.clip()                 // the shadow only ever falls on the moon itself
     ctx.fillStyle = rgb([230, 234, 244]); ctx.fillRect(mx - r, my - r, r * 2, r * 2)
     const k = phase < .5 ? phase / .5 : (1 - phase) / .5           // 0 new → 1 full
-    ctx.fillStyle = rgb(mix(top, [0, 0, 0], .3)); ctx.beginPath(); ctx.arc(mx + (phase < .5 ? -1 : 1) * r * 2 * k, my, r * 1.02, 0, 6.29); ctx.fill()
+    ctx.fillStyle = rgb(mix(top, [0, 0, 0], held ? .06 : .3)); ctx.beginPath(); ctx.arc(mx + (phase < .5 ? -1 : 1) * r * 2 * k, my, r * 1.02, 0, 6.29); ctx.fill()
     ctx.restore()
   }
 
@@ -132,7 +137,7 @@ function draw(t: number, dt: number) {
   while (clouds.length > want) clouds.pop()
   if (clouds.length) {
     const day = clamp((el + 4) / 14)
-    const body = mix(mix(mid, [255, 255, 255], .22 * day + .04), [30, 32, 40], wx.rain * .5)
+    const body = mix(mix(mid, [255, 255, 255], held ? .5 : .22 * day + .04), held ? [150, 156, 170] : [30, 32, 40], wx.rain * .5)
     for (const c of clouds) {
       c.x += c.v * wx.wind * dt; if (c.x > 1.3) c.x -= 1.6
       const cx = c.x * W, cy = c.y * H, S = c.s * m
@@ -165,7 +170,7 @@ function draw(t: number, dt: number) {
 
   /* rain and snow */
   if (wx.rain) {
-    ctx.strokeStyle = rgb([200, 214, 232], .28); ctx.lineWidth = 1; ctx.beginPath()
+    ctx.strokeStyle = held ? rgb([110, 130, 160], .3) : rgb([200, 214, 232], .28); ctx.lineWidth = 1; ctx.beginPath()
     const n = Math.round(drops.length * wx.rain), slant = .18 * wx.wind
     for (let i = 0; i < n; i++) {
       const d = drops[i]; d.y += d.v * dt * (1 + wx.rain * .6); d.x += slant * dt * .4
@@ -194,7 +199,7 @@ function draw(t: number, dt: number) {
   }
 
   /* land */
-  land(el, sx, month, wx, hor)
+  land(el, sx, month, wx, hor, held)
 }
 
 /* ---------- the ground ---------- */
@@ -226,15 +231,21 @@ function groundColor(month: number, wx: Wx): RGB {
   c = mix(c, [56, 62, 62], wx.rain * .35)                      // wet ground is dark
   return c
 }
-function land(el: number, sx: number, month: number, wx: Wx, hor: RGB) {
+function land(el: number, sx: number, month: number, wx: Wx, hor: RGB, held: boolean) {
   if (!ctx) return
   const horizon = H * .8
   const day = clamp((el + 6) / 18)                             // how much daylight reaches the ground
-  const night: RGB = [9, 10, 13]
+  let night: RGB = [9, 10, 13]
   const warm = clamp(1 - el / 22) * clamp((el + 4) / 6)        // low sun gilds the land
   let base = groundColor(month, wx)
   base = mix(base, [255, 168, 88], warm * .22)
   base = mix(night, base, day)
+  /* Held up into the light, the land is the daytime meadow washed into the sky's own horizon, more
+     of it the darker the hour, so a night hill is a pale periwinkle rise and not a dark silhouette. */
+  if (held) {
+    base = mix(mix(groundColor(month, wx), hor, lerp(.78, .5, day)), [255, 255, 255], .12)
+    night = base
+  }
   const flat = 1 - wx.clouds * .8 - wx.fog * .9                // cloud flattens the light; no lit side, no shadow side
   const hazeCol = mix(hor, [150, 156, 164], wx.fog * .6)
   /* three ridges, far to near: the far ones fade into the sky, the near one is the truest color */
@@ -260,7 +271,9 @@ function land(el: number, sx: number, month: number, wx: Wx, hor: RGB) {
     }
     if (n === 1) {
       /* the treeline sits on the middle ridge, a shade darker than the ground it grows from */
-      const tc = mix(mix(base.map(v => v * .55) as RGB, hazeCol, fade * .6), [24, 40, 30], day * .3 * (1 - wx.snow))
+      const tc = held
+        ? mix(base.map(v => v * .84) as RGB, hazeCol, fade * .5)   // on a held sky a tree is a darker shade of the hill, not a silhouette
+        : mix(mix(base.map(v => v * .55) as RGB, hazeCol, fade * .6), [24, 40, 30], day * .3 * (1 - wx.snow))
       ctx!.fillStyle = rgb(mix(tc, [226, 232, 240], wx.snow * .3))
       for (const t of trees) {
         const x = t.x * W, y = ridgeY(x, horizon + off * H, amp, k, ph) + H * .003, h = t.h * H * Math.min(1, W / H / 1.3), w = h * t.w
@@ -283,9 +296,13 @@ function frame(ts: number) {
 }
 onMounted(() => {
   resize()
-  ro = new ResizeObserver(resize); ro.observe(canvas.value!)
+  ro = new ResizeObserver(() => { resize(); if (props.held) draw(performance.now() / 1000, 0) }); ro.observe(canvas.value!)
   if (reduced.matches) { draw(0, 0); watch(() => store.sky, () => draw(0, 0), { deep: true }); return }
-  raf = requestAnimationFrame(frame)
+  watch(() => props.held, (held) => {
+    if (held) { cancelAnimationFrame(raf); raf = 0; draw(performance.now() / 1000, 0) }
+    else if (!raf) raf = requestAnimationFrame(frame)
+  }, { immediate: true })
+  watch(() => store.sky, () => { if (props.held) draw(performance.now() / 1000, 0) }, { deep: true })
 })
 onUnmounted(() => { cancelAnimationFrame(raf); ro?.disconnect() })
 </script>

@@ -59,3 +59,4 @@ relay/terraform/relay.plan
 # A house's own device scans (tools/discover.py): its addresses and names stay on the machine that made them
 docs/inventory*.md
 docs/discovery.json
+relay/.env

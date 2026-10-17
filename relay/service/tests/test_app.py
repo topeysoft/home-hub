@@ -7,7 +7,7 @@ from pathlib import Path
 from fastapi.testclient import TestClient
 
 from app import CLAIMS_PER_DAY, WRONG_INVITES_PER_DAY, make, nearby_origins, seed_own_names
-from registry import DAY, Registry
+from registry import DAY, TICKET_REACH, Payers, Registry, sign_ticket
 
 
 class Service(unittest.TestCase):
@@ -23,21 +23,21 @@ class Service(unittest.TestCase):
         self.r.db.close(); self.dir.cleanup()
 
     def test_a_hub_looks_claims_and_checks_on_its_name(self):
-        self.assertTrue(self.c.get("/names/temi").json()["free"])
-        made = self.c.post("/houses", json={"name": "temi"})
+        self.assertTrue(self.c.get("/names/jordan").json()["free"])
+        made = self.c.post("/houses", json={"name": "jordan"})
         self.assertEqual(made.status_code, 201)
         secret = made.json()["secret"]
         self.assertFalse(made.json()["carried"])
-        self.assertEqual(self.c.get("/names/temi", params={"also": ["Holts"]}).json()["suggestions"][:2], ["temis-house", "temi-house"])
-        seen = self.c.get("/houses/temi", headers={"Authorization": f"Bearer {secret}"})
-        self.assertEqual(seen.status_code, 200); self.assertEqual(seen.json()["address"], "temi.elyir.app")
+        self.assertEqual(self.c.get("/names/jordan", params={"also": ["Cedar"]}).json()["suggestions"][:2], ["jordans-house", "jordan-house"])
+        seen = self.c.get("/houses/jordan", headers={"Authorization": f"Bearer {secret}"})
+        self.assertEqual(seen.status_code, 200); self.assertEqual(seen.json()["address"], "jordan.elyir.app")
         self.assertNotIn("secret", seen.json())
 
     def test_a_claim_says_how_to_reach_the_relay_so_nobody_types_it(self):
         c = TestClient(make(self.r, now=lambda: self.t, relay={"addr": "relay.elyir.app", "token": "shared"}))
-        made = c.post("/houses", json={"name": "temi"}).json()
+        made = c.post("/houses", json={"name": "jordan"}).json()
         self.assertEqual(made["relay"], {"addr": "relay.elyir.app", "token": "shared"})
-        seen = c.get("/houses/temi", headers={"Authorization": f"Bearer {made['secret']}"}).json()
+        seen = c.get("/houses/jordan", headers={"Authorization": f"Bearer {made['secret']}"}).json()
         self.assertEqual(seen["relay"]["addr"], "relay.elyir.app")
 
     def test_the_offer_is_closed_until_somebody_opens_it(self):
@@ -46,8 +46,8 @@ class Service(unittest.TestCase):
         self.assertTrue(opened.get("/offer").json()["open"])
 
     def test_a_taken_name_answers_with_somewhere_else_to_go(self):
-        self.c.post("/houses", json={"name": "temi"})
-        again = self.c.post("/houses", json={"name": "temi"})
+        self.c.post("/houses", json={"name": "jordan"})
+        again = self.c.post("/houses", json={"name": "jordan"})
         self.assertEqual(again.status_code, 409)
         self.assertEqual(again.json()["detail"]["why"], "taken")
         self.assertEqual(len(again.json()["detail"]["suggestions"]), 3)
@@ -57,13 +57,13 @@ class Service(unittest.TestCase):
         self.assertEqual(bad.status_code, 422); self.assertIn("dash", bad.json()["detail"])
 
     def test_only_the_house_that_claimed_a_name_can_see_or_release_it(self):
-        secret = self.c.post("/houses", json={"name": "temi"}).json()["secret"]
+        secret = self.c.post("/houses", json={"name": "jordan"}).json()["secret"]
         for wrong in ({}, {"Authorization": "Bearer guess"}, {"Authorization": "Bearer "}):
-            self.assertEqual(self.c.get("/houses/temi", headers=wrong).status_code, 404, wrong)
-        self.assertEqual(self.c.get("/houses/temi", headers={"Authorization": f"Bearer {secret}"}).status_code, 200)
-        self.assertEqual(self.c.delete("/houses/temi", headers={"Authorization": "Bearer guess"}).status_code, 404)
-        self.assertEqual(self.c.delete("/houses/temi", headers={"Authorization": f"Bearer {secret}"}).status_code, 204)
-        self.assertTrue(self.c.get("/names/temi").json()["free"])
+            self.assertEqual(self.c.get("/houses/jordan", headers=wrong).status_code, 404, wrong)
+        self.assertEqual(self.c.get("/houses/jordan", headers={"Authorization": f"Bearer {secret}"}).status_code, 200)
+        self.assertEqual(self.c.delete("/houses/jordan", headers={"Authorization": "Bearer guess"}).status_code, 404)
+        self.assertEqual(self.c.delete("/houses/jordan", headers={"Authorization": f"Bearer {secret}"}).status_code, 204)
+        self.assertTrue(self.c.get("/names/jordan").json()["free"])
 
     def test_one_address_cannot_claim_names_all_day(self):
         for i in range(CLAIMS_PER_DAY): self.assertEqual(self.c.post("/houses", json={"name": f"house{i}"}).status_code, 201)
@@ -72,10 +72,10 @@ class Service(unittest.TestCase):
         self.assertEqual(self.c.post("/houses", json={"name": "one-more"}).status_code, 201)
 
     def test_frps_is_told_yes_or_no(self):
-        secret = self.c.post("/houses", json={"name": "temi"}).json()["secret"]
-        ask = {"version": "0.1.0", "op": "Login", "content": {"user": "temi", "metas": {"house": "temi", "secret": secret}}}
+        secret = self.c.post("/houses", json={"name": "jordan"}).json()["secret"]
+        ask = {"version": "0.1.0", "op": "Login", "content": {"user": "jordan", "metas": {"house": "jordan", "secret": secret}}}
         self.assertEqual(self.local.post("/frps", json=ask).json(), {"reject": True, "reject_reason": "this house is not carried by this relay"})
-        self.r.grant("temi", self.t + 30 * DAY)
+        self.r.grant("jordan", self.t + 30 * DAY)
         self.assertEqual(self.local.post("/frps", json=ask).json(), {"reject": False, "unchange": True})
 
     def test_the_relays_door_is_not_open_to_anyone_else(self):
@@ -111,6 +111,46 @@ class Service(unittest.TestCase):
         self.t += DAY + 1
         self.assertEqual(self.c.post("/houses/desk/invite", json={"code": code}, headers=key).status_code, 404)   # its day was up: let go
         self.assertIsNone(self.r.invite_problem(code))
+
+    def test_a_paid_plan_elsewhere_carries_a_house_that_brings_its_ticket(self):
+        """Bench Cloud signs "carry obi1 until then"; the printer brings it with its own secret."""
+        keyfile = Path(self.dir.name) / "payers"
+        keyfile.write_text("# payer key\nbench s3cret\n")
+        c = TestClient(make(self.r, now=lambda: self.t, payers=Payers(keyfile)))
+        secret = c.post("/houses", json={"name": "obi1"}).json()["secret"]
+        me = {"Authorization": f"Bearer {secret}"}
+        good = lambda **k: sign_ticket(**{"key": "s3cret", "payer": "bench", "name": "obi1", "until": self.t + 30 * DAY,
+                                          "expires": self.t + 3600, "house": "h_1", **k})
+        carried = c.post("/houses/obi1/carry", json={"ticket": good()}, headers=me)
+        self.assertEqual(carried.status_code, 200)
+        self.assertTrue(carried.json()["carried"]); self.assertEqual(carried.json()["entitled_until"], self.t + 30 * DAY)
+        self.assertIsNone(self.c.get("/houses/obi1", headers=me).json()["held_until"])
+        # a ticket only works with the name's own secret, for that name, signed by a known payer, in time
+        self.assertEqual(c.post("/houses/obi1/carry", json={"ticket": good()}).status_code, 404)
+        for bad, why in ((good(name="r2d2"), "another name"), (good(key="guess"), "signed"), (good(expires=self.t - 1), "ran out"),
+                         (good(payer="someone"), "signed"), ("nonsense", "isn't a ticket")):
+            r = c.post("/houses/obi1/carry", json={"ticket": bad}, headers=me)
+            self.assertEqual(r.status_code, 403); self.assertIn(why, r.json()["detail"]["message"])
+        # never further than TICKET_REACH, and never shortening a longer grant
+        c.post("/houses/obi1/carry", json={"ticket": good(until=self.t + 400 * DAY)}, headers=me)
+        self.assertEqual(self.r.status("obi1")["entitled_until"], self.t + TICKET_REACH)
+        self.r.grant("obi1", self.t + 365 * DAY, "by hand")
+        c.post("/houses/obi1/carry", json={"ticket": good()}, headers=me)
+        self.assertEqual(self.r.status("obi1")["entitled_until"], self.t + 365 * DAY)
+        # a plan that stops simply runs out: carried no longer, but the name stays the house's
+        self.t += 366 * DAY
+        self.assertFalse(self.r.status("obi1")["carried"]); self.assertTrue(self.r.taken("obi1"))
+
+    def test_a_payer_is_added_on_the_volume_without_a_restart(self):
+        keyfile = Path(self.dir.name) / "payers"
+        payers = Payers(keyfile, env="other=k")
+        self.assertEqual(payers.keys(), {"other": "k"})
+        keyfile.write_text("bench s3cret\n")
+        self.assertEqual(payers.keys(), {"other": "k", "bench": "s3cret"})
+
+    def test_cloud_is_kept_for_the_service(self):
+        for name in ("cloud", "cloud-staging", "printers-staging"):
+            self.assertEqual(self.c.post("/houses", json={"name": name}).status_code, 422, name)
 
 
 if __name__ == "__main__":
@@ -152,7 +192,6 @@ class Nearby(unittest.TestCase):
         self.r.seen("obi1", "[2001:db8::5]:443")
         self.assertEqual(self.r.nearby("203.0.113.9"), [])
         self.assertEqual(self.r.nearby("2001:db8::5"), ["obi1"])
-
 
 class OwnNames(unittest.TestCase):
     """The names the box carries for itself: each app is carried from the secret cloud-init hands it, and may

@@ -37,7 +37,7 @@ import { TemperatureSensorDevice } from "@matter/main/devices/temperature-sensor
 import { ThermostatDevice } from "@matter/main/devices/thermostat";
 import { WindowCoveringDevice } from "@matter/main/devices/window-covering";
 import { AggregatorEndpoint } from "@matter/main/endpoints/aggregator";
-import { act, configured, report, shared, watch, type BridgeStatus, type SharedDevice } from "./hub.js";
+import { act, configured, report, shared, watch, type BridgeStatus, type SharedDevice, teller } from "./hub.js";
 
 // HUB_ rather than MATTER_, and it is not a style choice: matter.js reads the whole MATTER_* namespace
 // as its own configuration, so a MATTER_STORAGE of ours lands as its `storage` and the node then fails
@@ -470,7 +470,8 @@ async function openWindow(asked: number, seconds: number) {
     }
 }
 
-const tell = () => report(status());
+const say = teller(report);
+const tell = () => say(status());
 
 /**
  * Fetch the list and make the bridge match it. Everything comes through here -- the first run, a
@@ -510,7 +511,7 @@ async function reconcile() {
     } catch (e) {
         const message = (e as Error).message;
         console.warn(`could not match the bridge to the house: ${message}`);
-        await report({ ...status(), error: message });
+        await say({ ...status(), error: message });
     } finally {
         working = false;
         if (again) { again = false; void reconcile(); }

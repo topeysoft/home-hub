@@ -612,7 +612,7 @@ async function level(l: typeof LEVELS[number]) {
 
 .sd-act { margin: 12px 0 6px; }
 /* one of the second strip's two questions: what it is, what it was told, and the way to ask again */
-.sd-line { display: flex; align-items: center; gap: 12px; margin-top: 8px; padding: 6px 6px 6px 16px; border-radius: var(--r-sm); border: 1px solid var(--edge); background: rgba(255, 255, 255, 0.03); }
+.sd-line { display: flex; align-items: center; gap: 12px; margin-top: 8px; padding: 6px 6px 6px 16px; border-radius: var(--r-sm); border: 1px solid var(--edge); background: rgba(var(--wash-rgb), 0.03); }
 .sd-line-k { width: 70px; font-size: 15px; }
 .sd-line-v { flex: 1; font-size: 14px; color: var(--muted); }
 .rig-auto-dot {
@@ -660,7 +660,7 @@ async function level(l: typeof LEVELS[number]) {
   padding: 0 22px;
   border-radius: 24px;
   border: 1px solid var(--edge);
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(var(--wash-rgb), 0.05);
   color: var(--ink);
   text-align: left;
   font: inherit;
@@ -668,7 +668,7 @@ async function level(l: typeof LEVELS[number]) {
   transition: background 0.18s var(--ease);
 }
 .rig-card:hover {
-  background: rgba(255, 255, 255, 0.09);
+  background: rgba(var(--wash-rgb), 0.09);
 }
 .rig-card.on {
   border-color: rgba(var(--lamp-rgb), 0.55);
@@ -684,7 +684,7 @@ async function level(l: typeof LEVELS[number]) {
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(var(--wash-rgb), 0.08);
   color: var(--lamp);
   flex: 0 0 auto;
 }
@@ -797,7 +797,7 @@ async function level(l: typeof LEVELS[number]) {
   max-width: 230px;
   height: 22px;
   border-radius: 4px;
-  background: repeating-linear-gradient(90deg, rgba(255, 255, 255, 0.13) 0 4px, transparent 4px 7px);
+  background: repeating-linear-gradient(90deg, rgba(var(--wash-rgb), 0.13) 0 4px, transparent 4px 7px);
 }
 /* In the sheet the card is a column, so the picture must not be told to grow: it is 22px of strip
    across the whole card, not a panel. */
@@ -833,13 +833,13 @@ async function level(l: typeof LEVELS[number]) {
   border-radius: 4px;
 }
 .sd-channels .r {
-  background: repeating-linear-gradient(90deg, #e2483e 0 4px, transparent 4px 7px), rgba(255, 255, 255, 0.03);
+  background: repeating-linear-gradient(90deg, #e2483e 0 4px, transparent 4px 7px), rgba(var(--wash-rgb), 0.03);
 }
 .sd-channels .g {
-  background: repeating-linear-gradient(90deg, #4ac46a 0 4px, transparent 4px 7px), rgba(255, 255, 255, 0.03);
+  background: repeating-linear-gradient(90deg, #4ac46a 0 4px, transparent 4px 7px), rgba(var(--wash-rgb), 0.03);
 }
 .sd-channels .b {
-  background: repeating-linear-gradient(90deg, #4b86e8 0 4px, transparent 4px 7px), rgba(255, 255, 255, 0.03);
+  background: repeating-linear-gradient(90deg, #4b86e8 0 4px, transparent 4px 7px), rgba(var(--wash-rgb), 0.03);
 }
 
 .sd-card {
@@ -851,7 +851,7 @@ async function level(l: typeof LEVELS[number]) {
   padding: 20px 22px;
   border-radius: 24px;
   border: 1px solid var(--edge);
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(var(--wash-rgb), 0.05);
   color: var(--ink);
   text-align: left;
   font: inherit;
@@ -875,7 +875,7 @@ async function level(l: typeof LEVELS[number]) {
   cursor: pointer;
 }
 .sd-tap:hover {
-  background: rgba(255, 255, 255, 0.09);
+  background: rgba(var(--wash-rgb), 0.09);
 }
 .sd-tap:disabled {
   opacity: 0.45;

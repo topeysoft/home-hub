@@ -101,7 +101,7 @@ describe('a siren, guessed from its name', () => {
      is the failure docs/kinds.md added the second tap for, still live in any house whose siren nobody
      had re-typed by hand. What is asserted here is that the GUESS is enough to arm it. */
   const siren = (kind?: string): Device =>
-    ({ id: 'switch.siren', name: 'Holts Summit Alarm Siren', room_id: 'hall', capability: 'switch', state: 'off', attrs: {}, kind, guess: 'alarm' })
+    ({ id: 'switch.siren', name: 'Cedar Falls Alarm Siren', room_id: 'hall', capability: 'switch', state: 'off', attrs: {}, kind, guess: 'alarm' })
 
   it('is shown as an alarm without anybody having said so', () => {
     expect(cap(siren())).toBe('alarm')

@@ -7,11 +7,12 @@ import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
 import type { Device } from './api'
 import { whatsOn, cap, deviceById, done, doneLine, isActive, justDone, perform, shortName, roomOf, store } from './store'
 import Icon from './Icon.vue'
+import { isAlways } from './onhome'
 
 /* Everything that is on across the house, each a chip that turns it off with one tap. The house line says "something is
    on in 3 rooms"; this is the something, and the tap. A door only locks here, never unlocks; a robot has no "off". */
 const MAX = 8
-const on = computed(whatsOn)
+const on = computed(() => whatsOn().filter(d => !isAlways(d.id)))   // what this phone keeps is in Always here (onhome.ts)
 
 /* A tapped chip does NOT leave the list. It keeps its place, says what it did and when -- "Off · just now" -- and
    tapping it again puts the thing back, which is where the undo lives; a chip going out from under the finger that
@@ -30,7 +31,7 @@ function sync(now: Device[]) {
   }
   /* quieted somewhere else, or before Home was come back to: still this person's own doing, so still here */
   const held = new Set([...kept, ...rest.values()].map(d => d.id))
-  rows.value = [...kept, ...rest.values(), ...justDone().filter(d => !held.has(d.id))]
+  rows.value = [...kept, ...rest.values(), ...justDone().filter(d => !held.has(d.id) && !isAlways(d.id))]
 }
 watch(on, sync, { immediate: true })
 watch(() => Object.keys(done).length, () => sync(on.value))

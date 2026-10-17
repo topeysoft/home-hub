@@ -402,6 +402,7 @@ class Changes:
         if new == "forgotten": return f"removed {name} from the house."
         if detail.get("shown_as"): return f"set {name} to show as {KIND_AS.get(new) or plainly(new).lower()}."
         if detail.get("leads"): return f"set {name} to show first on its card."
+        if "off_home" in detail: return f"took {name} off Home." if detail["off_home"] else f"put {name} back on Home."
         if detail.get("paired"): return f"paired {new} over {detail['paired']}."
         return self.fallback(r, detail)
 

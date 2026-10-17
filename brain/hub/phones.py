@@ -74,7 +74,7 @@ class Phones:
 
     @staticmethod
     def _public(p: dict, me: dict | None = None) -> dict:
-        return {k: p.get(k) for k in ("id", "name", "kind", "joined", "expires", "remote", "last_seen", "how")} | {
+        return {k: p.get(k) for k in ("id", "name", "kind", "joined", "expires", "remote", "last_seen", "how", "room")} | {
             "me": bool(me and me["id"] == p["id"]), "moved": bool((p.get("moved_to") or {}).get("at")),
             # in the Houses app: the move since 3 October. A phone that moved only to the house's own name is offered it once more.
             "in_app": bool((p.get("moved_to") or {}).get("app"))}
@@ -220,6 +220,21 @@ class Phones:
         self.hub.log.add("phone", p["id"], None, "removed", source="user", detail={"name": p["name"]})
         self._changed()
         return True
+
+    # ---- where a screen hangs (design/companion/, C) ----
+    GENERIC = ("A screen", "Wall screen")
+
+    def place(self, phone_id: str, room: str, room_name: str) -> dict:
+        """The room this screen is in. A screen still called by what it is takes the room's name too."""
+        p = self.get(phone_id)
+        if not p: raise KeyError("No such phone.")
+        p["room"] = room
+        if p.get("name") in self.GENERIC or (p.get("kind") == "screen" and p.get("name", "").endswith(" screen")):
+            p["name"] = self._clean(f"{room_name} screen")
+        self._save()
+        self.hub.log.add("phone", p["id"], None, "placed", source="user", detail={"name": p["name"], "room": room_name})
+        self._changed()
+        return self._public(p)
 
     def set_remote(self, phone_id: str, remote: bool) -> dict:
         p = self.get(phone_id)

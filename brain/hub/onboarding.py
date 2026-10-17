@@ -44,6 +44,12 @@ If a page asks for your Home Assistant address, it is **{ha_url}**."""
 # were asked for by a person or read from a file, the second were opened by HA because an account needs one again.
 SIGN_IN = {"reauth", "reconfigure"}
 NOT_DISCOVERY = {None, "user", "import"} | SIGN_IN
+# Zigbee and Z-Wave sticks are the hub's own: radios.sh finds them and the driver layer runs them through
+# Zigbee2MQTT and Z-Wave JS UI. HA still offers each stick it sees to its own integrations, an offer that can
+# only end in "already part of the house", so it is never shown -- and the Zigbee ones are answered "ignore"
+# so HA stops making them. Z-Wave is only hidden: the hub's own Z-Wave entry is a zwave_js one.
+RADIOS = {"zha", "zwave_js", "homeassistant_sky_connect", "homeassistant_connect_zbt2", "homeassistant_hardware", "homeassistant_yellow"}
+IGNORE_RADIOS = RADIOS - {"zwave_js"}
 
 # integration kinds that are devices or hubs for devices, not helpers, not virtual aliases, not internals
 KINDS = {"hub", "device", "service"}
@@ -113,7 +119,12 @@ class Onboarding:
 
     async def discovered(self) -> list[dict]:
         """Things HA noticed on the network that are not set up yet."""
-        return await self._flows(lambda source: source not in NOT_DISCOVERY)
+        rows = await self._flows(lambda source: source not in NOT_DISCOVERY)
+        for r in rows:
+            if r["handler"] not in IGNORE_RADIOS: continue
+            try: await self.hub.ha.send("config_entries/ignore_flow", flow_id=r["flow_id"], title=r["title"])
+            except Exception as e: log.warning("could not tell HA to stop offering %s: %s", r["title"], e)
+        return [r for r in rows if r["handler"] not in RADIOS]
 
     async def sign_ins(self) -> list[dict]:
         """Accounts waiting for a person: the sign-in ran out, or the maker changed what it needs.

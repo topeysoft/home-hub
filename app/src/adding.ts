@@ -13,7 +13,9 @@
  * The radios did not go anywhere: Zigbee, Z-Wave and Matter are still exactly what they were, and
  * the hub still picks between them. They stopped being the question on the way in.
  */
+import type { Device } from './api'
 import { reloadHome, store } from './store'
+import { unitsOf, type UnitRow } from './units'
 import { names } from './printers'
 
 /** The doors of beat one. Four is the whole catalogue; a fifth means the taxonomy is wrong. */
@@ -56,8 +58,15 @@ export type Caught = {
   device_id?: string
   name?: string          // what the house is calling it, which beat four offers to change
   what?: string          // what it turned out to be, in objects: "a light that dims, and a motion sensor"
-  many?: boolean         // one account, several things: the room is asked under New devices instead
+  many?: boolean         // several things at once
+  unit?: boolean         // the one thing has more than one part, so a name given is the unit's
+  ids?: string[]         // what arrived, when the house could see it: asked here if it fits, first in New devices if not
+  from?: string          // what brought them, as it was named: "My ecobee"
 }
+
+/** How many things beat four asks the rooms of on one screen (design/arrived/, C). Past this the room is
+    asked under New devices, which opens on what was just added. */
+export const FITS = 4
 
 /** What beat three says while it works. `how_long` is honest or absent; never a guess dressed as one. */
 export type Working = { text: string; how_long?: string }
@@ -84,15 +93,41 @@ export type Act = { label: string; primary?: boolean; run: () => void }
  */
 export const everyDevice = () => new Set(store.rooms.flatMap(r => r.devices.map(d => d.id)))
 
-export async function whatArrived(before: Set<string>, tries = 6): Promise<Caught> {
+export async function whatArrived(before: Set<string>, tries = 6, from?: string): Promise<Caught> {
+  /* A pairing brings its parts over a few seconds -- a thermostat, then its humidity, then the sensor in
+     the bedroom -- so the answer is taken once two looks in a row agree, not at the first newcomer. */
+  let seen = -1
   for (let i = 0; i < tries; i++) {
     await new Promise(r => setTimeout(r, 2000))
     await reloadHome()
-    const now = store.rooms.flatMap(r => r.devices).filter(d => !before.has(d.id))
-    if (now.length === 1) return { device_id: now[0].id, name: now[0].name, what: kindOf(now[0].capability) }
-    if (now.length > 1) return { many: true, what: `${now.length} new things` }
+    const now = arrivals(before)
+    if (now.length && now.length === seen) return caughtFrom(now, from)
+    seen = now.length
   }
-  return { many: true }
+  const now = arrivals(before)
+  return now.length ? caughtFrom(now, from) : { many: true, from }
+}
+const arrivals = (before: Set<string>) => store.rooms.flatMap(r => r.devices).filter(d => !before.has(d.id))
+
+/** What arrived, as beat four needs it: counted in things, not entities, so a thermostat with its humidity
+    is one thing to place and name, and a thermostat with a sensor in the bedroom is two. */
+export function caughtFrom(arrived: Device[], from?: string): Caught {
+  const units = unitsOf(arrived)
+  if (!units.length) return { many: true, from }
+  if (units.length === 1) {
+    const u = units[0]
+    return { device_id: u.lead.id, name: u.name, what: unitKind(u), unit: u.parts.length > 1, from }
+  }
+  return { many: true, ids: arrived.map(d => d.id), from, what: units.map(unitKind).join(', and ') }
+}
+
+/** What one thing is, said as a person would: a sensor that reads the temperature and sees people is a
+    temperature sensor, not the motion sensor its lead part happens to be. */
+export function unitKind(u: UnitRow): string {
+  const base = (d: Device) => d.capability.split('.')[0]
+  if (u.parts.some(d => base(d) === 'climate')) return kindOf('climate')
+  if (u.parts.every(d => base(d) === 'sensor' || base(d) === 'motion') && u.parts.some(d => d.capability === 'sensor.temperature')) return 'a temperature sensor'
+  return kindOf(base(u.lead))
 }
 
 /* What a thing is, in the words a person would use for it. Never a protocol, never a count of

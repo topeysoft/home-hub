@@ -1,0 +1,294 @@
+{
+  "name": "Starting up",
+  "areas": [
+    "Wall screens"
+  ],
+  "artboards": [
+    {
+      "file": "HiLightG.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "G \u2014 Hi comes into focus in a warm light",
+      "page": "page-3"
+    },
+    {
+      "file": "HiWrittenH.dc.html",
+      "x": 1560,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "H \u2014 Hi written by hand, in one stroke",
+      "page": "page-3"
+    },
+    {
+      "file": "HiLampI.dc.html",
+      "x": 3120,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "I \u2014 Hi, and the dot of the i is the house's lamp",
+      "page": "page-3"
+    },
+    {
+      "file": "ElyirWrittenJ.dc.html",
+      "x": 4680,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "J \u2014 elyir written by hand; the dot of the i becomes the house's lamp",
+      "page": "page-1"
+    },
+    {
+      "file": "ElyirLightK.dc.html",
+      "x": 6240,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "K \u2014 elyir written by hand; the light stays on its own, for every product",
+      "page": "page-3"
+    },
+    {
+      "file": "HiFrames.dc.html",
+      "x": 0,
+      "y": 1500,
+      "w": 2560,
+      "h": 1300,
+      "title": "Hi, five ways, side by side",
+      "page": "page-1"
+    },
+    {
+      "file": "Today.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "Today \u2014 the image as specified, with nothing chosen",
+      "page": "page-2"
+    },
+    {
+      "file": "OneMarkA.dc.html",
+      "x": 1560,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "A \u2014 one mark, from the first frame to the panel",
+      "page": "page-2"
+    },
+    {
+      "file": "HaloFirstB.dc.html",
+      "x": 3120,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "B \u2014 the halo first, the glass dark until the house is ready",
+      "page": "page-2"
+    },
+    {
+      "file": "SaysC.dc.html",
+      "x": 4680,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "C \u2014 it says what it is doing, in three stages",
+      "page": "page-2"
+    },
+    {
+      "file": "DrawnOnceD.dc.html",
+      "x": 1560,
+      "y": 1600,
+      "w": 1440,
+      "h": 900,
+      "title": "D \u2014 the outline draws itself once, then the lamp breathes",
+      "page": "page-2"
+    },
+    {
+      "file": "DrawnAsItGoesE.dc.html",
+      "x": 3120,
+      "y": 1600,
+      "w": 1440,
+      "h": 900,
+      "title": "E \u2014 the outline drawn as it goes, the light on when the house is ready",
+      "page": "page-2"
+    },
+    {
+      "file": "PenTracesF.dc.html",
+      "x": 4680,
+      "y": 1600,
+      "w": 1440,
+      "h": 900,
+      "title": "F \u2014 drawn once, then a pen keeps tracing it",
+      "page": "page-2"
+    },
+    {
+      "file": "Frames.dc.html",
+      "x": 0,
+      "y": 3200,
+      "w": 2820,
+      "h": 1720,
+      "title": "The same eight moments, seven ways",
+      "page": "page-2"
+    }
+  ],
+  "annotations": [
+    {
+      "id": "decided",
+      "page": "page-1",
+      "x": -620,
+      "y": -760,
+      "w": 500,
+      "text": "DECIDED 7 OCTOBER 2026\n\nJ: elyir written by hand, the dot of the i a lamp that lights, breathes and glides into the house, and breathes there, slowly, one breath every 6.4 seconds, until the house is ready. And the same startup for every Elyir product with a screen: the name and the lamp are shared frame for frame, and each product brings where the dot lands.\n\nBuilt in startup/: sequence.mjs is the one source, render.mjs draws the boot splash from it, and startup/startup.test.mjs fails when this board, the sequence and the splash stop agreeing. The rejected boards are on the next page, with their cases."
+    },
+    {
+      "id": "hi",
+      "page": "page-1",
+      "x": -620,
+      "y": 0,
+      "w": 500,
+      "text": "ROUND THREE, 7 OCTOBER: HI, THEN THE HOUSE\n\nThe note on the first two rounds: none of it feels premium, something is missing, and it should be simple. Hi at the beginning, on the screen for three to four seconds, then whatever comes next. Nothing complicated, but alive.\n\nSo every board here does the same three things and nothing else. Hi comes up with the first frame the screen draws, at 0:04, and holds for three and a half seconds. Then the house fades in, with its lamp breathing, and waits there until the house is ready. Then the panel. No words besides Hi, no stages, no progress.\n\nWhat differs is only how Hi is drawn, because that is where premium is won or lost: G is type coming into focus, H is handwriting, I is type whose dot is the lamp.\n\nHi lives entirely inside Plymouth, before the browser exists, and Plymouth plays it as frames rendered from these boards, so the blur, the glow and the stroke are exactly what is drawn here. Plymouth holds until Hi has had its three and a half seconds, so a fast start never cuts it short. A wall that is only a wall goes from Hi almost straight to the panel.\n\nRECOMMENDATION: I. The dot of the i lights up like a lamp, breathes, and then becomes the lamp in the house, so the greeting and the house are one light and the hand-off is the one moment of motion. It is the simplest of the three to make, and it is ours. H is the most charming but reads close to a famous computer's hello. G is beautiful and could belong to anybody.\n\nThe slow-start sentence and a screen-only restart work as in the earlier rounds.\n\nAND \"SOMETHING ELSE, I'LL DESCRIBE IT\" IS A REAL OPTION."
+    },
+    {
+      "id": "hi-light",
+      "page": "page-3",
+      "x": 0,
+      "y": 960,
+      "w": 1440,
+      "text": "G, IN A WARM LIGHT\n\nHi comes into focus out of a soft blur over a second, the letters drawing together a little as they sharpen, with a warm light behind them that drifts slowly the whole time it holds. It blurs away again into the house. The case: it is the purest version of the ask, one word and one light, and the drifting light is what keeps it from being a still image. Its limit: it could be any company's greeting."
+    },
+    {
+      "id": "hi-written",
+      "page": "page-3",
+      "x": 1560,
+      "y": 960,
+      "w": 1440,
+      "text": "H, WRITTEN BY HAND\n\nHi is written in one continuous stroke in about two seconds, the way a person writes it, and the i is dotted last. It holds, then fades into the house. The case: handwriting is the warmest thing a screen can do, and being written makes it alive without any other motion. Its limit: a handwritten greeting on a new screen is close to a very famous one, and the stroke drawn here is a sketch; a real one wants a lettering pass."
+    },
+    {
+      "id": "hi-lamp",
+      "page": "page-3",
+      "x": 3120,
+      "y": 960,
+      "w": 1440,
+      "text": "I, THE DOT IS THE LAMP\n\nH and the stem of the i fade up. A moment later the dot of the i appears and lights, warm, the same light as the lamp in the house, and breathes while Hi holds. Then the letters fade, the dot glides down to its place inside the house, and the house fades in around it. It keeps breathing there until the house is ready. The case: one light carries the whole startup, from the greeting to the panel, and nothing else moves. Its limit: the glide has to be smooth on the wall's own hardware, which is the one thing these boards cannot show."
+    },
+    {
+      "id": "elyir-written",
+      "page": "page-1",
+      "x": 4680,
+      "y": 960,
+      "w": 1440,
+      "text": "J, ELYIR WRITTEN BY HAND, THE DOT INTO THE HOUSE\n\nAsked 7 October, after round three: H's direction with the name instead of Hi, and then with I's dot. elyir is written in one continuous stroke in about two and a half seconds, the l looping up and the y's tail looping back into the i and the r. The i is not dotted with ink: its dot appears unlit a moment later, lights warm, and breathes while the name holds, four and a half seconds in all. Then the name fades, the dot glides down into the house, the house fades in around it, and the dot is its lamp, breathing until the house is ready.\n\nThe case: H's warmth and I's single light, with our own word, so it is a signature rather than a greeting. Its limit: the stroke here is a sketch made in code, and a signature is where a slightly wrong curve shows. If this is the one, the lettering wants a proper pass by hand before it becomes the startup frames."
+    },
+    {
+      "id": "elyir-light",
+      "page": "page-3",
+      "x": 6240,
+      "y": 960,
+      "w": 1440,
+      "text": "K, THE SAME, WITH THE LIGHT ON ITS OWN\n\nAlso asked 7 October: the same startup for every Elyir product that has a screen, the hub, the Bench and whatever comes next. J ends in the house, which is the hub's and not the Bench's. K is J up to the moment the name fades; then the dot settles in the middle of the screen, a little larger, and breathes there alone until the product is ready, when it swells and opens into it.\n\nTHE SPLIT THAT MAKES ONE STARTUP WORK FOR EVERYTHING. The name being written and the dot lighting is the Elyir part, identical on every product, frame for frame. Where the dot goes next is the product's part. Two ways to have it: every product does K, and the startup is literally one file shared by all of them; or each product lands the dot in its own mark, J for the hub, and a Bench mark the Bench would need drawn. K is the simpler promise and the easier one to keep as products are added. J is warmer on the hub but asks every future product for a mark with a light in it."
+    },
+    {
+      "id": "why",
+      "x": -620,
+      "y": 0,
+      "w": 500,
+      "text": "STARTING UP, ON THE WALL WE MAKE\n\nAsked 5 October: the wall unit should start the way a premium thermostat does, calm, one picture, no machine showing through. This is possible because the wall unit is ours from the plug to the panel: no Android, a CM5 running Pi OS Lite, cage and Chromium (docs/wall-hardware.md in home-hub-hardware). Every frame between power and the panel is either a choice we make or a default we accept, and Today is what the defaults look like.\n\nWHAT ALL THREE SHARE, AND IS NOT CONTESTED. The firmware splash off (disable_splash=1). The kernel quiet, with no logos. The backlight held off until the first frame we drew, which the carrier's power tree already allows, since it enables the backlight late. Chromium told to paint black, so it never flashes white. And the page that waits for the house shipped on the unit itself, because on a hub unit nothing is serving the panel yet. That page is the spec's \"one sentence a dead screen shows\", and it must not grow into a second client.\n\nWHAT IS CONTESTED is what the glass shows for the minute the house takes to start after a power cut. A shows one picture and says nothing. B shows nothing and lets the halo speak. C says, in a few words, how far along it is.\n\nA SLOW START, FOR ALL THREE. After three minutes with the house still not answering, one sentence comes up under whatever is showing, the one the tablet kiosk already says: if it stays like this for a few minutes, unplug it for ten seconds and plug it back in. The words get settled against docs/wording.md.\n\nA SCREEN RESTARTING IS NOT THE HOUSE STARTING. When only the browser restarts, or a wall that is only a wall comes back, the house kept running the whole time. It takes seconds, and it must not look like a power cut. In C it says so in words.\n\nRECOMMENDATION: A, with C's line kept for when it is slow. A long wait happens only after a power cut, and a held picture is the calm moment being asked for. Words earn their place only when something is taking too long. B is the most striking, but a minute of dark glass looks like a dead screen to anyone who does not know what the halo means, and the halo is the weakest thing on the wall in daylight.\n\nAND \"SOMETHING ELSE, I'LL DESCRIBE IT\" IS A REAL OPTION.",
+      "page": "page-2"
+    },
+    {
+      "id": "today",
+      "x": 0,
+      "y": 960,
+      "w": 1440,
+      "text": "TODAY, DRAWN FROM THE SPEC, NOT FROM A UNIT\n\nNo wall unit has started yet, so this is what stock Pi OS Lite, cage and Chromium in kiosk mode would show on the 10-inch display, with nothing chosen. The backlight comes on with nothing drawn, and a lit LCD is gray, not black. Then four raspberries and the boot log, a login prompt for a moment as the console hands over, and a white frame as Chromium opens. Then Chromium's own page saying localhost refused to connect: on a hub unit the brain serves the panel from the same box, and the brain is a minute behind the browser. The panel arrives with a cut. Unless the image retries, the error page is where it waits. The log lines are illustrative.",
+      "page": "page-2"
+    },
+    {
+      "id": "one-mark",
+      "x": 1560,
+      "y": 960,
+      "w": 1440,
+      "text": "A, ONE MARK\n\nThe firmware and kernel show nothing, because the backlight is off. At 0:04 Plymouth draws the house, the same mark as the app's icon, with the lamp inside unlit. At 0:14 the browser's first page draws the same mark at the same pixels, so the handoff that makes most custom startups look cheap cannot be seen. Then the lamp comes on and breathes slowly while the house starts. When the house is ready, the mark grows a little and fades as the panel comes up behind it.\n\nThe case: it is the calmest of the three, one picture from the first frame to the last, and it costs a Plymouth theme and one static page. Its limit: for a minute it says nothing, and a breathing lamp is all that tells somebody after a power cut that it is not stuck. That is why the slow-start sentence matters most here.",
+      "page": "page-2"
+    },
+    {
+      "id": "halo-first",
+      "x": 3120,
+      "y": 960,
+      "w": 1440,
+      "text": "B, THE HALO FIRST\n\nThe coprocessor that drives the halo is running a third of a second after power, long before Linux. So the halo is the first sign of life. It comes up warm and breathes, and the glass stays completely dark, backlight off, until it can show the house. Then the halo brightens once, the panel fades up, and the halo goes out.\n\nThe case: the glass never shows anything but the house, no logo and no words, and nothing about it could be done by a tablet. Its limits: a minute of dark glass reads as broken to anyone who does not know what the halo means, the halo is weakest in daylight, and a slow start still has to light the glass for its sentence.\n\nThe halo is drawn as the light it throws across the edge of the glass, since the board is the glass. Its color is an emitter's, saturated amber with the other channels near zero, not the panel's pastel lamp, per docs/puck-light.md.",
+      "page": "page-2"
+    },
+    {
+      "id": "says",
+      "x": 4680,
+      "y": 960,
+      "w": 1440,
+      "text": "C, IT SAYS WHAT IT IS DOING\n\nThe same mark, smaller, and under it one line in plain words with three dots: Starting up, Starting the house, Almost ready. Each stage is something the waiting page can see for itself on the same box, with nothing new to build: nothing answering yet; the engine answering but not the brain; the brain answering but the house not loaded. The lamp in the mark brightens a step with each one.\n\nThe case: after a power cut, the person in front of the wall can see it moving, and the same line can say the one thing A cannot: \"Restarting this screen. The house kept running.\" Its limits: words on a startup screen get read as progress, so a stage that lasts forty seconds will look stuck. Three stages are the most it can honestly show.",
+      "page": "page-2"
+    },
+    {
+      "id": "drawn",
+      "x": -620,
+      "y": 1600,
+      "w": 500,
+      "text": "ROUND TWO, 5 OCTOBER: THE OUTLINE BEING DRAWN\n\nAsked after the first three: what about the outline of the house being drawn? It can mean three different things, and each gives the minute of waiting a different job, so all three are drawn.\n\nD draws the house once, as the screen first lights, and then behaves like A. E makes the drawing the progress: each stage the wall can see for itself adds a stroke, and the light inside comes on only when the house is ready. F draws it once and then keeps a warm point running along the line until the house is ready.\n\nHOW THE DRAWING SURVIVES THE HANDOFF. The strokes are drawn while Plymouth is showing, and Plymouth plays them as a sequence of frames rendered from this same drawing, so the two are the same pixels. Plymouth is held until its part of the drawing is finished, so the browser always takes over from a finished stroke, never from the middle of one.\n\nRECOMMENDATION: E. It is the only one where the picture means what is happening: a house being built while the house starts, and the light coming on when it is ready. That is honest progress with no words, and it ends on the moment the person was waiting for. Its risk is C's: one stage can last forty seconds, so the pen rests at the end of the line and glows to show it has not stopped. On a wall that is only a wall the whole drawing takes about twenty seconds. D is the cheapest, an entrance for A. F's endless trace is the most like a loading spinner, which is the computer showing through.\n\nThe slow-start sentence and the screen-only restart work as in the first round.",
+      "page": "page-2"
+    },
+    {
+      "id": "drawn-once",
+      "x": 1560,
+      "y": 2560,
+      "w": 1440,
+      "text": "D, DRAWN ONCE\n\nAt 0:04 the roof is drawn from the left eave over the ridge, then the walls from the top of the left one, down, across and up, in about three seconds. The lamp appears unlit as the last stroke closes. From there it is A: the browser takes over invisibly, the lamp comes on and breathes, and the mark grows and fades into the panel. The case: the moment the screen first lights becomes a small event rather than a logo appearing, at no cost to A's calm. Its limit is A's: for the rest of the minute nothing new happens.",
+      "page": "page-2"
+    },
+    {
+      "id": "drawn-as-it-goes",
+      "x": 3120,
+      "y": 2560,
+      "w": 1440,
+      "text": "E, DRAWN AS IT GOES\n\nThe roof is drawn while the screen starts. Then each stage the wall can see for itself on the same box adds a stroke: the browser up draws the left wall, the engine answering draws the floor, the brain answering draws the right wall. While it waits between strokes, the pen rests at the end of the line and glows. When the house is ready, the light inside comes on, and the house grows and fades into the panel. The case: the drawing is the progress, it needs no words, and the last thing to happen is the light coming on. Its limits: the strokes come unevenly, a quick one, a forty-second wait, then another, and a person cannot tell how much is left. A screen that is only restarting goes from roof to light in seconds.",
+      "page": "page-2"
+    },
+    {
+      "id": "pen-traces",
+      "x": 4680,
+      "y": 2560,
+      "w": 1440,
+      "text": "F, A PEN THAT KEEPS TRACING\n\nDrawn once like D. Then, from the moment the browser takes over, a warm point of light runs along the line, roof then walls, a lap every three seconds, until the house is ready. Then the point stops, the lamp lights, and the panel comes up. The case: there is always visible movement, so it can never look stuck, and the trace is our shape rather than a spinner's. Its limit: an endless loop says waiting, not progress, and a minute of it is the most like a computer of the three.",
+      "page": "page-2"
+    },
+    {
+      "id": "frames",
+      "x": 2940,
+      "y": 3200,
+      "w": 600,
+      "text": "HOW TO READ THESE\n\nThe four wall boards play the startup on a loop: the first sixteen seconds at 1.5x, the long wait at 8x, and the panel arriving at real speed. The yellow chip is the real time since power and is not part of the screen. Click it to pause.\n\nThe sheet holds the same seven moments still. The times are a hub unit's, estimated until a unit is on the bench. A wall that is only a wall reaches Ready in about twenty seconds.\n\nThe panel in the last columns is a screenshot of the mock house, taken 5 October.",
+      "page": "page-2"
+    }
+  ],
+  "launch": {
+    "view": "canvas"
+  },
+  "pages": [
+    {
+      "id": "page-1",
+      "name": "Hi, then the house"
+    },
+    {
+      "id": "page-3",
+      "name": "Hi, then the house: not chosen"
+    },
+    {
+      "id": "page-2",
+      "name": "Earlier rounds"
+    }
+  ],
+  "decided": {
+    "on": "2026-10-07",
+    "chose": "J",
+    "board": "ElyirWrittenJ.dc.html"
+  }
+}

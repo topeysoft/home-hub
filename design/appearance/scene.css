@@ -1,0 +1,128 @@
+/*
+ * The evening home screen every board in this collection draws, once, so the boards differ only in
+ * what they argue about: how light the page is. The layout is the one design/backdrop/ drew from
+ * the mock house at 1440x900; every color comes from a variable the board sets, so a direction is
+ * a set of values and not a second copy of the screen.
+ */
+* { box-sizing: border-box; }
+html, body { margin: 0; background: #0c0d10; }
+body { font-family: "Plus Jakarta Sans", "Instrument Sans", -apple-system, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+
+.board { width: 1440px; height: 964px; position: relative; overflow: hidden; background: #0c0d10; }
+.screen { position: absolute; left: 0; top: 0; width: 1440px; height: 900px; overflow: hidden; isolation: isolate; color: var(--page-ink); }
+.bg { position: absolute; inset: 0; z-index: 0; transition: opacity .6s; }
+.fg { position: absolute; inset: 0; z-index: 3; }
+
+/* a sky, from Scene.sky(): gradient, stars, sun or glow, the hills, and a veil */
+.sky-l { position: absolute; inset: 0; }
+.sky-hills { position: absolute; left: 0; top: 0; width: 1440px; height: 900px; }
+
+.chrome { background: var(--chrome); border: 1px solid var(--chrome-edge); color: var(--chrome-ink);
+          backdrop-filter: blur(22px) saturate(1.4); -webkit-backdrop-filter: blur(22px) saturate(1.4); box-shadow: var(--chrome-shadow); }
+.card { position: absolute; border-radius: 26px; overflow: hidden; background: var(--card); border: 1px solid var(--card-edge);
+        box-shadow: var(--card-shadow); color: var(--card-ink); backdrop-filter: var(--card-blur); -webkit-backdrop-filter: var(--card-blur);
+        transition: background .6s, color .6s; }
+
+.clock { position: absolute; left: 40px; top: 24px; display: flex; align-items: baseline; gap: 12px; }
+.clock b { font-weight: 300; font-size: 29px; letter-spacing: -.02em; }
+.clock span { font-size: 13.5px; color: var(--page-ink-2); }
+.tabs { position: absolute; left: 527px; top: 16px; width: 386px; height: 52px; border-radius: 999px; display: flex; align-items: center; padding: 4px; gap: 4px; }
+.tabs div { flex: 0 0 auto; padding: 0 22px; height: 44px; display: flex; align-items: center; gap: 8px; border-radius: 999px; font-size: 16px; color: var(--chrome-ink-2); }
+.tabs .on { background: var(--tab-on); color: var(--tab-on-ink); box-shadow: var(--tab-on-shadow, none); }
+.status { position: absolute; right: 148px; top: 34px; font-size: 12.5px; letter-spacing: .1em; color: var(--page-ink-2); display: flex; align-items: center; gap: 8px; }
+.status i { width: 6px; height: 6px; border-radius: 50%; background: var(--live); }
+.round { position: absolute; top: 22px; width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; }
+.band { position: absolute; top: 84px; height: 57px; border-radius: 16px; display: grid; grid-template-columns: auto 1fr; gap: 12px; align-items: center; padding: 0 16px 0 10px; }
+.band .ic { width: 32px; height: 32px; border-radius: 9px; background: var(--mark); color: var(--mark-ink); display: grid; place-items: center; }
+.band b { display: block; font-weight: 500; font-size: 15px; }
+.band small { display: block; font-size: 13px; color: var(--chrome-ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* the weather, open on the sky (Today, B) ... */
+.wx-art { position: absolute; left: 70px; top: 180px; width: 230px; height: 170px; }
+.loz { position: absolute; left: 246px; top: 395px; width: 198px; height: 327px; border-radius: 99px; text-align: center; padding-top: 120px;
+       background: var(--loz); border: 1px solid var(--loz-edge); color: var(--loz-ink);
+       backdrop-filter: blur(22px) saturate(1.4); -webkit-backdrop-filter: blur(22px) saturate(1.4); box-shadow: var(--chrome-shadow); }
+.loz b { display: block; font-weight: 200; font-size: 78px; line-height: 1; letter-spacing: -.03em; }
+.loz .c { display: block; margin-top: 12px; font-size: 21px; }
+.loz small { display: block; margin-top: 12px; font-size: 14px; line-height: 1.6; color: var(--loz-ink-2); }
+/* ... or through a window, on a page that has no sky of its own (A, C) */
+.win { position: absolute; left: 40px; top: 172px; width: 444px; height: 550px; border-radius: 30px; overflow: hidden; display: none;
+       box-shadow: var(--card-shadow); color: #fff; }
+.win .sky-l, .win .sky-hills { position: absolute; }
+.win .txt { position: absolute; left: 30px; bottom: 28px; text-shadow: 0 1px 14px rgba(0,0,0,.35); }
+.win .txt b { display: block; font-weight: 200; font-size: 96px; line-height: 1; letter-spacing: -.04em; }
+.win .txt .c { display: block; margin-top: 8px; font-size: 22px; }
+.win .txt small { display: block; margin-top: 6px; font-size: 14.5px; color: rgba(255,255,255,.82); }
+[data-weather='window'] .wx-art, [data-weather='window'] .loz { display: none; }
+[data-weather='window'] .win { display: block; }
+
+.tv { left: 505px; top: 216px; width: 272px; height: 452px; }
+.tv .art { height: 155px; overflow: hidden; background: linear-gradient(180deg, #7a3a24, #5a2d20 70%, #3a2320); position: relative; }
+.tv .art::after { content: ""; position: absolute; left: 50px; right: -40px; bottom: -30px; height: 90px; border-radius: 50%; background: rgba(30,18,16,.6); }
+.chip { position: absolute; font-size: 11.5px; letter-spacing: .1em; padding: 5px 9px; border-radius: 999px; background: rgba(0,0,0,.35); color: #e6e1d8; }
+.media { position: absolute; left: 14px; right: 14px; bottom: 14px; height: 214px; border-radius: 20px; padding: 18px 20px; background: var(--well); border: 1px solid var(--card-edge); }
+.media b { font-weight: 500; font-size: 19px; } .media small { display: block; color: var(--card-ink-2); font-size: 14px; margin-top: 3px; }
+.bar { height: 2px; background: var(--track); border-radius: 2px; margin-top: 18px; position: relative; }
+.bar i { position: absolute; left: 0; top: 0; bottom: 0; width: 38%; background: var(--card-ink); }
+.play { width: 56px; height: 56px; border-radius: 50%; background: var(--card-ink); margin: 18px auto 0; display: grid; place-items: center; color: var(--card); }
+.play svg { color: var(--play-ink); }
+
+.door { left: 797px; top: 172px; width: 250px; height: 260px; background: linear-gradient(180deg, #243040, #1a222e); color: #f1eee8; border-color: transparent; }
+.door .ground { position: absolute; left: -40px; right: -40px; bottom: -60px; height: 160px; border-radius: 50%; background: #121820; }
+.door .lab { position: absolute; left: 14px; bottom: 14px; display: flex; gap: 10px; align-items: center; font-size: 18px; }
+.door .lab i { width: 30px; height: 30px; border-radius: 9px; background: rgba(255,255,255,.14); display: grid; place-items: center; }
+
+.thermo { left: 797px; top: 453px; width: 250px; height: 262px; background: var(--cool); color: var(--cool-ink); }
+/* the dial is an object, dark at every hour and in every mode -- see --ink-lit in panel.css */
+.dial { position: absolute; left: 61px; top: 28px; width: 128px; height: 128px; border-radius: 50%; background: #1e232b; border: 6px solid #3b4250; display: flex; align-items: center; justify-content: center; font-size: 44px; font-weight: 300; color: #f1eee8; }
+.dial::before { content: ""; position: absolute; inset: -6px; border-radius: 50%; border: 3px solid transparent; border-left-color: #8fb8ea; transform: rotate(-20deg); }
+.pm { position: absolute; top: 172px; width: 44px; height: 44px; border-radius: 50%; background: var(--cool-chip); display: grid; place-items: center; font-size: 22px; }
+.thermo small { position: absolute; left: 16px; bottom: 14px; font-size: 13px; color: var(--cool-ink-2); }
+
+.lamp { left: 1068px; top: 216px; width: 322px; height: 452px; }
+.lamp.on { background: var(--lamp-on); color: var(--lamp-on-ink); box-shadow: var(--lamp-on-shadow, var(--card-shadow)); border-color: var(--lamp-on-edge, var(--card-edge)); }
+.lamp .ic { position: absolute; left: 18px; top: 20px; width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center; background: var(--chip); color: var(--card-ink); }
+.lamp.on .ic { background: var(--lamp-on-mark, var(--mark)); color: var(--lamp-on-mark-ink, var(--mark-ink)); }
+.lamp .beam { position: absolute; left: 150px; top: 290px; width: 170px; height: 180px; clip-path: polygon(38% 0, 62% 0, 100% 100%, 0 100%); opacity: 0; background: linear-gradient(180deg, var(--beam), transparent); }
+.lamp.on .beam { opacity: 1; }
+.lamp .shade { position: absolute; left: 196px; top: 262px; width: 82px; height: 42px; border-radius: 42px 42px 6px 6px; background: linear-gradient(#e6e2dc, #b9b5ae); }
+.lamp .rod { position: absolute; left: 130px; right: 0; top: 262px; height: 3px; background: var(--track); }
+.lamp .name { position: absolute; left: 18px; bottom: 30px; font-size: 18px; }
+.lamp .val { position: absolute; left: 18px; bottom: 10px; font-size: 14.5px; color: var(--card-ink-2); }
+.lamp.on .val { color: var(--lamp-on-ink-2); }
+.lamp .lvl { position: absolute; left: 18px; right: 18px; bottom: 0; height: 3px; background: var(--track); }
+.lamp .lvl i { position: absolute; left: 0; top: 0; bottom: 0; width: 26%; }
+.lamp.on .lvl i { background: var(--lamp-on-ink); }
+.brand { position: absolute; right: 18px; top: 20px; font-size: 12px; letter-spacing: .1em; padding: 5px 10px; border-radius: 999px; background: var(--chip); color: var(--card-ink-2); }
+.lamp.on .brand { background: var(--lamp-on-chip); color: var(--lamp-on-ink-2); }
+.strip { left: 1410px; top: 190px; width: 300px; height: 500px; }
+.strip .sw { position: absolute; left: 10px; top: 28px; width: 18px; height: 150px; border-radius: 9px; background: var(--strip); }
+
+.orb { position: absolute; left: 41px; top: 815px; width: 55px; height: 55px; border-radius: 50%;
+       background: radial-gradient(circle at 35% 30%, #d9c6ff, #6b4bb5 45%, #1d1636 80%); box-shadow: 0 0 0 3px rgba(120,100,200,.35), var(--orb-shadow); }
+.family { position: absolute; right: 40px; top: 824px; display: flex; align-items: center; gap: 14px; font-size: 15px; color: var(--page-ink-2); }
+.family b { font-weight: 400; color: var(--page-ink); font-size: 16px; }
+.family .av { display: flex; } .family .av i { width: 34px; height: 34px; border-radius: 50%; margin-left: -6px; border: 2px solid var(--av-edge); display: grid; place-items: center; font-style: normal; font-size: 13px; color: #fff; }
+
+/* resting: the same wall, the cards gone, the clock */
+.rest { position: absolute; inset: 0; z-index: 3; display: none; flex-direction: column; align-items: center; justify-content: center; gap: 8px;
+        color: var(--rest-ink); text-shadow: var(--rest-shadow); }
+.resting .fg { display: none; }
+.resting .rest { display: flex; }
+.rest .time { font-size: 200px; font-weight: 200; letter-spacing: -.04em; line-height: 1; font-variant-numeric: tabular-nums; }
+.rest .day { font-size: 22px; color: var(--rest-ink-2); }
+.rest .wx { display: inline-flex; align-items: center; gap: 10px; margin-top: 18px; font-size: 22px; }
+.rest .wx span { color: var(--rest-mark); }
+.rest .on { margin-top: 14px; font-size: 16px; color: var(--rest-ink-2); }
+.rest .next { margin-top: 6px; font-size: 15px; color: var(--rest-ink-2); opacity: .8; }
+
+/* the strip under the screen: board chrome, not panel */
+.ctl { position: absolute; left: 0; right: 0; top: 900px; height: 64px; border-top: 1px dashed rgba(255,255,255,.18);
+       display: flex; align-items: center; gap: 18px; padding: 0 24px; font-family: "Instrument Sans", system-ui, sans-serif; background: #0a0b0d; }
+.ctl .g { display: flex; white-space: nowrap; align-items: center; gap: 6px; }
+.ctl .g > span { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: #7f7d77; margin-right: 4px; }
+.ctl button { font: inherit; font-size: 13px; padding: 6px 11px; border-radius: 999px; border: 1px solid rgba(255,255,255,.12); background: rgba(255,255,255,.04); color: #b9b5ad; cursor: pointer; }
+.ctl button.on { background: rgba(233,184,114,.14); border-color: rgba(233,184,114,.6); color: #f1eee8; }
+.ctl .tag { margin-left: auto; white-space: nowrap; font-size: 12px; color: #7f7d77; }
+.win-sky { position: absolute; inset: 0; }
+.win-art { position: absolute; left: 24px; top: 28px; width: 250px; height: 185px; }

@@ -1,4 +1,6 @@
 {
+  "name": "The panel",
+  "areas": ["Wall screens"],
   "artboards": [
     {
       "file": "Main.dc.html",

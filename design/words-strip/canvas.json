@@ -1,4 +1,5 @@
 {
+  "areas": ["Plain words", "Light strips"],
   "pages": [
     {
       "id": "page-1",

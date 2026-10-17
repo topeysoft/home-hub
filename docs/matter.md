@@ -252,8 +252,8 @@ fixed, and they are the kind of warning that otherwise survives quietly to a cer
 owner's word or the driver's — and `guessed_kind()` in `model.py` guesses appliances and nothing else. A siren that
 nobody has re-typed is a `switch`.
 
-This is not hypothetical. The house this was built in has `switch.holts_summit_alarm_siren` — a Ring siren, named
-*Holts Summit Alarm Siren* — sitting at `kind: switch`. The first time that house shares its plugs, its siren goes to
+This is not hypothetical. The house this was built in has `switch.cedar_falls_alarm_siren` — a Ring siren, named
+*Cedar Falls Alarm Siren* — sitting at `kind: switch`. The first time that house shares its plugs, its siren goes to
 Apple Home as a plug, and `docs/kinds.md`'s whole argument about the 2am stray finger arrives in an app that has no
 second tap. The rule is right; it is simply downstream of a fact nobody has entered.
 

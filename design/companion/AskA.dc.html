@@ -1,0 +1,62 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>A, it asks, with the house it found</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="companion.css">
+<style>
+  body[data-found="one"] [data-when]:not([data-when~="one"]) { display: none; }
+  body[data-found="two"] [data-when]:not([data-when~="two"]) { display: none; }
+  body[data-found="none"] [data-when]:not([data-when~="none"]) { display: none; }
+  .pick { display: flex; gap: 16px; align-items: center; }
+  .pick + .pick { margin-top: 12px; }
+</style>
+</head>
+<body data-found="one">
+<div class="wall"><div class="sun"></div><div class="land"></div>
+  <div class="col">
+    <div class="mark"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v9.5h13V10"/></svg></div>
+    <h1>Welcome home.</h1>
+
+    <p class="lede" data-when="one">There&rsquo;s already a hub running a house on this Wi&#8209;Fi.</p>
+    <p class="lede" data-when="two">There are two houses on this Wi&#8209;Fi. Which one is this screen for?</p>
+    <p class="lede" data-when="none">Run the whole house from this screen. Setting it up takes a few minutes.</p>
+
+    <div data-when="one" style="margin-bottom: 22px;">
+      <div class="card lit pick">
+        <span class="house"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v9.5h13V10"/></svg></span>
+        <span style="flex: 1;"><span class="t1" style="display:block">Maple Court</span><span class="t2">Set up by Jordan &middot; 6 rooms</span></span>
+        <span class="cta">Use this screen with it</span>
+      </div>
+    </div>
+
+    <div data-when="two" style="margin-bottom: 22px;">
+      <div class="card pick">
+        <span class="house"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v9.5h13V10"/></svg></span>
+        <span style="flex: 1;"><span class="t1" style="display:block">Maple Court</span><span class="t2">Set up by Jordan &middot; 6 rooms</span></span>
+        <span class="ghost" style="padding: 12px 20px;">Use with this one</span>
+      </div>
+      <div class="card pick">
+        <span class="house" style="background: var(--surface-hi); color: var(--ink-2);"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v9.5h13V10"/></svg></span>
+        <span style="flex: 1;"><span class="t1" style="display:block">The cottage</span><span class="t2">Set up by Robin &middot; 2 rooms</span></span>
+        <span class="ghost" style="padding: 12px 20px;">Use with this one</span>
+      </div>
+    </div>
+
+    <div data-when="none"><div class="actions"><span class="cta">Get started</span></div>
+      <p class="status"><span class="dot"></span> No other hub on this Wi&#8209;Fi. This screen will run the house.</p></div>
+
+    <p class="foot" data-when="one two">Or <span class="link">start a new house on this screen</span> instead.</p>
+    <p class="foot" data-when="none">Moving from another hub? <span class="link">Bring its backup over</span></p>
+  </div>
+
+  <div class="flips"><span style="padding: 0 6px;">It finds</span>
+    <span class="flip on" data-to="one">one house</span><span class="flip" data-to="two">two</span><span class="flip" data-to="none">none</span></div>
+</div>
+<script>
+  document.querySelectorAll('.flip').forEach(f => f.addEventListener('click', () => {
+    document.body.dataset.found = f.dataset.to
+    document.querySelectorAll('.flip').forEach(g => g.classList.toggle('on', g === f))
+  }))
+</script>
+</body>
+</html>

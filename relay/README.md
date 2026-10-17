@@ -50,13 +50,13 @@ it, and `terraform apply`. The wildcard and the CAA pair land at the same time a
 
 ```sh
 # the house claims its name (the panel will do this; until then, from anywhere):
-curl -s https://api.elyir.app/houses -H 'content-type: application/json' -d '{"name":"temi"}'
-#   -> {"name":"temi","address":"temi.elyir.app","secret":"...", ...}   the secret is shown once
-ssh root@<relay> docker exec relay-service python cli.py grant temi 2027-10-01 "Temi, by hand"
+curl -s https://api.elyir.app/houses -H 'content-type: application/json' -d '{"name":"jordan"}'
+#   -> {"name":"jordan","address":"jordan.elyir.app","secret":"...", ...}   the secret is shown once
+ssh root@<relay> docker exec relay-service python cli.py grant jordan 2027-10-01 "Jordan, by hand"
 ssh root@<relay> docker exec relay-service python cli.py list
 ```
 
-The hub then needs `HUB_AWAY_HOUSE=temi` and `HUB_RELAY_SECRET=<the secret>` in its `.env`
+The hub then needs `HUB_AWAY_HOUSE=jordan` and `HUB_RELAY_SECRET=<the secret>` in its `.env`
 (`driver-layer/.env.example`). A name claimed and not granted is let go after a day. `cli.py` also
 stops a house (it keeps its name), rotates a lost secret, and releases a name.
 
@@ -73,6 +73,14 @@ ssh root@<relay> docker exec relay-service python cli.py invite 2027-10-05 "a pr
 ssh root@<relay> docker exec relay-service python cli.py invites          # used by whom, or still good until
 ssh root@<relay> docker exec relay-service python cli.py uninvite 9HTF    # an unused code, by its last four
 ```
+
+**Or a paid plan elsewhere, with a ticket.** A service the house pays (a payer: Elyir Bench Cloud for
+printers) signs "carry this name until then" with a key it shares with the relay and hands that to the
+house; the house brings it with its own secret (`POST /houses/<name>/carry {"ticket"}`). Both are
+needed, so a payer can't carry a name its holder didn't ask for. A ticket is good for an hour and
+carries at most 45 days ahead, never shortening a longer grant: a plan that stops just runs out, and
+the name stays the house's. Payers and their keys are lines of `name key` in `/var/lib/relay/service/payers`
+on the volume (read again when it changes, kept across a new box), or `RELAY_PAYERS=name=key`.
 
 **The printer app** (`printers.elyir.app`, since 2 October 2026) is static files served by the same
 Caddy as `api`, carried through frps as one more always-carried name whose secret is derived from the

@@ -191,16 +191,16 @@ class WhoAsked(unittest.TestCase):
 
     def test_a_person_is_named_from_the_request(self):
         from hub.events import asked_by
-        t = asked_by.set("Temi's iPhone")
+        t = asked_by.set("Jordan's iPhone")
         try: self.log.add("home", "hallway", None, "Landing", source="user")
         finally: asked_by.reset(t)
-        self.assertEqual(self.log.recent(1)[0]["who"], "Temi's iPhone")
+        self.assertEqual(self.log.recent(1)[0]["who"], "Jordan's iPhone")
 
     def test_a_rule_is_not_named_however_it_was_started(self):
         """A task spawned mid-request inherits the request's context and outlives it. Attributing its
         writes to whoever last tapped something would put a name to work they did not do."""
         from hub.events import asked_by
-        t = asked_by.set("Temi's iPhone")
+        t = asked_by.set("Jordan's iPhone")
         try:
             self.log.add("intent", "hall", None, "occupied", source="rule")
             self.log.add("state", "light.hall", "off", "on", source="device")
@@ -225,9 +225,9 @@ class WhoAsked(unittest.TestCase):
             old.commit(); old.close()
 
             log = EventLog(path)
-            log.add("home", "kitchen", None, "Scullery", source="user", who="Temi's iPhone")
+            log.add("home", "kitchen", None, "Scullery", source="user", who="Jordan's iPhone")
             rows = log.recent(10)
-            self.assertEqual([r["who"] for r in rows], ["Temi's iPhone", None])   # and the old row is honest
+            self.assertEqual([r["who"] for r in rows], ["Jordan's iPhone", None])   # and the old row is honest
             log.db.close()
 
 

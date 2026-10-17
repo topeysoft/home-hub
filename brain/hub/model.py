@@ -28,6 +28,38 @@ APPLIANCE = re.compile(r"\b(fridge|refrigerator|freezer|oven|range|cavity|cookto
 # is the promise a plug makes; a fridge's ice maker going off with it is a fridge with no ice in the morning.
 # The words tried are the entity's and its hardware's together, so "Refrigerator" on the unit names all of
 # its switches. What HA calls an outlet stays a plug whatever it is named. docs/kinds.md, *An appliance*.
+# A car charger, found by its readings rather than its maker: one unit that says a car is plugged in
+# (`plug`), that it is charging (`battery_charging`) and how much power is flowing. A robot vacuum has the
+# second and not the first, a phone has no power reading, so neither is mistaken for one. HA marks the
+# first two as diagnostics; for a charger they are the whole of what a household wants to know, so they
+# are read here and nothing else of the unit is -- its temperatures, voltages and currents never reach a room.
+CHARGER_PARTS = {("binary_sensor", "plug"): "plug", ("binary_sensor", "battery_charging"): "charging", ("sensor", "power"): "power"}
+
+
+def chargers(entities, states) -> dict[str, dict[str, str]]:
+    """HA device id -> {"plug": eid, "charging": eid, "power": eid}, for every unit that carries all three."""
+    found: dict[str, dict[str, str]] = {}
+    for e in entities:
+        s, dev = states.get(e["entity_id"]), e.get("device_id")
+        if not s or not dev or e.get("disabled_by"): continue
+        part = CHARGER_PARTS.get((e["entity_id"].split(".")[0], s["attributes"].get("device_class") or e.get("original_device_class")))
+        if part: found.setdefault(dev, {}).setdefault(part, e["entity_id"])
+    return {dev: parts for dev, parts in found.items() if len(parts) == len(CHARGER_PARTS)}
+
+
+def charger_state(plug: dict | None, charging: dict | None) -> str:
+    if not plug or plug["state"] in ("unavailable", "unknown"): return "unavailable"
+    if charging and charging["state"] == "on": return "charging"
+    return "plugged" if plug["state"] == "on" else "ready"
+
+
+def kilowatts(power: dict | None) -> float | None:
+    try: v = float(power["state"])
+    except (TypeError, ValueError, KeyError): return None
+    unit = (power.get("attributes") or {}).get("unit_of_measurement") or "kW"
+    return round(v / 1000 if unit == "W" else v * 1000 if unit == "MW" else v, 1)
+
+
 MACHINE = re.compile(r"\b(fridge|refrigerator|freezer|ice ?maker|ice|dishwasher|washer|washing machine|dryer|oven|"
                      r"range|cooktop|stove|hob|hood|water heater|boiler|furnace|aquarium|pool|spa|hot tub|sauna|wine|humidor)\b", re.I)
 
@@ -75,6 +107,29 @@ def changed_at(s) -> float:
     v = s.get("last_changed") or s.get("last_updated")
     try: return datetime.fromisoformat(v).timestamp()
     except (TypeError, ValueError): return time.time()
+
+
+# What a thermostat that brings its own says beside its temperature: the Home, Away or Sleep it has
+# switched itself to, and the air it reads (an Ecobee over HomeKit; design/thermostat/, B). Read off
+# entities on the thermostat's own hardware, never guessed from a name.
+COMFORT = {"home", "sleep", "away"}
+AIR = {1: "Good", 2: "Good", 3: "Fair", 4: "Poor", 5: "Poor"}   # HomeKit's steps: excellent, good, fair, inferior, poor
+
+
+def companion_kind(e: dict, s: dict) -> str | None:
+    domain, a = e["entity_id"].split(".")[0], s.get("attributes") or {}
+    if domain == "select" and set(a.get("options") or []) == COMFORT: return "comfort"
+    if domain == "sensor" and (a.get("device_class") or e.get("original_device_class")) == "aqi": return "air"
+    return None
+
+
+def told_by(kind: str, s: dict) -> dict:
+    if kind == "comfort":
+        v = s.get("state")
+        return {"comfort": v, "comfort_since": changed_at(s)} if v in COMFORT else {"comfort": None, "comfort_since": None}
+    try: step = int(float(s.get("state")))
+    except (TypeError, ValueError): step = None
+    return {"air": AIR.get(step)}
 
 
 def capability_for(domain: str, device_class: str | None, words: str = "") -> str | None:
@@ -190,9 +245,15 @@ class Home:
         # to 2700K, and the difference -- who decided -- is the whole of what Automatic means. Kept
         # in settings beside `kinds` so a restore brings it back with the rest of the house.
         self.color_pinned: set[str] = set()
+        # What the household said never to show on Home (design/home-keep/, B). The house's answer rather than
+        # a screen's, because a plug that is noise on the wall is noise on every phone. Kept in settings.
+        self.off_home: set[str] = set()
         self.room_colors: dict[str, list] = {}   # kept per room, from settings, so a restore brings them back
         self.lamps: dict[str, str] = {}    # camera id -> the light built into the same unit (Ring floodlight and spotlight cams)
         self.eyes: dict[str, str] = {}     # light/switch/fan id -> the motion sensor built into the same unit (a Brilliant switch, a Ring pathlight): docs/units.md
+        self.part_of: dict[str, str] = {}   # a car charger's reading -> the charger it belongs to (the plug's id)
+        self.charger_parts: dict[str, dict[str, str]] = {}   # charger id -> {"plug", "charging", "power"} -> its reading's id
+        self._parts: dict[str, dict] = {}    # the latest HA state of each such reading, to work the charger out from
         self.fixtures: dict[str, dict] = {}   # device id -> what a fan-with-a-light's parts know about each other ({"light": id} on the fan, {"fan": id} on the light, "leads" on both): docs/units.md
         self.leads: dict[str, str] = {}    # hardware id -> which part of a fixture is the tile ("fan" or "light"), where the owner has said; fan otherwise. Kept in settings with `kinds`
         self.hardware: dict[str, dict] = {}   # driver device id -> {"name", "manufacturer", "model"}: what the maker called the unit, for naming new things
@@ -201,6 +262,8 @@ class Home:
         # dark, and why (hub/controller.py). Merged into its attrs like `extras`, but never replaced by a
         # timer's: device id -> {"strip": {...}}. Written by hub/strip.py.
         self.reports: dict[str, dict] = {}
+        self.companions: dict[str, tuple[str, str]] = {}   # entity id -> (thermostat id, "comfort" | "air")
+        self.told: dict[str, dict] = {}                    # thermostat id -> what its companions and room sensors say
         # LIGHTS FOLDED INTO ANOTHER LIGHT'S TILE: a roofline of several boxes is ONE light on the wall
         # (design/roofline/OneLight.dc.html). Hardware id of a box -> hardware id of the box whose light is
         # the tile. A folded light stays a device -- rules, the log and a tap on the roofline still reach
@@ -216,8 +279,10 @@ class Home:
         if eid in self.eyes: out["motion"] = self.eyes[eid]
         out.update(self.fixtures.get(eid, {}))
         out.update(self.reports.get(eid, {}))
+        out.update(self.told.get(eid, {}))
         if extra.get("fan_until", 0) > time.time(): out["fan_mode"] = "on"
         if cap.split(".")[0] == "light" and eid in self.color_pinned: out["color_pinned"] = True
+        if eid in self.off_home: out["off_home"] = True
         return out
 
     @staticmethod
@@ -256,8 +321,13 @@ class Home:
         st = {s["entity_id"]: s for s in states}
         camera_devices = {e["device_id"] for e in entities if e["entity_id"].startswith("camera.") and e.get("device_id")}
         self.devices = {}
+        units = chargers(entities, st)
+        self.charger_parts = {parts["plug"]: parts for parts in units.values()}
+        self.part_of = {eid: parts["plug"] for parts in units.values() for eid in parts.values()}
+        self._parts = {eid: st[eid] for eid in self.part_of}
         for eid, s in st.items():
             e = reg.get(eid, {})
+            if e.get("device_id") in units: continue   # a charger is one device, made below
             if e.get("disabled_by") or e.get("hidden_by") or e.get("entity_category"):
                 continue      # diagnostics and config entities are not product surface
             domain = eid.split(".")[0]
@@ -282,6 +352,20 @@ class Home:
             d.kind = self.shown_as(eid, cap, d.guess)
             self.devices[eid] = d
             if cap == "light" and d.hw and d.hw in self.folded: continue   # part of another light's one tile
+            self.rooms[room].devices.append(d)
+        for hw, parts in units.items():
+            e = reg.get(parts["plug"], {})
+            room = e.get("area_id") or dev_area.get(hw) or "unassigned"
+            if room not in self.rooms: room = "unassigned"
+            unit = self.hardware.get(hw, {})
+            name = next((d.get("name_by_user") for d in ha_devices if d["id"] == hw and d.get("name_by_user")), None) or "Car charger"
+            d = Device(parts["plug"], name, room, "charger", "", {}, hw, bool(e.get("area_id")), 0.0)
+            d.entry = e.get("config_entry_id") or dev_entry.get(hw)
+            d.maker, d.model, d.hw_name = unit.get("manufacturer") or None, unit.get("model") or None, unit.get("name") or None
+            d.named_by_unit = False
+            d.kind = d.guess = "charger"
+            self._charger(d)
+            self.devices[d.id] = d
             self.rooms[room].devices.append(d)
         # A camera with a lamp built in: the viewer offers the lamp beside the picture, the way Ring's own app does.
         # The lamp stays a light of its own as well, so the room and its scenes can use it like any other.
@@ -309,6 +393,22 @@ class Home:
                 self.fixtures[fid] = {"light": d.id, "leads": lead}
                 self.fixtures[d.id] = {"fan": fid, "leads": lead}
         for eid, more in self.fixtures.items(): self.devices[eid].attrs.update(more)
+        # A thermostat with sensors of its own in other rooms -- each one its own device hanging off the
+        # thermostat's -- is told how many, so the pane can say "its own sensors" rather than "its own".
+        self.companions, self.told = {}, {}
+        thermostats = {d.hw: d.id for d in self.devices.values() if d.capability == "climate" and d.hw}
+        warm = {e.get("device_id") for e in entities if e["entity_id"].startswith("sensor.")
+                and (e.get("original_device_class") or (st.get(e["entity_id"]) or {}).get("attributes", {}).get("device_class")) == "temperature"}
+        for hw, cid in thermostats.items():
+            n = sum(1 for d in ha_devices if d.get("via_device_id") == hw and d["id"] in warm)
+            self.told[cid] = {"own_sensors": n} if n else {}
+        for e in entities:
+            cid, s = thermostats.get(e.get("device_id")), st.get(e["entity_id"])
+            kind = companion_kind(e, s) if cid and s and not e.get("disabled_by") else None
+            if not kind: continue
+            self.companions[e["entity_id"]] = (cid, kind)
+            self.told[cid].update(told_by(kind, s))
+        for cid, told in self.told.items(): self.devices[cid].attrs.update(told)
         return self
 
     def lead_for(self, hw: str | None) -> str:
@@ -339,7 +439,30 @@ class Home:
         k = self.kinds.get(eid)
         return k if k and k != (guess or capability) and k in kinds_for(capability) else None
 
+    def _charger(self, d: Device):
+        parts = {name: self._parts.get(eid) for name, eid in self.charger_parts.get(d.id, {}).items()}
+        d.state = charger_state(parts.get("plug"), parts.get("charging"))
+        d.attrs = {"power": kilowatts(parts.get("power")) if d.state == "charging" else None}
+        live = [p for p in parts.values() if p]
+        d.seen = max((seen_at(p) for p in live), default=time.time())
+        d.since = changed_at(parts["plug"]) if parts.get("plug") else time.time()
+        if d.state == "charging" and parts.get("charging"): d.since = changed_at(parts["charging"])
+
     def apply_state(self, entity_id, new_state) -> Device | None:
+        if entity_id in self.companions and new_state:
+            cid, kind = self.companions[entity_id]
+            d = self.devices.get(cid)
+            if not d: return None
+            more = told_by(kind, new_state)
+            self.told.setdefault(cid, {}).update(more)
+            d.attrs.update(more)
+            return d     # the thermostat changed, as far as anybody looking at it is concerned
+        if entity_id in self.part_of:
+            d = self.devices.get(self.part_of[entity_id])
+            if not d or not new_state: return None
+            self._parts[entity_id] = new_state
+            self._charger(d)
+            return d
         d = self.devices.get(entity_id)
         if not d or not new_state: return None
         d.state = new_state["state"]

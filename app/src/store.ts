@@ -4,12 +4,13 @@ import { carried, tell } from './inapp'
 import { moveCode, withoutCode } from './move'
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import { reactive, watch } from 'vue'
-import { getMe, claimMove, kickStream, type Me, doRestart, type Rung, getBridge, type Bridge, getStrip, stripLooking, type Strip, getHome, getEvents, getAmbient, getScenes, getStatus, getDiscovered, getRoutines, getAssistant, getPresence, getHealth, getSounds, connect, act, setIntent, setHomeIntent, type Room, type Device, type Home, type Event, type Ambient, type Rules, type Status, type Found, type Intent, type Routine, type Assistant, type Presence, type Note, type Sound, requestUpdate, getPhones, type Phone, type Ask, getAccounts, type Account, getShare, type Share, getHappened, type Happened, getChanges, type Changes, getSignals, type SignalsPage, type TryBrief, getRoofline, type Roofline, getPrinters, type Printers, type Printer } from './api'
+import { getMe, claimMove, kickStream, type Me, doRestart, type Rung, getBridge, type Bridge, getStrip, stripLooking, type Strip, getHome, getEvents, getAmbient, getScenes, getStatus, getDiscovered, getRoutines, getAssistant, getPresence, getHealth, getSounds, connect, act, setIntent, setHomeIntent, type Room, type Device, type Home, type Event, type Ambient, type Rules, type Status, type Found, type Intent, type Routine, type Assistant, type Presence, type Note, type Sound, requestUpdate, getPhones, type Phone, type Ask, getAccounts, type Account, getShare, type Share, getHappened, type Happened, getChanges, type Changes, getSignals, type SignalsPage, type TryBrief, getRoofline, type Roofline, getPrinters, type Printers, type Printer, getPower, getPowerDay, type Power, type PowerDay } from './api'
 import { previewHeld, previewHeldNote, previewRoofDevice, previewRoofline, previewStripBeat } from './controller'
 import { lock, CANCELED, failed } from './code'
 import { isPage } from './pages'
 import { sunPosition, sunGuess, moonPhase } from './sun'
 import { locale, setHouseLanguage } from './lang'
+import { linkWord, reach, reached, unreachedTap, watchReach } from './reach'
 import { hasCard, printerOn, printerPart, printersIn as inRoom } from './printers'
 
 /* The few soft sheets the panel has. Named rather than written out twice: the restart keeps the one
@@ -104,6 +105,9 @@ export const store = reactive({
      ones found on the Wi-Fi, and any ask waiting at a printer. Null on a hub that predates them. */
   printers: null as Printers | null,
   printer: null as string | null,      // the printer whose pane is open (PrinterPane.vue), by id
+  power: null as Power | null,         // the sun, the battery and the grid (brain/hub/power.py); null in a house without them
+  powerOpen: false,                    // the power pane (PowerPane.vue)
+  powerDay: null as PowerDay | null,   // today so far, and the most the roof has made this month, which the sun's warmth is measured against
   /* A print card the house no longer has a print for -- OBI1 Ready again -- keeps its place, drained,
      until the panel looks away, exactly as a lamp just turned off does. This is the last thing each
      card said; `done` (below) is what says it is still owed a place. printers.ts says why. */
@@ -127,6 +131,7 @@ export const store = reactive({
   /* A room the panel has been asked to open from somewhere else -- New devices, after an account
      brought in six things at once. App.vue takes it and clears it; nothing else reads it. */
   goRoom: null as string | null,
+  justAdded: null as { from?: string; ids: string[]; at: number } | null,   // what an add just brought, for New devices to put first (design/arrived/)
   sky: { elevation: -20, azimuth: 0, phase: 0, hour: 0, month: 6, condition: 'clear-night', guessed: true },   // what the sky draws; month is seasonal (0 midwinter → 6 midsummer, either hemisphere)
 })
 
@@ -196,11 +201,11 @@ export const defaultKind = (d: Device) => d.guess || d.capability
 /** Said quietly under the name on a thing's own pane, and nowhere else: a tile is a glance, and the
     point of the override is that the thing stops looking unusual. Empty where nobody has said anything. */
 export const shownAs = (d: Device) => d.kind && d.kind !== defaultKind(d) ? `Shown as ${KIND_NOUN[cap(d)] ?? cap(d)}` : ''
-export const KIND_NOUN: Record<string, string> = { light: 'a light', switch: 'a plug', fan: 'a fan', alarm: 'an alarm', appliance: 'an appliance', media: 'a speaker', cover: 'a blind', climate: 'a thermostat', lock: 'a lock', camera: 'a camera', vacuum: 'a vacuum' }
+export const KIND_NOUN: Record<string, string> = { light: 'a light', switch: 'a plug', fan: 'a fan', alarm: 'an alarm', appliance: 'an appliance', media: 'a speaker', cover: 'a blind', climate: 'a thermostat', lock: 'a lock', camera: 'a camera', vacuum: 'a vacuum', charger: 'a car charger' }
 /** The glyph for a thing, which for an appliance reads its name: a fridge's ice maker gets the snowflake
     the weather already draws, and any other machine's feature the machine. Every other kind is its own icon. */
 export const iconFor = (d: Device) => cap(d) === 'appliance' && /\bice\b|freez/i.test(d.name) ? 'snow' : cap(d)
-export const PASSIVE = new Set(['sensor', 'motion', 'contact', 'camera'])
+export const PASSIVE = new Set(['sensor', 'motion', 'contact', 'camera', 'charger'])
 export const visibleRooms = () => {
   const rs = store.rooms.filter(r => r.id !== 'unassigned' || r.devices.length)
   return [...rs.filter(r => !bare(r)), ...rs.filter(bare)]   // rooms with something in them first
@@ -221,6 +226,12 @@ export function unitNamed(d: Device): boolean {
   const unit = (d.hw_name ?? '').trim()
   if (d.attrs.fan) return false   // the light of a fan-with-a-light is "Bedroom Fan Light", not the fan: under a lamp drawing, "Fan" reads as the wrong thing
   return !!unit && new RegExp(`^${unit.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s+(light|switch|fan|plug|dimmer)$`, 'i').test(d.name.trim())
+}
+/** The name with its kind, where the name alone is a room's: Nest calls a thermostat after the room it hangs
+    in, and "Remove Living Room?" reads as taking the room away (reported 7 October). */
+export function nameInFull(d: Device): string {
+  const n = d.name.trim(), noun = (KIND_NOUN[cap(d)] ?? '').replace(/^an? /, '')
+  return noun && store.rooms.some(r => norm(r.name) === norm(n)) ? `the ${n} ${noun}` : n
 }
 export function shortName(d: Device, room?: Room | null): string {
   let n = d.name.trim()
@@ -266,6 +277,7 @@ export function activityParts(r: Room, withMedia = true): string[] {
   if (plugs.length === 1) parts.push(`${shortName(plugs[0], r)} on`); else if (plugs.length) parts.push(`${plugs.length} plugs on`)
   for (const d of r.devices.filter(d => cap(d) === 'fan' && d.state === 'on')) parts.push(`${shortName(d, r)} on`)
   for (const d of r.devices.filter(d => cap(d) === 'vacuum' && d.state === 'cleaning')) parts.push(`${shortName(d, r)} cleaning`)
+  if (r.devices.some(d => cap(d) === 'charger' && d.state === 'charging')) parts.push('Charging the car')
   if (r.devices.some(d => cap(d) === 'motion' && d.state === 'on')) parts.push('Motion')
   if (r.devices.some(d => cap(d) === 'camera' && d.state === 'recording')) parts.push('Recording')
   return parts
@@ -288,6 +300,7 @@ export function restingParts(r: Room): string[] {
   const parts: string[] = []
   const locks = r.devices.filter(d => cap(d) === 'lock' && !isDead(d))
   if (locks.length && locks.every(d => d.state === 'locked')) parts.push('Locked')
+  if (r.devices.some(d => cap(d) === 'charger' && d.state === 'plugged')) parts.push('Car plugged in')
   const shut = r.devices.filter(d => cap(d) === 'cover' && d.state === 'closed').length
   if (shut) parts.push(shut === 1 ? 'Blind closed' : `${shut} blinds closed`)
   /* A camera watching the porch is not the house doing something -- roomActive
@@ -334,10 +347,13 @@ function roomLine(r: Room, resting: boolean): string {
 }
 /* An appliance's feature being on is not the house doing anything: an ice maker is on all year, and a
    card for it in "on right now" would be a card that never leaves. It is on its own tile, and that is where. */
-export function roomActive(r: Room) { return r.devices.some(d => isActive(d) && cap(d) !== 'camera' && cap(d) !== 'appliance') || printersIn(r).some(printerOn) }
-/** Everything that is on across the house, cameras and appliances excluded: the "on right now" strip. */
+export function roomActive(r: Room) {
+  return r.devices.some(d => (isActive(d) && cap(d) !== 'camera' && cap(d) !== 'appliance') || (cap(d) === 'charger' && d.state === 'charging')) || printersIn(r).some(printerOn)
+}
+/** Everything that is on across the house, cameras and appliances excluded: the "on right now" strip. What the household
+    set to Never on Home is left out too, of the row, the chips and the house's sentence alike (onhome.ts). */
 export function whatsOn(): Device[] {
-  return store.rooms.flatMap(r => r.devices.filter(d => isActive(d) && !PASSIVE.has(cap(d)) && cap(d) !== 'appliance'))
+  return store.rooms.flatMap(r => r.devices.filter(d => isActive(d) && !PASSIVE.has(cap(d)) && cap(d) !== 'appliance' && !d.attrs?.off_home))
 }
 export function houseLine(): string {
   if (!store.loaded) return store.error || 'Finding the house…'
@@ -464,9 +480,15 @@ export function forgetDone(all = false) {
   const now = Date.now()
   for (const id of Object.keys(done)) if (all || now - done[id].at > DONE_FOR) delete done[id]
 }
+/** A car that stops charging keeps its line in Home's band until nobody is looking (chargers.ts). */
+export function noteCharger(was: Device, now: Device) {
+  if (cap(now) !== 'charger') return
+  if (now.state === 'charging') delete done[`charger:${now.id}`]
+  else if (was.state === 'charging') keepDone(`charger:${now.id}`, 'stopped')
+}
 /** What Home is still showing though it is off: quieted by hand, not yet forgotten. */
 export function justDone(): Device[] {
-  return Object.keys(done).map(deviceById).filter((d): d is Device => !!d && !isActive(d) && !PASSIVE.has(cap(d)))
+  return Object.keys(done).map(deviceById).filter((d): d is Device => !!d && !isActive(d) && !PASSIVE.has(cap(d)) && !d.attrs?.off_home)
 }
 /** "Off, just now" -- what a kept card says about itself. */
 export function doneLine(id: string, now = Date.now()): string {
@@ -490,16 +512,24 @@ export function guessNow(d: Device, guess: { state?: string; attrs?: Record<stri
 /** Apply the expected result right away, ask the house, and step back if it refuses. */
 export async function perform(d: Device, action: string, data?: Record<string, unknown>, guess?: { state?: string; attrs?: Record<string, any> }) {
   const before = { state: d.state, attrs: { ...d.attrs } }, wasDone = done[d.id]
-  if (guess) guessNow(d, guess)
-  /* guessed, with the state: what this did is the card's own sentence once it is no longer on */
-  if (QUIETED[action]) markDone(d.id, QUIETED[action]); else if (WOKEN.has(action)) delete done[d.id]
-  store.pending[d.id] = true
+  /* Known to be cut off from the hub: guess nothing, because the guess is what flipped the card back
+     in front of somebody (design/out-of-reach/, C). It is still asked; it may get through. */
+  const guessing = !reach.out
+  if (guessing) {
+    if (guess) guessNow(d, guess)
+    /* guessed, with the state: what this did is the card's own sentence once it is no longer on */
+    if (QUIETED[action]) markDone(d.id, QUIETED[action]); else if (WOKEN.has(action)) delete done[d.id]
+    store.pending[d.id] = true
+  }
   try { await act(d.id, action, data) }
   catch (e: any) {
     d.state = before.state; d.attrs = before.attrs; delete store.pending[d.id]
     if (wasDone) done[d.id] = wasDone; else delete done[d.id]
+    /* never reached the hub: the card says so, and the band once it is more than one tap */
+    if (e?.unreached) { unreachedTap(d.id); return false }
     notify(`${shortName(d, roomOf(d))} isn’t answering`, 'error'); return false
   }
+  if (reach.misses) reached()
   window.setTimeout(() => delete store.pending[d.id], 5000)   // the stream normally clears it much sooner
   return true
 }
@@ -646,6 +676,10 @@ export const keptPrints = () => Object.values(store.printsKept).filter(p => done
 /** Things found nearby and not in the house yet: on the network, and 3D printers on the Wi-Fi. */
 export const foundCount = () => store.found.length + (store.printers?.found.length ?? 0)
 export const printerById = (id: string | null) => store.printers?.printers.find(p => p.id === id) ?? null
+export async function loadPower() {
+  try { store.power = await getPower() } catch { store.power = null }
+  if (store.power) try { store.powerDay = await getPowerDay() } catch { /* the sun's warmth falls back to today's own reading */ }
+}
 let printersPoll: number | undefined
 export async function loadPrinters() {
   try { applyPrinters(await getPrinters()) } catch { store.printers = null }
@@ -740,6 +774,8 @@ export function restartLink(up: boolean): boolean {
    countdown, not the card. Only the panel's own copies go. A bridge or strip still being set up is
    read back from the hub when it returns and reopens where it was, a phone asking to join asks again,
    and a restart still puts the person back on the page they asked from (`restarting.from`). */
+/** The corner's word and its dot, from the live connection and from whether fresh requests get through. */
+export const linkNow = () => linkWord(store.linkUp, store.linkLost, reach.out)
 export const hubAway = () => !!(store.restarting?.lost || store.updating?.lost || (store.restoring && store.linkLost))
 export function clearForAway() {
   store.sheet = null
@@ -910,7 +946,9 @@ function applyIntent(i: Intent) {
 function applyDevice(d: Device) {
   for (const r of store.rooms) {
     const i = r.devices.findIndex(x => x.id === d.id)
-    if (i >= 0) { r.devices[i] = d; delete store.pending[d.id]; if (store.viewer?.id === d.id) store.viewer = d; if (store.opened?.id === d.id) store.opened = d; eventsSoon(); return }
+    if (i >= 0) {
+      noteCharger(r.devices[i], d)
+      r.devices[i] = d; delete store.pending[d.id]; if (store.viewer?.id === d.id) store.viewer = d; if (store.opened?.id === d.id) store.opened = d; eventsSoon(); return }
   }
 }
 let stop: (() => void) | undefined, lostTimer: number | undefined, skyTimer: number | undefined
@@ -945,7 +983,7 @@ export async function load() {
   await refreshStatus()
   if (lock.unpaired) return                    // the join screen is up; the house answers once this phone is in
   try { applyHome(await getHome()) } catch { store.error = 'The hub is not answering.' }
-  loadAmbient(); loadRules(); loadRoutines(); loadAssistant(); loadPresence(); loadHealth(); loadSounds(); loadPhones(); loadAccounts(); loadShare(); loadRoofline(); loadPrinters()
+  loadAmbient(); loadRules(); loadRoutines(); loadAssistant(); loadPresence(); loadHealth(); loadSounds(); loadPhones(); loadAccounts(); loadShare(); loadRoofline(); loadPrinters(); loadPower()
 }
 let foundPoll: number | undefined
 /* The hub came back on a different build from the one this page was reading. Until it reloads, the
@@ -986,7 +1024,8 @@ export async function start() {
   clearInterval(foundPoll); foundPoll = window.setInterval(refreshFound, 60000)
   refreshBridge()
   refreshStrip()
-  stop = connect({ device: applyDevice, home: applyHome, intent: applyIntent, drafts: d => { store.drafts = d; eventsSoon() }, presence: p => { store.presence = p; eventsSoon() }, phones: () => loadPhones(true), share: () => { store.shareTick++; loadShare() }, signals: t => { store.signalTry = t; if (store.signals) loadSignals() }, roofline: r => { if (!ROOF_PARAM) store.roofline = r }, printers: applyPrinters, ambient: a => { store.ambient = a; updateSky() }, status: s => {
+  watchReach()
+  stop = connect({ device: applyDevice, home: applyHome, intent: applyIntent, drafts: d => { store.drafts = d; eventsSoon() }, presence: p => { store.presence = p; eventsSoon() }, phones: () => loadPhones(true), share: () => { store.shareTick++; loadShare() }, signals: t => { store.signalTry = t; if (store.signals) loadSignals() }, roofline: r => { if (!ROOF_PARAM) store.roofline = r }, printers: applyPrinters, power: p => { store.power = p }, ambient: a => { store.ambient = a; updateSky() }, status: s => {
     const was = store.status?.driver, version = store.status?.version
     store.status = s
     if (newBuild(version, s.version)) {
@@ -1001,6 +1040,7 @@ export async function start() {
     else if (store.updating && u && !u.requested) endUpdate()
     if (s.driver === 'ready' && was !== 'ready') { load() }   // the engine just came up: read the house
   }, link: v => {
+    if (!v && store.linkUp) reach.heard = Date.now()
     store.linkUp = v
     tell('houses:status', { connected: v })   // the app keeps its own word for whether this house is answering
     clearTimeout(lostTimer)

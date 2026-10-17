@@ -16,7 +16,8 @@ import { failed } from '../code'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import type { Device } from '../api'
 import { setFan, setSense } from '../api'
-import { cap, isDead, notify, perform, shortName, store, fanFor } from '../store'
+import { isDead, notify, perform, store, fanFor } from '../store'
+import { keepRows } from '../pane'
 import Icon from '../Icon.vue'
 
 const props = defineProps<{ device: Device }>()
@@ -125,27 +126,13 @@ async function fan(minutes: number) {
   busy.value = false
 }
 
-/* which thermometer it goes by: the pane where that decision belongs, since it is this box that
-   acts on it. Only rooms with a sensible reading are offered, exactly as the tile does. */
-const inHouseUnit = (v: number, from?: string) => !from ? v : from.includes('F') === unit.value.includes('F') ? v : unit.value.includes('F') ? v * 9 / 5 + 32 : (v - 32) * 5 / 9
-function plausible(d: Device) {
-  const v = inHouseUnit(Number(d.state), d.attrs.unit_of_measurement)
-  if (!Number.isFinite(v)) return false
-  return unit.value.includes('F') ? v >= 45 && v <= 95 : v >= 7 && v <= 35
-}
-const sensors = computed(() => {
-  const own = props.device.hw, out: { id: string; label: string }[] = []
-  for (const r of store.rooms) for (const d of r.devices) {
-    if (r.id === 'unassigned' || cap(d) !== 'sensor' || !d.capability.endsWith('.temperature') || (own && d.hw === own) || isDead(d) || !plausible(d)) continue
-    const same = r.devices.filter(x => x.capability === 'sensor.temperature').length > 1
-    out.push({ id: d.id, label: same ? `${r.name} · ${shortName(d, r)}` : r.name })
-  }
-  return out
-})
+/* which room it keeps right: the pane where that decision belongs, since it is this box that acts on
+   it. Only rooms with a sensible reading are offered, exactly as the tile does (pane.ts, keepRows). */
+const keep = computed(() => keepRows(props.device, store.rooms, unit.value))
 async function sense(id: string | null) {
   if (busy.value || (id ?? null) === (a.value.sense_from ?? null)) return
   busy.value = true
-  try { await setSense(props.device.id, id); notify(id ? `Using ${sensors.value.find(s => s.id === id)?.label ?? 'that sensor'} for the temperature.` : 'Back to its own sensor.') }
+  try { await setSense(props.device.id, id); notify(id ? `Keeping ${keep.value.find(s => s.id === id)?.label ?? 'that room'} right.` : a.value.own_sensors ? 'Back to its own sensors.' : 'Back to its own sensor.') }
   catch (e: any) { notify(failed('Couldn’t change the sensor', e), 'error') }
   busy.value = false
 }
@@ -158,11 +145,11 @@ async function sense(id: string | null) {
          :aria-valuemin="LOW" :aria-valuemax="HIGH" :aria-valuenow="showing ?? current"
          @pointerdown="grab" @pointermove="turn" @pointerup="letGo" @pointercancel="letGo" @keydown="key">
       <svg viewBox="0 0 330 330" class="rig-ring" aria-hidden="true">
-        <circle cx="165" cy="165" :r="R" fill="none" stroke="rgba(255,255,255,.10)" stroke-width="17" stroke-linecap="round"
+        <circle cx="165" cy="165" :r="R" fill="none" stroke="rgba(var(--wash-rgb), .10)" stroke-width="17" stroke-linecap="round"
                 :stroke-dasharray="`${SWEEP * C} ${C}`" transform="rotate(135 165 165)" />
         <circle v-if="arc && !off" cx="165" cy="165" :r="R" fill="none" :stroke="arc.warm ? 'var(--lamp)' : '#7ab0e8'" stroke-width="17" stroke-linecap="round"
                 :stroke-dasharray="`${arc.len} ${C}`" :stroke-dashoffset="-arc.from" transform="rotate(135 165 165)" />
-        <circle v-if="handle != null && !off" cx="165" cy="165" :r="R" fill="none" stroke="#f1eee8" stroke-width="25" stroke-linecap="round"
+        <circle v-if="handle != null && !off" cx="165" cy="165" :r="R" fill="none" stroke="var(--ink)" stroke-width="25" stroke-linecap="round"
                 :stroke-dasharray="`6 ${C}`" :stroke-dashoffset="-handle" transform="rotate(135 165 165)" />
       </svg>
       <div class="rig-dial-face">
@@ -182,6 +169,16 @@ async function sense(id: string | null) {
         </div>
       </div>
 
+      <div class="clim-keep" v-if="keep.length > 1">
+        <span class="clim-keep-head"><Icon name="sensor" :size="19" />Keep it right in</span>
+        <button v-for="r in keep" :key="r.id ?? 'own'" class="clim-keep-row" :class="{ on: (a.sense_from ?? null) === r.id }" :disabled="busy" @click="sense(r.id)"
+                :aria-label="`${r.label}${r.temp != null ? `, ${r.temp}°` : ''}${r.here ? ', somebody is in' : ''}`" :aria-pressed="(a.sense_from ?? null) === r.id">
+          <i class="clim-keep-here" :class="{ in: r.here }"></i>
+          <span class="clim-keep-name">{{ r.label }}</span>
+          <span class="clim-keep-t" v-if="r.temp != null">{{ r.temp }}°</span>
+        </button>
+      </div>
+
       <div class="rig-row" v-if="hasFan">
         <span class="rig-row-head"><Icon name="fan" :size="20" :class="{ spin: fanOn }" />
           {{ fanOn ? (fanLeft ? `Fan · ${fanLeft} min` : 'Fan running') : 'Fan for' }}</span>
@@ -191,13 +188,6 @@ async function sense(id: string | null) {
         </div>
       </div>
 
-      <div class="rig-row" v-if="sensors.length">
-        <span class="rig-row-head"><Icon name="sensor" :size="19" />Sensor</span>
-        <div class="rig-row-acts">
-          <button class="clim-chip" :class="{ on: !a.sense_from }" :disabled="busy" @click="sense(null)">Its own</button>
-          <button v-for="s in sensors" :key="s.id" class="clim-chip" :class="{ on: a.sense_from === s.id }" :disabled="busy" @click="sense(s.id)">{{ s.label }}</button>
-        </div>
-      </div>
     </div>
   </div>
 </template>
@@ -268,6 +258,9 @@ async function sense(id: string | null) {
   background: rgba(122, 176, 232, 0.22);
   color: #d6e8fb;
 }
+:root[data-shade='light'] .rig-mode.on {
+  color: color-mix(in srgb, rgb(122, 176, 232) 35%, var(--ink));
+}
 .rig-row {
   /* one surface with the choice inside it, the way the board drew the fan and the sensor: a loose
      label above loose chips read as a settings list rather than as part of the dial */
@@ -278,7 +271,7 @@ async function sense(id: string | null) {
   padding: 10px 16px;
   border-radius: 20px;
   border: 1px solid var(--edge);
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(var(--wash-rgb), 0.05);
 }
 .rig-row-head {
   display: flex;
@@ -288,4 +281,64 @@ async function sense(id: string | null) {
   font-size: 15.5px;
   color: var(--ink-2);
   white-space: nowrap;
-}</style>
+}
+/* which room it keeps right (design/thermostat/RoomsB.dc.html): one surface like the fan's, a row a room */
+.clim-keep {
+  display: flex;
+  flex-direction: column;
+  padding: 8px;
+  border-radius: 20px;
+  border: 1px solid var(--edge);
+  background: rgba(var(--wash-rgb), 0.05);
+}
+.clim-keep-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 10px 8px;
+  font-size: 15.5px;
+  color: var(--ink-2);
+}
+.clim-keep-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 36px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 14px;
+  background: none;
+  color: var(--ink-2);
+  font: inherit;
+  font-size: 15px;
+  cursor: pointer;
+  transition: background 0.18s, color 0.18s;
+}
+.clim-keep-row.on {
+  background: var(--ink);
+  color: var(--bg);
+}
+.clim-keep-row:disabled {
+  opacity: 0.5;
+}
+.clim-keep-here {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex: none;
+}
+.clim-keep-here.in {
+  background: var(--live);
+}
+.clim-keep-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  text-align: left;
+}
+.clim-keep-t {
+  font-variant-numeric: tabular-nums;
+}
+</style>

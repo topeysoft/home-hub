@@ -835,7 +835,7 @@ nothing), so the answer given at setup is never final.
   *Every evening*, *Only in an occasion*, *Not by itself*. The next outside strip is asked *Is this more of
   the Roofline?*; more of it is folded into the first box's tile (`Home.folded`, by hardware id) and every
   tap, scene or sentence on the tile reaches every box. Evenings come on at dusk (the sun four degrees
-  under, about twenty minutes after sunset — the boards drew 6:41 PM on Oct 24 in Holts Summit) and go
+  under, about twenty minutes after sunset — the boards drew 6:41 PM on Oct 24 in Cedar Falls) and go
   off at the household's end, 11:00 unless changed, by EDGES written down per date, so a roof switched off
   at nine stays off and a brain restarted mid-evening neither relights it nor forgets eleven. An occasion
   turns nothing on: with no evenings asked for, Christmas leaves the roof dark. Dates decide the occasion

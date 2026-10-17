@@ -204,9 +204,11 @@ class ForgettingTests(ApiTest):
         self.assertIn(("config/entity_registry/remove", {"entity_id": "light.ceiling"}), self.ha.sent)
 
     def test_what_will_not_go_on_its_own_says_so_in_the_houses_words(self):
-        """HA lets an integration refuse. The person is told what to do about it, not what HA said."""
+        """HA lets an integration refuse, and when switching it off fails too the person is told what to
+        do about it, not what HA said."""
         self.registry({"id": "hw-ceiling", "config_entries": ["entry-hw-ceiling"]})
         self.ha.fail["config/device_registry/remove_config_entry_from_device"] = RuntimeError("Integration does not support device removal")
+        self.ha.fail["config/device_registry/update"] = RuntimeError("Integration does not support device removal")
         r = self.client.delete("/devices/light.ceiling")
         self.assertEqual(r.status_code, 502)
         self.assertIn("Ceiling light", r.json()["detail"])
@@ -262,22 +264,35 @@ class ForgettingTests(ApiTest):
         self.assertIn(("config/device_registry/remove_config_entry_from_device",
                        {"device_id": "hw-ceiling", "config_entry_id": "entry-hw-ceiling"}), self.ha.sent)
 
-    def test_what_will_not_go_names_the_account_it_goes_with(self):
-        """The refusal has always said the true thing and then left somebody on a row with no idea
-        which of their accounts it meant. The name is the one fact that makes it actionable."""
+    def test_what_its_account_will_not_let_go_still_leaves_the_house_and_says_where_it_stays(self):
+        """Reported 7 October: a Nest thermostat taken off the wall could not be removed, because Nest
+        never lets one device go, and the only door left was removing Google Nest -- cameras, doorbell
+        and all. It is switched off in the registry instead, and the account is named so the pane can
+        say where it still is."""
+        self.registry({"id": "hw-ceiling", "config_entries": ["entry-hw-ceiling"]})
+        self.ha.answers["config_entries/get"] = [{"entry_id": "entry-hw-ceiling", "domain": "nest",
+                                                  "title": "Google Nest"}]
+        self.ha.fail["config/device_registry/remove_config_entry_from_device"] = RuntimeError("nope")
+        r = self.client.delete("/devices/light.ceiling")
+        self.assertEqual(r.status_code, 200, r.text)
+        self.assertEqual(r.json()["kept_by"], "Google Nest")
+        self.assertIn(("config/device_registry/update", {"device_id": "hw-ceiling", "disabled_by": "user"}), self.ha.sent)
+        self.assertNotIn("config/config_entries/delete", [ty for ty, _ in self.ha.sent])   # the account stays
+
+    def test_and_says_the_account_plainly_when_the_engine_will_not_say_which(self):
+        self.registry({"id": "hw-ceiling", "config_entries": ["entry-a", "entry-b"]})
+        self.ha.fail["config/device_registry/remove_config_entry_from_device"] = RuntimeError("nope")
+        self.assertEqual(self.client.delete("/devices/light.ceiling").json()["kept_by"], "the account that brought it")
+
+    def test_what_cannot_even_be_switched_off_names_the_account_it_goes_with(self):
         self.registry({"id": "hw-ceiling", "config_entries": ["entry-hw-ceiling"]})
         self.ha.answers["config_entries/get"] = [{"entry_id": "entry-hw-ceiling", "domain": "ring",
                                                   "title": "Ring"}]
         self.ha.fail["config/device_registry/remove_config_entry_from_device"] = RuntimeError("nope")
+        self.ha.fail["config/device_registry/update"] = RuntimeError("nope")
         detail = self.client.delete("/devices/light.ceiling").json()["detail"]
         self.assertIn("It goes when Ring is removed", detail)
-        self.assertIn("What this house has", detail)   # the page the button under it opens
-
-    def test_and_falls_back_to_the_words_it_used_before_when_the_engine_will_not_say(self):
-        self.registry({"id": "hw-ceiling", "config_entries": ["entry-a", "entry-b"]})
-        self.ha.fail["config/device_registry/remove_config_entry_from_device"] = RuntimeError("nope")
-        self.assertIn("the account that brought it",
-                      self.client.delete("/devices/light.ceiling").json()["detail"])
+        self.assertIn("What this house has", detail)
 
     def test_forgetting_something_that_is_not_there(self):
         self.assertEqual(self.client.delete("/devices/light.nowhere").status_code, 404)
@@ -576,3 +591,79 @@ class IdentifyTests(ApiTest):
 
     def test_showing_a_thing_where_it_is_needs_no_code_because_it_is_a_tap_and_not_a_change(self):
         self.assertFalse(needs_code("POST", "/devices/light.kitchen/identify"))
+
+
+class ThermostatCompanionEventTests(ApiTest):
+    """The Ecobee switching itself to Away reaches the pane, and is not a change in the thermostat's own
+    state: an "away" in the log as the thermostat's state would read as a mode nobody set, and the rules
+    would see it as one."""
+
+    def test_away_beside_a_thermostat_is_broadcast_and_not_logged_as_its_state(self):
+        from tests.test_model import ThermostatCompanionTests
+        self.hub.home.build(*ThermostatCompanionTests().snap())
+        self.hub._on_event({"event_type": "state_changed", "data": {
+            "entity_id": "select.thermostat_current_mode",
+            "old_state": {"state": "home", "attributes": {"options": ["home", "sleep", "away"]}},
+            "new_state": {"state": "away", "last_changed": "2026-10-07T18:55:00+00:00", "attributes": {"options": ["home", "sleep", "away"]}}}})
+        told = self.sent("device")
+        self.assertEqual(told[-1]["device"]["id"], "climate.thermostat")
+        self.assertEqual(told[-1]["device"]["attrs"]["comfort"], "away")
+        self.assertEqual(self.hub.log.recent(10, subject="climate.thermostat", kinds=("state",)), [])
+
+
+class FirstReadingTests(ApiTest):
+    """Reported 8 October: a thermostat paired over HomeKit said it was added and was nowhere on the wall
+    until a refresh. Its first reading arrived after the rebuild its registry entry set off, and a state
+    for a thing the house does not hold yet was simply dropped."""
+
+    def test_the_first_reading_of_a_thing_the_house_does_not_hold_rebuilds_it(self):
+        with unittest.mock.patch.object(self.hub, "rebuild_soon") as soon:
+            self.hub._on_event({"event_type": "state_changed", "data": {
+                "entity_id": "climate.my_ecobee", "old_state": None,
+                "new_state": {"state": "cool", "attributes": {"friendly_name": "My ecobee"}}}})
+        soon.assert_called_once()
+
+    def test_a_later_reading_of_something_the_house_leaves_out_does_not(self):
+        with unittest.mock.patch.object(self.hub, "rebuild_soon") as soon:
+            self.hub._on_event({"event_type": "state_changed", "data": {
+                "entity_id": "sensor.thermostat_wifi_signal", "old_state": {"state": "-60"},
+                "new_state": {"state": "-61", "attributes": {}}}})
+        soon.assert_not_called()
+
+
+class OnHomeTests(ApiTest):
+    """Never on Home (design/home-keep/, B): the house's answer, so every screen leaves the thing out.
+    Always is each screen's own and never reaches the brain."""
+
+    def test_never_is_kept_with_the_settings_and_carried_on_the_thing(self):
+        r = self.client.post("/devices/switch.kettle/home", json={"show": "never"})
+        self.assertEqual((r.status_code, r.json()["show"]), (200, "never"))
+        self.assertTrue(self.hub.home.devices["switch.kettle"].attrs["off_home"])
+        self.assertEqual(json.loads((self.data / "settings.json").read_text())["off_home"], ["switch.kettle"])
+        self.assertEqual(self.sent("device")[-1]["device"]["attrs"]["off_home"], True)
+        from tests.apptest import house
+        self.hub.home.build(*house())                 # a registry change: the whole model, made again
+        self.assertTrue(self.hub.home.devices["switch.kettle"].attrs["off_home"])
+
+    def test_it_survives_a_state_change(self):
+        self.client.post("/devices/switch.kettle/home", json={"show": "never"})
+        self.hub.home.apply_state("switch.kettle", {"state": "on", "attributes": {"friendly_name": "Kettle"}})
+        self.assertTrue(self.hub.home.devices["switch.kettle"].attrs["off_home"])
+
+    def test_when_its_on_puts_it_back_and_leaves_no_record(self):
+        self.client.post("/devices/switch.kettle/home", json={"show": "never"})
+        r = self.client.post("/devices/switch.kettle/home", json={"show": "on"})
+        self.assertEqual(r.json()["show"], "on")
+        self.assertNotIn("off_home", self.hub.home.devices["switch.kettle"].attrs)
+        self.assertEqual(json.loads((self.data / "settings.json").read_text())["off_home"], [])
+
+    def test_the_history_says_it_in_plain_words(self):
+        self.client.post("/devices/switch.kettle/home", json={"show": "never"})
+        self.client.post("/devices/switch.kettle/home", json={"show": "on"})
+        said = [r["text"] for r in self.client.get("/happened/changes").json()["rows"]]
+        self.assertTrue(any("took Kettle off Home" in t for t in said), said)
+        self.assertTrue(any("put Kettle back on Home" in t for t in said), said)
+
+    def test_anything_else_is_refused(self):
+        self.assertEqual(self.client.post("/devices/switch.kettle/home", json={"show": "always"}).status_code, 400)
+        self.assertEqual(self.client.post("/devices/switch.nothing/home", json={"show": "never"}).status_code, 404)

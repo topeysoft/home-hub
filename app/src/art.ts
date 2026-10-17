@@ -160,6 +160,7 @@ const PLATE = 'url(#mPlate)'      // a flat metal face
 const MATTE = 'url(#mMatte)'      // painted or plastic, unlit
 const SHADE = 'url(#mShade)'      // a lampshade with light behind it
 const DARK = 'url(#mDark)'        // dark plastic
+const CHARGING = 'rgb(116, 198, 157)'   // the panel's --live: a car charging, not a lamp
 const POOL = 'url(#mPool)'        // light landing on a floor
 const CONE = 'url(#mCone)'        // light on its way down
 const GLASS = 'url(#mGlass)'      // a lit bulb
@@ -184,6 +185,8 @@ export type ArtState = {
   playing?: boolean
   cooling?: boolean
   heating?: boolean
+  set?: number            // 0..1 along a thermostat's ring: where it was set
+  now?: number            // 0..1 along it: where the room is
 }
 
 export type Art = {
@@ -202,10 +205,10 @@ export type Art = {
 
 export type Kind =
   | 'floor-lamp' | 'table-lamp' | 'ceiling' | 'strip' | 'bulb' | 'pendant'
-  | 'camera' | 'doorbell' | 'thermostat' | 'speaker' | 'tv' | 'lock' | 'plug' | 'fan' | 'blind' | 'vacuum'
+  | 'camera' | 'doorbell' | 'thermostat' | 'speaker' | 'tv' | 'lock' | 'plug' | 'fan' | 'blind' | 'vacuum' | 'charger'
 export const LIGHT_KINDS: Kind[] = ['floor-lamp', 'table-lamp', 'ceiling', 'strip', 'bulb', 'pendant']
 export const KINDS: Kind[] = [...LIGHT_KINDS,
-  'camera', 'doorbell', 'thermostat', 'speaker', 'tv', 'lock', 'plug', 'fan', 'blind', 'vacuum']
+  'camera', 'doorbell', 'thermostat', 'speaker', 'tv', 'lock', 'plug', 'fan', 'blind', 'vacuum', 'charger']
 
 /* How much light is coming out, 0..1. Off is off: no pool, no cone, no glow, no
    exceptions. An "off" tile that still emits was a real bug on the first pass of
@@ -377,31 +380,29 @@ function thing(kind: Kind, s: ArtState, m: Materials): Art {
   }
 
   if (kind === 'thermostat') {
-    /* blue cooling, orange heating: the same two the panel already tints a
-       climate tile with, and neither is allowed to drift with the sky */
-    const arc = s.cooling ? '#7fb4e8' : s.heating ? '#e9a06a' : ''
+    /* The panel's own ring, not any maker's hardware (design/thermostat/, The dial on the card, A, chosen
+       9 October; it was a Nest -- brushed bezel, dark glass, a tick at twelve -- on every house's wall).
+       The ring from the thermostat's pane: 270 degrees open at the foot, the gap the house is closing in
+       the action's color, a handle where it was set. Drawn in the ink of whatever it sits on
+       (currentColor), so a number inside it takes the card's ink too and reads in either shade.
+       Without readings -- a room card's corner, the device sheet -- it is a plain ring with the handle
+       a little past the top. Blue cooling and orange heating are the two the panel tints a climate card
+       with, and neither drifts with the sky. */
+    const R = 42, C = 2 * Math.PI * R, SWEEP = 0.75 * C
+    const along = (f: number) => Math.min(1, Math.max(0, f)) * SWEEP
+    const ring = (extra: Extra) => circ(96, 62, R, 'none', { 'stroke-width': 5, 'stroke-linecap': 'round', transform: 'rotate(135 96 62)', ...extra })
+    const set = s.set ?? (s.on === false ? undefined : 0.55)
+    const arc = set == null ? '' : s.cooling ? '#7fb4e8' : s.heating ? '#e9a06a' : ''
+    const now = s.now ?? (set == null ? 0 : s.cooling ? set + 0.12 : s.heating ? set - 0.12 : set)
+    const from = Math.min(along(set ?? 0), along(now)), gap = Math.max(2, Math.abs(along(set ?? 0) - along(now)))
+    const turn = set == null ? 0 : (135 + Math.min(1, Math.max(0, set)) * 270) * Math.PI / 180
     return {
       ...none,
-      /* the bezel and nothing else: circ(96, 62, 46) with a pixel to spare, so a
-         tile can put the dial round its own number and leave the base behind */
       face: { x: 49, y: 15, w: 94, h: 94 },
       marks: [
-        ell(96, 122, 40, 7, m.metalLo, { opacity: 0.35 }),
-        circ(96, 62, 46, PLATE),
-        circ(96, 62, 39, DARK),
-        circ(96, 62, 39, 'none', { stroke: m.metalMid, 'stroke-width': 1, opacity: 0.3 }),
-        /* the set-point mark. The number itself stays out of the drawing: the
-           tile already says it in type you can read across a room. */
-        pathOf('M96 26v7', 'none', { stroke: '#f1eee8', 'stroke-width': 2, 'stroke-linecap': 'round' }),
-        /* The one mark on this drawing that says which way the house is going, and
-           it is drawn to be seen now rather than to be found. It used to be 34 of
-           the ring's 270 units at 3 wide and .8 opaque -- a tick, which was the
-           right weight while this drawing was hidden on every screen and only ever
-           appeared on the generated sheet. The dial is the thermostat's card now,
-           so its state mark has to carry across a room like everything else on that
-           row: a little over a quarter of the ring, at the full color. The ellipse
-           and its radius are untouched, so the crop the tests hold it to is too. */
-        ...(arc ? [ell(96, 62, 43, 43, 'none', { stroke: arc, 'stroke-width': 4, opacity: 0.95, 'stroke-dasharray': '78 192', transform: 'rotate(140 96 62)' })] : []),
+        ring({ stroke: 'currentColor', opacity: 0.18, 'stroke-dasharray': `${SWEEP.toFixed(1)} ${C.toFixed(1)}` }),
+        ...(arc ? [ring({ stroke: arc, 'stroke-dasharray': `${gap.toFixed(1)} ${C.toFixed(1)}`, 'stroke-dashoffset': (-from).toFixed(1) })] : []),
+        ...(set != null ? [circ(+(96 + R * Math.cos(turn)).toFixed(1), +(62 + R * Math.sin(turn)).toFixed(1), 5, 'currentColor')] : []),
       ],
     }
   }
@@ -517,6 +518,22 @@ function thing(kind: Kind, s: ArtState, m: Materials): Art {
     }
   }
 
+  if (kind === 'charger') {
+    /* A wall connector and its cable. Its strip of light is the only thing that emits, and only while the
+       car charges -- in the panel's green, because charging the car is not a light being on. */
+    const on = s.on === true
+    return {
+      glow: on ? 0.3 : 0,
+      marks: [
+        rect(50, 8, 60, 104, m.metalLo, { rx: 17, opacity: 0.16 }),
+        rect(57, 12, 46, 88, MATTE, { rx: 15 }),
+        rect(69, 30, 22, 3.4, on ? CHARGING : m.metalLo, { rx: 1.7, opacity: on ? 1 : 0.8 }),
+        pathOf('M80 100c0 16 34 19 44 5c6-9 4-22-4-30', 'none', { stroke: m.darkLo, 'stroke-width': 5, 'stroke-linecap': 'round' }),
+        rect(112, 54, 18, 26, DARK, { rx: 6, transform: 'rotate(-12 121 67)' }),
+      ],
+    }
+  }
+
   /* vacuum */
   const cleaning = s.on === true
   return {
@@ -565,6 +582,7 @@ export function kindFor(capability: string, name: string): Kind | null {
     case 'fan': return 'fan'
     case 'cover': return 'blind'
     case 'vacuum': return 'vacuum'
+    case 'charger': return 'charger'
     case 'climate': return 'thermostat'
     /* a doorbell is a camera to the hub, and nothing like one on a wall */
     case 'camera': return /\b(doorbell|door ?bell|bell)\b/i.test(name) ? 'doorbell' : 'camera'

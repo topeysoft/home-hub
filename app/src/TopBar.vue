@@ -12,7 +12,7 @@
 import { computed } from 'vue'
 import { stripWaiting } from './adding'
 import { homeTab } from './layout'
-import { store, updateReady, weatherParts } from './store'
+import { linkNow, store, updateReady, weatherParts } from './store'
 import Icon from './Icon.vue'
 import WeatherArt from './WeatherArt.vue'
 import { narrow, setupLeft, setupNow } from './band'
@@ -65,7 +65,7 @@ const tabs = computed(() => [
               :aria-label="app.others ? `${app.name}. Another house needs you. Switch house` : `${app.name}. Switch house`">
         <span class="house-switch-dot"></span><span class="house-switch-name">{{ app.name }}</span><Icon name="chevron" :size="14" class="house-switch-open" />
       </button>
-      <span v-else class="link" :class="{ up: store.linkUp }">{{ store.linkUp ? 'Connected' : 'Reconnecting' }}</span>
+      <span v-else class="link" :class="linkNow().cls">{{ linkNow().word }}</span>
       <span class="topbar-wx" v-if="temp" :aria-label="`Outside, ${temp}`">
         <WeatherArt class="topbar-cloud" />
         <span class="topbar-temp">{{ temp }}</span>

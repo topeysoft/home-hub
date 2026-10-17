@@ -67,7 +67,7 @@ const coords = (p: Place) => `${p.lat.toFixed(3)}, ${p.lon.toFixed(3)}`
 
     <label class="search">
       <Icon name="search" :size="18" />
-      <input v-model="q" @input="onInput" type="search" placeholder="Search a town, or type coordinates" autocomplete="off" spellcheck="false" />
+      <input v-model="q" @input="onInput" type="search" enterkeyhint="search" data-keys-keep=".results, .chosen" placeholder="Search a town, or type coordinates" autocomplete="off" spellcheck="false" />
     </label>
     <ul class="results" v-if="results.length">
       <li v-for="r in results" :key="r.name + r.lat"><button @click="choose(r)"><span class="r-name">{{ r.name }}</span><span class="r-sub">{{ coords(r) }}</span></button></li>

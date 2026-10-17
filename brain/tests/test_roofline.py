@@ -20,7 +20,7 @@ from hub.strip import Strips
 from tests.test_strip import FakeHA, FakeLog, FakeRadio, run
 
 TZ = ZoneInfo("America/Chicago")
-HOLTS_SUMMIT = {"name": "Holts Summit", "lat": 38.64, "lon": -92.12}
+CEDAR_FALLS = {"name": "Cedar Falls", "lat": 42.53, "lon": -92.45}
 
 
 class House:
@@ -28,7 +28,7 @@ class House:
 
     def __init__(self, tmp):
         self.settings = Settings(Path(tmp) / "settings.json")
-        self.tz, self.location = TZ, dict(HOLTS_SUMMIT)
+        self.tz, self.location = TZ, dict(CEDAR_FALLS)
         self.ha, self.log = FakeHA(), FakeLog()
         self.home = Home()
         self.home.rooms = {"outside": Room("outside", "Outside"), "unassigned": Room("unassigned", "New devices")}

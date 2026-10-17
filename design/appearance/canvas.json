@@ -1,0 +1,135 @@
+{
+  "name": "Light or dark",
+  "areas": [
+    "Wall screens",
+    "Phones and away"
+  ],
+  "artboards": [
+    {
+      "file": "Today.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 964,
+      "title": "Today — Daylight, as it ships",
+      "is_interactive": true,
+      "page": "light"
+    },
+    {
+      "file": "PaperA.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 964,
+      "title": "A — Paper: one light page, the sky in a window",
+      "is_interactive": true,
+      "page": "light-rejected"
+    },
+    {
+      "file": "HeldB.dc.html",
+      "x": 1560,
+      "y": 0,
+      "w": 1440,
+      "h": 964,
+      "title": "B — Held sky: the sky kept, held up into the light",
+      "is_interactive": true,
+      "page": "light"
+    },
+    {
+      "file": "LamplitC.dc.html",
+      "x": 1560,
+      "y": 0,
+      "w": 1440,
+      "h": 964,
+      "title": "C — Lamplit: paper that warms at night, dark only at rest",
+      "is_interactive": true,
+      "page": "light-rejected"
+    },
+    {
+      "file": "Choosing.dc.html",
+      "x": 0,
+      "y": 1260,
+      "w": 390,
+      "h": 844,
+      "title": "Choosing it, on a phone",
+      "page": "light"
+    }
+  ],
+  "annotations": [
+    {
+      "id": "decided",
+      "page": "light",
+      "x": 3120,
+      "y": 0,
+      "w": 520,
+      "text": "DECIDED 7 OCTOBER 2026: B, HELD SKY\n\nLight is the sky kept and held up into the light: the hour shown by the sky's color, never by its darkness, with frosted white glass cards over it and dark ink that never flips. The resting wall is that same pale sky with the clock on it.\n\nHow it is chosen is as drawn on Choosing it: each phone picks for itself (Same as phone, Light, Dark), the wall screen is set on the wall screen (Light, Dark), and a wall that never picks stays dark.\n\nBUILT 7 OCTOBER, ONE CHANGE FROM THE NOTE: the wall's choice is kept on the wall screen itself, not by the hub. The panel has no way to tell the wall from a laptop on the same Wi-Fi, so a choice kept by the hub would have changed the wall from any browser. The cost: a wall screen that is reset or reinstalled comes back dark.\n\nStill open: whether the Daylight feel is retired now that Light exists. It is drawn as gone on Choosing it, and that was not part of the pick.\n\nA and C are on the next page, Light or dark: not chosen, with their cases intact."
+    },
+    {
+      "id": "why",
+      "x": -620,
+      "y": 0,
+      "w": 500,
+      "text": "THE ASK, 7 OCTOBER\n\nA light mode: everything brighter and easier to read, at any hour, and something a household chooses, as the Bench already lets a printer screen choose.\n\nWHY DAYLIGHT IS NOT ALREADY THIS. Daylight is the lightest feel the panel ships, and it is pastel paper cards held a fixed distance lighter than the sky (tone.ts). The sky still goes to near black at night, so at 11:40 PM Daylight is mid-gray cards with white type on a dark wall. The bars, the band, the weather and the resting screen are dark at every hour in every feel. Flip Today to Night, then Dusk.\n\nWHAT ALL THREE DIRECTIONS SHARE, AND IS NOT A CHOICE.\n- Dark ink on a light page, and it never flips.\n- The signal colors get darker versions. The lamp amber, the live green and the danger red were chosen to show up on a dark field and wash out on white. The green dot is #2e8a5c here, not #74c69d.\n- A light that is on fills its card with amber. A glow does not show on a white page.\n- Pictures stay pictures. The camera, the TV's artwork and the thermostat's dial are dark at every hour, as they are now.\n- The lights in the house are unaffected. Emitter colors are not screen colors.\n\nTHIS OVERRULES ONE EARLIER RULE. design/backdrop/ said a wall glowing like noon at 3 AM is wrong in any direction. Light mode is a household choosing exactly that, so each board answers how much of the hour it keeps. Flip Screen to Resting at Night on each one: that is the moment that matters in a dark hallway.\n\nEach board runs. The chips under each screen are board controls, not part of the panel.",
+      "page": "light"
+    },
+    {
+      "id": "today",
+      "x": 0,
+      "y": -620,
+      "w": 560,
+      "text": "TODAY: DAYLIGHT, AS IT SHIPS\n\nThe home screen on the mock house with the Daylight feel: paper cards in the pastel tone, held .335 lighter than the sky, on today's sky and veil. Values from app/src/tone.ts. The cards flip to dark type only once they pass L .62, which here is only at noon.\n\nAt night the cards are L .49 gray with light type, about 3:1. At dusk they are L .59, still light type, and the worst of the three. The thermostat holds its own distance and flips at a different hour from the cards around it.\n\nThis is the reference the three directions are judged against: each has to read better than this at every hour, and look at least as good at dusk.",
+      "page": "light"
+    },
+    {
+      "id": "a",
+      "x": 0,
+      "y": -620,
+      "w": 560,
+      "text": "A: PAPER. ONE LIGHT PAGE, THE SKY IN A WINDOW\n\nAn off-white page and white cards, the same at every hour. Nothing on the page knows the time except the clock and one card: the weather becomes a window onto the real sky at the real hour, drawn exactly as the wall draws it now, with the moon, the stars and the hills. At night it is the only dark thing on the wall.\n\nFOR: the simplest to read and to build. One set of values, no arithmetic against the sky, every contrast fixed and checkable once. It is what light mode means on every phone and laptop, so nobody has to learn it. The window keeps the thing people like about the panel, the sky, in the one place it means something.\n\nAGAINST: at 11:40 PM the wall is the brightest thing in the house, and at rest it is a white wall with a clock on it. That is what was asked for, and it is also what will get turned off in a bedroom hallway. And it is the plainest of the three: a page, not a place.",
+      "page": "light-rejected"
+    },
+    {
+      "id": "b",
+      "x": 1560,
+      "y": -620,
+      "w": 560,
+      "text": "B: HELD SKY. THE SKY KEPT, HELD UP INTO THE LIGHT\n\nThe sky stays behind everything, with its hills and its weather, but it never gets dark. It shows the hour by its color instead: open blue at noon, lilac to apricot at dusk, a pale periwinkle at night with the stars still faintly in it. The cards are frosted white glass over it, the panel's own material turned to day.\n\nFOR: it is still the panel. The thing that makes the wall feel like a window and not a tablet survives, and the hour is never lost. At night it settles to about L .75 at the top rather than white, so it is light without glaring. It also suits the default, Nightfall: it is that same face, lit.\n\nAGAINST: the most work. Every card's lightness is figured against a sky that is now light, which turns tone.ts around, and frosted glass costs the most to draw on a small host. Pastel skies are easy to get sugary: dusk is the one to look at hardest. And the night page is the dimmest of the three, so it is the least \"easier to read\" at the hour that matters least.",
+      "page": "light"
+    },
+    {
+      "id": "c",
+      "x": 1560,
+      "y": -620,
+      "w": 560,
+      "text": "C: LAMPLIT. PAPER THAT WARMS AT NIGHT, DARK ONLY AT REST\n\nA's paper page, but it knows the time. White at noon, warming to cream after sunset, and by night the color of paper under a lamp, never dark and never a white wall at midnight. The ink never flips. A light that is on glows a little past its card after dark.\n\nAnd one rule A and B do not have: a wall resting after sunset goes to the dark resting screen it has today. A resting wall is one nobody is reading, so being easy to read does not apply to it, and dark is what a hallway wants at midnight. While someone is using it, it stays light.\n\nFOR: it answers the ask (brighter and easier to read, chosen) without the one cost that makes A get switched off. It is nearly as simple to build as A: three pages instead of one, no sky arithmetic.\n\nAGAINST: \"light\" that changes on its own is less obviously what was picked. Someone who chose Light and finds a dark wall at 11 PM may think it broke. The rule has to be said on the Look page in a few words. And the night cream is the color most likely to read as dingy rather than warm: judge it on a real panel, not on this canvas.",
+      "page": "light-rejected"
+    },
+    {
+      "id": "choosing",
+      "x": 520,
+      "y": 1260,
+      "w": 560,
+      "text": "CHOOSING IT, THE SAME IN ALL THREE\n\nCopied from the Bench, which settled it on 2 October. Each phone picks for itself on its own Look page: Same as phone (the default, following the phone's own light or dark setting), Light or Dark, kept on that phone only. It never changes the wall screen. The wall screen picks on its own Look page, kept by the hub, and only the wall screen asks.\n\nThat is a change of rule for this page, whose first line says everyone sees what you pick here, on every screen. Light or dark becomes the one exception, and the line says so.\n\nWHAT IT DOES TO THE FEELS. With a real Light, the Daylight feel has no job left: it was the half-measure this replaces. It is drawn here as gone, which leaves Calm and Nightfall. That is a consequence to confirm, not a given.\n\nAND THE WALL'S DEFAULT stays Dark (today's look) for every house that does not pick. Nobody's wall turns white overnight.\n\nThe words go through docs/wording.md before they ship.",
+      "page": "light"
+    }
+  ],
+  "launch": {
+    "view": "canvas",
+    "file": "HeldB.dc.html"
+  },
+  "pages": [
+    {
+      "id": "light",
+      "name": "Light or dark",
+      "decided": {
+        "on": "2026-10-07",
+        "chose": "B",
+        "board": "HeldB.dc.html"
+      }
+    },
+    {
+      "id": "light-rejected",
+      "name": "Light or dark: not chosen"
+    }
+  ]
+}

@@ -114,7 +114,7 @@ async function whichWay() {
   border-radius: 32px 32px 0 0;
   border: 1px solid var(--edge);
   border-bottom: 0;
-  background: rgba(255, 255, 255, 0.035);
+  background: rgba(var(--wash-rgb), 0.035);
 }
 .roof-plate-head {
   display: flex;
@@ -179,7 +179,7 @@ async function whichWay() {
 /* EMITTER COLORS, NOT SCREEN COLORS (AGENTS.md section 4): what the roof is asked for, saturated -- the
    look's own bytes, inline -- never the panel's pastels. A dark run's lights are unlit, not dimmed. */
 .roof-dots i.off {
-  background: rgba(255, 255, 255, 0.13);
+  background: rgba(var(--wash-rgb), 0.13);
   box-shadow: none;
 }
 .roof-dots i.chase {
@@ -235,14 +235,14 @@ async function whichWay() {
   top: 5px;
   height: 1.5px;
   border-radius: 1px;
-  background: rgba(255, 255, 255, 0.3);
+  background: rgba(var(--wash-rgb), 0.3);
 }
 .roof-arrow i {
   position: absolute;
   top: 2px;
   width: 7px;
   height: 7px;
-  border: solid rgba(255, 255, 255, 0.3);
+  border: solid rgba(var(--wash-rgb), 0.3);
   transform: rotate(45deg);
 }
 .roof-arrow[data-dir='on'] i {

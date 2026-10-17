@@ -260,6 +260,20 @@ that view, and putting the temperatures on it is the next step, but it needs a c
 thermostat's sensor picker both ignore, and that is its own piece of work. No timer on an appliance: "ice maker for
 ten minutes" is a plug's sentence.
 
+## A car charger, which has nothing to switch
+
+*8 October 2026, design/charger/, A with C's line.* A Tesla Wall Connector was set up, said Added, and showed
+up nowhere: every reading it has is either a diagnostic or a kind the panel does not draw. A charger is now
+found by its readings rather than its maker -- one unit with a `plug` binary sensor (a car is connected), a
+`battery_charging` one (it is charging) and a `power` sensor -- and becomes ONE device of kind `charger`
+whose state is `charging`, `plugged` or `ready` (`brain/hub/model.py`, `chargers()`). Those three readings
+are let past the diagnostic rule for a charger and nothing else of the unit is: its temperatures, voltages
+and currents never reach a room, so a wall connector's handle temperature cannot become the garage's.
+
+It is not a kind anything can be shown as, and it cannot be shown as anything else: there is no control
+to share with another kind, and `CONTROLS` has no entry for it. The car decides when it charges, so the
+card has nothing to tap; holding it opens the day it has had, like a door contact.
+
 ## What was built
 
 1. **The second field.** `Device.kind` beside `capability` in `model.py`, with `kind_of(d)` — `kind or capability` —

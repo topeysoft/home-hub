@@ -5,10 +5,10 @@
 On the relay box it runs inside the service's own container, against the same file:
 
     ssh root@<relay> docker exec relay-service python cli.py list
-    ssh root@<relay> docker exec relay-service python cli.py grant temi 2027-10-01 "Temi, by hand"
-    ssh root@<relay> docker exec relay-service python cli.py stop temi
-    ssh root@<relay> docker exec relay-service python cli.py rotate temi     # a house that lost its key
-    ssh root@<relay> docker exec relay-service python cli.py release temi    # the name goes back
+    ssh root@<relay> docker exec relay-service python cli.py grant jordan 2027-10-01 "Jordan, by hand"
+    ssh root@<relay> docker exec relay-service python cli.py stop jordan
+    ssh root@<relay> docker exec relay-service python cli.py rotate jordan     # a house that lost its key
+    ssh root@<relay> docker exec relay-service python cli.py release jordan    # the name goes back
     ssh root@<relay> docker exec relay-service python cli.py invite 2027-10-05 "a tester, by hand"
     ssh root@<relay> docker exec relay-service python cli.py invites
     ssh root@<relay> docker exec relay-service python cli.py uninvite 9HTF   # an unused code, by its last four

@@ -1,4 +1,6 @@
 {
+  "name": "The Wall on a phone",
+  "areas": ["Phones and away"],
   "pages": [
     {
       "id": "page-1",

@@ -151,6 +151,9 @@ const stopSound = () => perform(props.device, 'sound_off', undefined, { state: '
   background: rgba(122, 176, 232, 0.16);
   color: #cfe3fa;
 }
+:root[data-shade='light'] .rig-chip.app {
+  color: color-mix(in srgb, rgb(122, 176, 232) 35%, var(--ink));
+}
 .rig-times {
   display: flex;
   justify-content: space-between;

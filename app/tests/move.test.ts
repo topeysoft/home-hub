@@ -9,7 +9,7 @@ import type { Me, Phone } from '../src/api'
 import { appHost, offerMove, moveCode, switchFor, waitsToBeLetOut, withoutCode } from '../src/move'
 import { apiUrl, door, learnLan, look, looks, moved, withToken, wsProtocols, wsUrl } from '../src/door'
 
-const phone = (over: Partial<Phone> = {}): Phone => ({ id: 'p1', name: "Temi's iPhone", kind: 'phone', joined: 0, expires: null, remote: false, last_seen: null, how: 'code', me: true, ...over })
+const phone = (over: Partial<Phone> = {}): Phone => ({ id: 'p1', name: "Jordan's iPhone", kind: 'phone', joined: 0, expires: null, remote: false, last_seen: null, how: 'code', me: true, ...over })
 const me = (over: Partial<Me> = {}): Me => ({ locked: true, paired: true, home: 'Maple Court', phone: phone(), address: 'https://maple-court.elyir.app', lan: '192-168-86-53.maple-court.home.elyir.app', ...over })
 
 describe('the band line', () => {

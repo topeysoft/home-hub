@@ -5,7 +5,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { Device, Event, Room } from '../src/api'
 import { store } from '../src/store'
-import { facts, moment, moments, paneKind, reading, verbs, whyLine } from '../src/pane'
+import { facts, keepRows, moment, moments, paneKind, reading, verbs, whyLine } from '../src/pane'
 
 const dev = (id: string, name: string, capability: string, state: string, attrs: Record<string, any> = {}, maker?: string): Device =>
   ({ id, name, room_id: 'living', capability, state, attrs, maker })
@@ -156,5 +156,41 @@ describe('why it is like that', () => {
   it('says plainly when a thing has stopped answering', () => {
     const d = dev('l', 'Lamp', 'light', 'unavailable')
     expect(whyLine(d, [ev('state', 'unavailable', at(15, 0))], room(), NOW)).toBe('Lamp has not answered since 3:00 PM.')
+  })
+})
+
+/* design/thermostat/, B, chosen 7 October: the room that counts, with Away and Sleep said in words. */
+describe('a thermostat that brings its own sensors', () => {
+  const eco = (attrs: Record<string, any> = {}) => dev('climate.t', 'Thermostat', 'climate', 'cool',
+    { temperature: 71, current_temperature: 74, own_sensors: 2, ...attrs })
+  const place = (id: string, name: string, devices: Device[]): Room =>
+    ({ id, name, devices: devices.map(d => ({ ...d, room_id: id })), intent: 'occupied', set_by: null, hold_until: null })
+  const warm = (id: string, v: string) => dev(id, 'Temperature', 'sensor.temperature', v, { unit_of_measurement: '°F' })
+
+  it('offers its own sensors first, then each room with its reading and whether somebody is in', () => {
+    const rooms = [place('office', 'Office', [warm('sensor.o', '75.2'), dev('binary_sensor.o', 'Occupancy', 'motion', 'on')]),
+                   place('bed', 'Bedroom', [warm('sensor.b', '70')]),
+                   place('unassigned', 'New devices', [warm('sensor.n', '71')])]
+    expect(keepRows(eco(), rooms, '°F')).toEqual([
+      { id: null, label: 'Its own sensors', temp: 74, here: false },
+      { id: 'sensor.o', label: 'Office', temp: 75, here: true },
+      { id: 'sensor.b', label: 'Bedroom', temp: 70, here: false },
+    ])
+  })
+
+  it('is plainly "its own" for a thermostat with none elsewhere', () => {
+    expect(keepRows(eco({ own_sensors: undefined }), [], '°F')[0].label).toBe('Its own')
+    expect(facts(eco({ own_sensors: undefined }), null, '°F').find(f => f.k === 'Sensing')?.v).toBe('Its own sensor')
+  })
+
+  it('says its air as one word beside the humidity, and nothing where it has none', () => {
+    expect(facts(eco({ air: 'Good', current_humidity: 48 }), null, '°F').map(f => f.k)).toEqual(['Humidity', 'Set to', 'Sensing', 'Air'])
+    expect(facts(eco(), null, '°F').some(f => f.k === 'Air')).toBe(false)
+  })
+
+  it('says when it set itself to Away or Sleep, and nothing at Home', () => {
+    expect(whyLine(eco({ comfort: 'away', comfort_since: at(18, 55) }), [], room(), NOW)).toBe('The thermostat set itself to Away at 6:55 PM.')
+    expect(whyLine(eco({ comfort: 'sleep', comfort_since: at(7, 0) }), [], room(), NOW)).toBe('The thermostat set itself to Sleep at 7:00 AM.')
+    expect(whyLine(eco({ comfort: 'home', comfort_since: at(18, 55) }), [], room(), NOW)).toBe('')
   })
 })

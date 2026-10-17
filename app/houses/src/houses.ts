@@ -13,10 +13,10 @@ import { reactive } from 'vue'
 import { all, put } from './db'
 
 export type HouseRecord = {
-  id: string          // the house's label in the zone: `temi` of temi.elyir.app
+  id: string          // the house's label in the zone: `jordan` of jordan.elyir.app
   name: string        // what this phone calls it (AppName): only this phone sees it
-  origin: string      // https://temi.elyir.app
-  lan: string         // the house's name at home, as it last said: 192-168-86-53.temi.home.elyir.app
+  origin: string      // https://jordan.elyir.app
+  lan: string         // the house's name at home, as it last said: 192-168-86-53.jordan.home.elyir.app
   token: string       // this phone's pass for this house
   added: number
   opened: number      // when it was last opened here: where the app opens when no house answers at home
@@ -49,7 +49,7 @@ export function originOf(label: string, here: { hostname: string; protocol: stri
   return `https://${label}.${here.hostname.split('.').slice(1).join('.')}`
 }
 
-/** The house a house's address names: `temi` of https://temi.elyir.app or temi.elyir.app. */
+/** The house a house's address names: `jordan` of https://jordan.elyir.app or jordan.elyir.app. */
 export function labelOf(address: string): string {
   const host = address.replace(/^https?:\/\//, '').split('/')[0].toLowerCase()
   return host.split('.')[0].replace(/[^a-z0-9-]/g, '')

@@ -19,7 +19,7 @@
  * They kept their code; only the frame changed.
  */
 import { computed, onMounted, onUnmounted, ref, watch, type Component } from 'vue'
-import { foundCount, store, updateReady, loadSignals } from './store'
+import { foundCount, linkNow, store, updateReady, loadSignals } from './store'
 import { adjusted, feelFrom } from './look'
 import Icon from './Icon.vue'
 import LocationPage from './LocationPage.vue'
@@ -41,6 +41,7 @@ import ChangesPage from './ChangesPage.vue'
 import AdvancedLink from './AdvancedLink.vue'
 import { isPage, LIT, type PageId } from './pages'
 import { printerChip } from './printers'
+import { kw } from './chargers'
 import PhoneSteps from './PhoneSteps.vue'
 import { dismissHomeScreen, narrow, setupLeft, setupNow, type SetupStep } from './band'
 import { offerMove } from './move'
@@ -138,6 +139,15 @@ const share = computed(() => {
   const things = s.shared === 1 ? '1 thing' : `${s.shared} things`
   return s.holders.length ? `${things}, with ${s.holders.map(h => h.name).join(' and ')}` : `${things} ready to add`
 })
+/* THE HOUSE'S POWER (design/energy/), only where there is a system to say it about. Its door opens the power
+   pane rather than a page: the pane is the one place it lives, and the band opens it too. */
+const power = computed(() => {
+  const p = store.power; if (!p) return ''
+  if (p.grid_up === false) return p.charge != null ? `The power is out · battery ${Math.round(p.charge)}%` : 'The power is out'
+  const sun = (p.solar ?? 0) >= 0.05 ? `${kw(p.solar)} from the sun` : 'Nothing from the sun now'
+  return p.charge != null ? `${sun} · battery ${Math.round(p.charge)}%` : sun
+})
+function openPower() { store.sheet = null; store.powerOpen = true }
 const version = computed(() => { const v = store.status?.version; return !v || v === 'dev' ? 'Development build' : v })
 const hub = computed(() => ready.value ? `${version.value} · an update is ready` : version.value)
 const code = computed(() => locked.value ? 'Needed to change the house' : 'Not set: anyone on your Wi‑Fi can change the house')
@@ -224,8 +234,13 @@ onUnmounted(() => window.removeEventListener('keydown', key))
             <span class="door-text"><span class="door-name">{{ d.name }}</span><span class="door-hint">{{ d.hint }}</span></span>
             <Icon name="back" :size="16" class="flip" />
           </button>
+          <button v-if="power" class="door" :class="{ attention: store.power?.grid_up === false }" @click="openPower">
+            <span class="door-icon"><Icon name="sun" :size="18" /></span>
+            <span class="door-text"><span class="door-name">Solar and battery</span><span class="door-hint">{{ power }}</span></span>
+            <Icon name="back" :size="16" class="flip" />
+          </button>
         </nav>
-        <p class="house-foot"><span class="link" :class="{ up: store.linkUp }">{{ store.linkUp ? 'Connected' : 'Reconnecting' }}</span></p>
+        <p class="house-foot"><span class="link" :class="linkNow().cls">{{ linkNow().word }}</span></p>
       </aside>
 
       <section class="house-main">

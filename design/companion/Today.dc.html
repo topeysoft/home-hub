@@ -1,0 +1,73 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>Today, a second screen in a house that has a hub</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="companion.css">
+<style>
+  .board { position: relative; width: 1440px; height: 900px; overflow: hidden; background: #0c0d10; color: var(--ink); font-size: 17px; line-height: 1.4; }
+  .board::before { content: ""; position: absolute; inset: 0;
+    background: radial-gradient(64% 54% at 22% 18%, rgba(72,63,135,.22), transparent 70%), radial-gradient(56% 48% at 86% 88%, rgba(92,63,57,.2), transparent 72%); }
+  .cap { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+  .screen { position: absolute; width: 630px; height: 394px; border-radius: 10px; overflow: hidden;
+            border: 1px solid var(--edge-hi); box-shadow: 0 30px 70px -34px rgba(0,0,0,.95); }
+  .screen > .wall { transform: scale(.4375); transform-origin: 0 0; }
+  .note { padding: 13px 16px 14px; border-radius: 18px; background: var(--surface); border: 1px solid var(--edge); }
+  .bad { color: var(--danger); }
+  code { color: var(--lamp); font-size: .92em; }
+  .tablet { position: absolute; inset: 0; background: #0c0d10; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; }
+</style>
+</head>
+<body>
+<div class="board">
+  <div style="position: absolute; top: 44px; left: 56px; right: 56px;">
+    <h1 style="font-size: 42px;">Today, a second screen in a house that already has a hub.</h1>
+    <p style="margin: 10px 0 0; font-size: 17px; color: var(--ink-2); max-width: 108ch;">There are two kinds of wall screen, and neither knows it is the second one. The wall unit sets up a whole new house. The tablet knows only an address, and when that address goes quiet it says so in the words of a browser.</p>
+  </div>
+
+  <div class="cap" style="position: absolute; top: 176px; left: 56px;">the wall unit, first time on, the hub already in the closet</div>
+  <div class="screen" style="top: 204px; left: 56px;">
+    <div class="wall"><div class="sun"></div><div class="land"></div>
+      <div class="col">
+        <div class="mark"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11.5 12 4l9 7.5"/><path d="M5.5 10v9.5h13V10"/></svg></div>
+        <h1>Welcome home.</h1>
+        <p class="lede">Run the whole house from this screen. Setting it up takes a few minutes.</p>
+        <div class="actions"><span class="cta" style="opacity:.5">Get started</span></div>
+        <p class="status"><span class="dot"></span> Getting things ready. The first start takes a minute or two.</p>
+        <p class="foot">Moving from another hub? <span class="link">Bring its backup over</span></p>
+      </div>
+    </div>
+  </div>
+  <div style="position: absolute; top: 612px; left: 56px; width: 630px;">
+    <div class="t1" style="margin-bottom: 4px;"><span class="bad">It is building a second house.</span> Nothing asked whether there was one.</div>
+    <div class="t2"><code>firstboot.sh</code> installs everything when a screen is plugged in, and <code>wall.sh</code> opens <code>localhost</code>. A second home engine starts on the wall, and the two hubs fight over the name: one of them becomes <code>hub-2</code>, and phones that knew <code>hub.local</code> may now be talking to the empty one.</div>
+  </div>
+
+  <div class="cap" style="position: absolute; top: 176px; left: 754px;">the wall tablet, the hub unplugged for a minute</div>
+  <div class="screen" style="top: 204px; left: 754px;">
+    <div class="tablet">
+      <div style="font-size: 26px; color: var(--ink);">Looking for the house</div>
+      <div style="font-size: 15px; color: var(--muted);">not answering yet &mdash; trying again</div>
+    </div>
+  </div>
+  <div style="position: absolute; top: 612px; left: 754px; width: 630px;">
+    <div class="t1" style="margin-bottom: 4px;">The only screen that is already just a screen.</div>
+    <div class="t2">It finds the hub (last address, <code>hub.local</code>, then a search) and shows its panel. It cannot say which house it lost, or since when, and the hub has no list of screens: it holds a phone&rsquo;s cookie and is guessed to be a wall from its browser.</div>
+  </div>
+
+  <div style="position: absolute; top: 742px; left: 56px; right: 56px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 18px;">
+    <div class="note">
+      <div class="t1" style="margin-bottom: 5px;">No screen knows where it hangs</div>
+      <div class="t2">The hallway screen opens on the same page as the kitchen one, and its presence sensor has no room to count toward.</div>
+    </div>
+    <div class="note">
+      <div class="t1" style="margin-bottom: 5px;">A bigger hub later is a reinstall</div>
+      <div class="t2">Start on the wall, buy a NUC, restore the backup to it, and the wall is still a whole hub, now running an old copy of the house.</div>
+    </div>
+    <div class="note">
+      <div class="t1" style="margin-bottom: 5px;">Its spare parts are wasted</div>
+      <div class="t2">The wall unit&rsquo;s microphone, presence sensor and Thread radio work only for the house it runs itself.</div>
+    </div>
+  </div>
+</div>
+</body>
+</html>

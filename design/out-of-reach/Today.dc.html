@@ -1,0 +1,277 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>Today: a tap that never left the screen</title>
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&display=swap">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Instrument Sans", -apple-system, "SF Pro Text", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      /* the panel's own tokens -- app/src/panel.css */
+      --bg: #0c0d10; --surface-rgb: 26,28,34; --surface: rgba(var(--surface-rgb),.68);
+      --edge: rgba(255,255,255,.1); --edge-hi: rgba(255,255,255,.18);
+      --ink: #f1eee8; --ink-2: #b9b5ad; --muted: #7f7d77;
+      --lamp-rgb: 233,184,114; --lamp: rgb(var(--lamp-rgb)); --lamp-ink-rgb: 42,28,7; --lamp-ink: rgb(var(--lamp-ink-rgb));
+      --live-rgb: 116,198,157; --live: rgb(var(--live-rgb));
+      --danger-rgb: 224,138,138; --danger: rgb(var(--danger-rgb));
+      --r-lg: 22px; --r-md: 16px; --r-sm: 12px;
+      /* the glass at night, as the shipped panel computes it at 7:40 PM */
+      --sweep: linear-gradient(112deg, transparent 26%, rgba(255,255,255,.15) 45%, rgba(255,255,255,.02) 56%, transparent 64%);
+      --glass: linear-gradient(148deg, oklch(0.357 0.014 274 / .34), oklch(0.287 0.012 274 / .12) 46%, oklch(0.317 0.014 274 / .24));
+      --lit: linear-gradient(155deg, oklch(0.377 0.047 76), oklch(0.322 0.047 82));
+      --unlit: linear-gradient(155deg, oklch(0.377 0.01 66), oklch(0.322 0.01 72));
+      --depth: inset 0 -46px 56px -48px rgba(14,16,21,.9), 0 28px 64px -26px rgba(10,11,17,.69), 0 2px 10px rgba(10,11,17,.3);
+    }
+    .screen { position: relative; width: 1440px; height: 900px; overflow: hidden; background: var(--bg); color: var(--ink); font-size: 17px; line-height: 1.4; }
+    .abs { position: absolute; }
+    svg.i { fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+    /* glass: the sweep over the pane, the depth under it, and the rim catching the light */
+    .gl { background-image: var(--sweep), var(--glass); box-shadow: var(--depth); }
+    .gl::after, .tile::after, .scene::after { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; padding: 1.4px;
+      background: linear-gradient(158deg, rgba(255,255,255,.42), rgba(255,255,255,.06) 34%, rgba(14,14,22,.02) 62%, rgba(255,255,255,.24));
+      -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0); -webkit-mask-composite: xor;
+      mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0); }
+    .round { position: absolute; border-radius: 50%; display: grid; place-items: center; color: var(--ink-2); }
+    .tab { display: inline-flex; align-items: center; gap: 10px; height: 44px; padding: 0 22px; white-space: nowrap; border-radius: 999px; font-size: 15.5px; color: var(--ink-2); }
+    .link { display: flex; align-items: center; gap: 8px; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
+    .link i { width: 6px; height: 6px; border-radius: 50%; background: var(--live); }
+    .link.out { color: var(--ink-2); }
+    .link.out i { background: var(--lamp); box-shadow: 0 0 0 3px rgba(var(--lamp-rgb),.18); }
+    /* a card in the room */
+    .tile { position: absolute; border-radius: 24px; border: 1px solid transparent; background-image: var(--sweep), var(--glass); box-shadow: var(--depth); overflow: hidden; }
+    .tile.big { border-radius: 28px; }
+    .tile.flat { background: var(--surface); border-color: var(--edge); }
+    .tile.flat::after { display: none; }
+    .tile.lit { background-image: var(--sweep), var(--lit); border-color: rgba(var(--lamp-rgb),.3); }
+    .tile.unlit { background-image: var(--unlit); }
+    .tile.unlit::after { opacity: .5; }
+    .tn { position: absolute; left: 19px; top: 16px; right: 18px; display: flex; align-items: center; gap: 11px; font-size: 16px; font-weight: 500; letter-spacing: -.005em; }
+    .tn svg { color: var(--ink-2); }
+    .lit .tn svg { color: var(--lamp); }
+    .ts { position: absolute; left: 19px; right: 18px; bottom: 15px; font-size: 14.5px; color: var(--ink-2); }
+    .row { display: flex; align-items: center; gap: 10px; height: 34px; padding: 0 12px; border-radius: 12px; font-size: 14.5px; font-weight: 500;
+           border: 1px solid var(--edge); background: rgba(255,255,255,.04); }
+    .row.on { background: rgba(var(--lamp-rgb),.9); color: var(--lamp-ink); border-color: transparent; }
+    .row .v { margin-left: auto; color: var(--muted); font-weight: 400; }
+    .row.on .v { color: var(--lamp-ink); }
+    .scene { position: relative; height: 64px; border-radius: 17px; background: rgba(255,255,255,.055); box-shadow: var(--depth); display: flex; align-items: center; gap: 16px; padding: 0 16px; }
+    .scene svg { color: var(--ink-2); }
+    .scene b { display: block; font-weight: 400; font-size: 17px; line-height: 21px; }
+    .scene small { display: block; font-size: 13px; color: var(--ink-2); line-height: 18px; }
+    .cap { font-size: 12px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .chipline { display: inline-flex; align-items: center; gap: 8px; height: 37px; padding: 0 14px 0 12px; border-radius: 999px; font-size: 13.5px;
+                color: var(--ink-2); background: rgba(255,255,255,.08); border: 1px solid var(--edge); white-space: nowrap; }
+    .chipline .ask { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
+    .reading { display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 14px 0 11px; border-radius: 999px; font-size: 14px; color: var(--ink-2);
+               background: var(--surface); border: 1px solid var(--edge); white-space: nowrap; }
+    .reading b { color: var(--ink); font-weight: 500; }
+    /* the toast, at its shipped values (.toast, .toast.error, .toast-act) */
+    .toast { position: absolute; left: 50%; bottom: 45px; transform: translateX(-50%); display: flex; align-items: center; gap: 14px; padding: 13px 20px;
+             border-radius: 999px; font-size: 15px; font-weight: 500; white-space: nowrap; box-shadow: 0 14px 40px -12px rgba(0,0,0,.7); }
+    .toast.error { background: #3a1d1d; color: #f3c9c9; border: 1px solid rgba(var(--danger-rgb),.35); }
+    .toast-act { margin: -6px -10px -6px 0; padding: 6px 12px; border-radius: 999px; background: rgba(255,255,255,.1); font-weight: 600; min-height: 32px; display: inline-flex; align-items: center; }
+    /* ANNOTATION, NEVER PANEL: dashed, and in the board's own voice. Nothing inside one is a screen. */
+    .note { position: absolute; border: 1px dashed rgba(255,255,255,.26); border-radius: 18px; padding: 13px 16px 12px; background: rgba(8,9,12,.82);
+            font-size: 13px; line-height: 1.45; color: var(--ink-2); }
+    .note b { color: var(--ink); font-weight: 500; }
+    .note .cap { display: block; margin-bottom: 9px; }
+    .try { display: flex; gap: 6px; margin-bottom: 9px; flex-wrap: nowrap; }
+    .flip { font-size: 12.5px; padding: 4px 10px; border-radius: 999px; border: 1px dashed rgba(255,255,255,.24); color: var(--ink-2); cursor: pointer; white-space: nowrap; }
+    .flip.on { border-style: solid; border-color: rgba(var(--lamp-rgb),.7); color: var(--lamp); background: rgba(var(--lamp-rgb),.08); }
+    .ring { position: absolute; border: 1.5px dashed rgba(255,255,255,.45); border-radius: 999px; pointer-events: none; }
+    .tag { position: absolute; font-size: 11.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-2); white-space: nowrap; }
+    .finger { position: absolute; width: 58px; height: 58px; border-radius: 50%; background: rgba(255,255,255,.16); border: 2px solid rgba(255,255,255,.55);
+              box-shadow: 0 0 0 10px rgba(255,255,255,.06); }
+
+    .pending .tn svg { color: var(--lamp); opacity: .55; filter: drop-shadow(0 0 6px rgba(var(--lamp-rgb),.6)); }
+  </style>
+</helmet>
+
+<!-- TODAY -- the kitchen's wall screen, as the shipped panel draws it, on an evening when it could no longer start a
+     new conversation with the hub but its open one stayed up. Nothing on it looked any different. -->
+<div class="screen">
+
+  <!-- the sky at 7:40 PM, as Sky.vue paints it on a clear October night, and the hills along the foot -->
+  <div class="abs" style="inset: 0; background: linear-gradient(rgb(17,18,25) 0%, rgb(20,21,30) 40%, rgb(21,22,31) 62%, rgb(15,16,21) 100%);"></div>
+  <div class="abs" style="inset: 0; background: radial-gradient(48% 40% at 8% 52%, rgba(40,46,84,.32), transparent 70%), radial-gradient(40% 30% at 70% 8%, rgba(34,38,66,.22), transparent 70%);"></div>
+  <svg class="abs" style="left: 0; top: 0;" width="1440" height="900" viewBox="0 0 1440 900">
+    <g fill="#fff">
+      <circle cx="18" cy="38" r=".9" opacity=".5"/><circle cx="384" cy="12" r=".8" opacity=".35"/><circle cx="372" cy="100" r=".9" opacity=".45"/>
+      <circle cx="1100" cy="96" r=".8" opacity=".4"/><circle cx="1418" cy="40" r=".9" opacity=".5"/><circle cx="1406" cy="330" r=".8" opacity=".45"/>
+      <circle cx="1240" cy="190" r=".7" opacity=".35"/><circle cx="700" cy="88" r=".7" opacity=".3"/><circle cx="18" cy="420" r=".7" opacity=".3"/>
+      <circle cx="635" cy="256" r=".9" opacity=".5"/><circle cx="1032" cy="252" r=".7" opacity=".3"/><circle cx="1395" cy="610" r=".8" opacity=".35"/>
+    </g>
+    <path d="M0 668 C 120 650, 230 664, 380 676 S 760 704, 1030 708 S 1180 676, 1250 674 S 1380 680, 1440 690 V900 H0z" fill="rgb(17,17,23)"/>
+    <path d="M1128 690 q6 -14 14 -10 q4 -10 12 -4 q6 -8 12 2 q10 -6 14 6 M1188 690 q8 -18 16 -4 q8 -6 12 6 M1290 682 q6 -12 14 -4 q6 -4 10 6" stroke="rgb(14,14,19)" stroke-width="10" fill="none" stroke-linecap="round"/>
+    <path d="M0 740 C 300 726, 640 750, 940 742 S 1300 730, 1440 738 V900 H0z" fill="rgb(14,14,18)"/>
+  </svg>
+
+  <!-- the bar, as it ships: the time, the three tabs, how the link is, the Add door and This house -->
+  <div class="abs" style="left: 40px; top: 26px; display: flex; align-items: baseline; gap: 12px;">
+    <span style="font-size: 27px; font-weight: 400; letter-spacing: -.03em; line-height: 30px;">7:40 PM</span>
+    <span style="font-size: 13.5px; color: var(--muted);">Friday, October 9</span>
+  </div>
+  <div class="abs gl" style="left: 532px; top: 15px; width: 376px; height: 54px; border-radius: 999px; padding: 4px; display: flex; justify-content: center;">
+    <span class="tab"><svg class="i" width="16" height="16" viewBox="0 0 24 24"><path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6h-6v6H4a1 1 0 0 1-1-1z"/></svg>Your evening</span><span class="tab">Rooms</span><span class="tab">Cameras</span>
+  </div>
+  <div class="abs" style="right: 148px; top: 34px;"><span class="link"><i></i>Connected</span></div>
+  <span class="round gl" style="left: 1306px; top: 22px; width: 40px; height: 40px;"><svg class="i" width="18" height="18" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span>
+  <span class="abs" style="left: 1333px; top: 25px; width: 8px; height: 8px; border-radius: 50%; background: var(--lamp);"></span>
+  <span class="round gl" style="left: 1360px; top: 22px; width: 40px; height: 40px;"><svg class="i" width="18" height="18" viewBox="0 0 24 24"><path d="M5 7h14M5 12h14M5 17h9"/></svg></span>
+<sc-if value="{{m1}}">
+  <!-- the room's head, as it ships: back, the name, how many are on, and the room's own line -->
+  <span class="round gl" style="left: 40px; top: 112px; width: 44px; height: 44px;"><svg class="i" width="22" height="22" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></span>
+  <div class="abs" style="left: 98px; top: 102px; width: 1200px;">
+    <div style="font-size: 56px; letter-spacing: -.025em; line-height: 60px;">Kitchen</div>
+    <div style="margin-top: 9px; font-size: 18px; color: var(--ink-2);">3 lights on</div>
+    <div style="margin-top: 13px; display: flex; gap: 10px; align-items: center;"><span class="chipline"><span style="color: var(--lamp); display: flex;"><svg class="i" width="15" height="15" viewBox="0 0 24 24" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg></span>Used by hand &middot; routines stay out for 1 h 18 min <span class="ask">Why?</span></span><span class="reading"><svg class="i" width="15" height="15" viewBox="0 0 24 24"><path d="M6 21V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v17M4 21h16M14.5 12h.01"/></svg>Back door <b>Closed</b></span><span class="reading"><svg class="i" width="15" height="15" viewBox="0 0 24 24"><path d="M10 13.5V5a2 2 0 1 1 4 0v8.5a4 4 0 1 1-4 0z"/></svg>Humidity <b>51%</b></span></div>
+  </div>
+  <span class="round gl" style="left: 1356px; top: 112px; width: 44px; height: 44px;"><svg class="i" width="19" height="19" viewBox="0 0 24 24"><path d="M4 20l4-1 9.5-9.5a2.1 2.1 0 0 0-3-3L5 16z"/></svg></span></sc-if><sc-if value="{{m2}}">
+  <!-- the room's head, as it ships: back, the name, how many are on, and the room's own line -->
+  <span class="round gl" style="left: 40px; top: 112px; width: 44px; height: 44px;"><svg class="i" width="22" height="22" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></span>
+  <div class="abs" style="left: 98px; top: 102px; width: 1200px;">
+    <div style="font-size: 56px; letter-spacing: -.025em; line-height: 60px;">Kitchen</div>
+    <div style="margin-top: 9px; font-size: 18px; color: var(--ink-2);">2 lights on</div>
+    <div style="margin-top: 13px; display: flex; gap: 10px; align-items: center;"><span class="chipline"><span style="color: var(--lamp); display: flex;"><svg class="i" width="15" height="15" viewBox="0 0 24 24" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg></span>Used by hand &middot; routines stay out for 1 h 18 min <span class="ask">Why?</span></span><span class="reading"><svg class="i" width="15" height="15" viewBox="0 0 24 24"><path d="M6 21V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v17M4 21h16M14.5 12h.01"/></svg>Back door <b>Closed</b></span><span class="reading"><svg class="i" width="15" height="15" viewBox="0 0 24 24"><path d="M10 13.5V5a2 2 0 1 1 4 0v8.5a4 4 0 1 1-4 0z"/></svg>Humidity <b>51%</b></span></div>
+  </div>
+  <span class="round gl" style="left: 1356px; top: 112px; width: 44px; height: 44px;"><svg class="i" width="19" height="19" viewBox="0 0 24 24"><path d="M4 20l4-1 9.5-9.5a2.1 2.1 0 0 0-3-3L5 16z"/></svg></span></sc-if><sc-if value="{{m3}}">
+  <!-- the room's head, as it ships: back, the name, how many are on, and the room's own line -->
+  <span class="round gl" style="left: 40px; top: 112px; width: 44px; height: 44px;"><svg class="i" width="22" height="22" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></span>
+  <div class="abs" style="left: 98px; top: 102px; width: 1200px;">
+    <div style="font-size: 56px; letter-spacing: -.025em; line-height: 60px;">Kitchen</div>
+    <div style="margin-top: 9px; font-size: 18px; color: var(--ink-2);">3 lights on</div>
+    <div style="margin-top: 13px; display: flex; gap: 10px; align-items: center;"><span class="chipline"><span style="color: var(--lamp); display: flex;"><svg class="i" width="15" height="15" viewBox="0 0 24 24" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg></span>Used by hand &middot; routines stay out for 1 h 18 min <span class="ask">Why?</span></span><span class="reading"><svg class="i" width="15" height="15" viewBox="0 0 24 24"><path d="M6 21V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v17M4 21h16M14.5 12h.01"/></svg>Back door <b>Closed</b></span><span class="reading"><svg class="i" width="15" height="15" viewBox="0 0 24 24"><path d="M10 13.5V5a2 2 0 1 1 4 0v8.5a4 4 0 1 1-4 0z"/></svg>Humidity <b>51%</b></span></div>
+  </div>
+  <span class="round gl" style="left: 1356px; top: 112px; width: 44px; height: 44px;"><svg class="i" width="19" height="19" viewBox="0 0 24 24"><path d="M4 20l4-1 9.5-9.5a2.1 2.1 0 0 0-3-3L5 16z"/></svg></span></sc-if><sc-if value="{{m4}}">
+  <!-- the room's head, as it ships: back, the name, how many are on, and the room's own line -->
+  <span class="round gl" style="left: 40px; top: 112px; width: 44px; height: 44px;"><svg class="i" width="22" height="22" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></span>
+  <div class="abs" style="left: 98px; top: 102px; width: 1200px;">
+    <div style="font-size: 56px; letter-spacing: -.025em; line-height: 60px;">Kitchen</div>
+    <div style="margin-top: 9px; font-size: 18px; color: var(--ink-2);">3 lights on</div>
+    <div style="margin-top: 13px; display: flex; gap: 10px; align-items: center;"><span class="chipline"><span style="color: var(--lamp); display: flex;"><svg class="i" width="15" height="15" viewBox="0 0 24 24" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg></span>Used by hand &middot; routines stay out for 1 h 18 min <span class="ask">Why?</span></span><span class="reading"><svg class="i" width="15" height="15" viewBox="0 0 24 24"><path d="M6 21V4a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v17M4 21h16M14.5 12h.01"/></svg>Back door <b>Closed</b></span><span class="reading"><svg class="i" width="15" height="15" viewBox="0 0 24 24"><path d="M10 13.5V5a2 2 0 1 1 4 0v8.5a4 4 0 1 1-4 0z"/></svg>Humidity <b>51%</b></span></div>
+  </div>
+  <span class="round gl" style="left: 1356px; top: 112px; width: 44px; height: 44px;"><svg class="i" width="19" height="19" viewBox="0 0 24 24"><path d="M4 20l4-1 9.5-9.5a2.1 2.1 0 0 0-3-3L5 16z"/></svg></span></sc-if>
+
+  <div class="tile big lit" style="left: 40px; top: 274px; width: 317px; height: 333px;">
+    <svg class="abs" style="left: 128px; top: 64px;" width="140" height="200" viewBox="0 0 140 200">
+      <path d="M0 9 H140" stroke="rgba(233,184,114,.28)" stroke-width="2"/>
+      <path d="M44 40 Q70 12 96 40 Z" fill="rgba(226,222,214,.82)"/>
+      <path d="M46 42 L-6 200 L146 200 L94 42 Z" fill="url(#beam)"/>
+      <ellipse cx="70" cy="41" rx="26" ry="4.5" fill="#fff4dc"/>
+      <defs><linearGradient id="beam" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="rgba(255,236,196,.42)"/><stop offset="1" stop-color="rgba(255,236,196,0)"/></linearGradient></defs>
+    </svg>
+    <div class="abs" style="left: 22px; right: 22px; bottom: 20px;">
+      <div style="font-size: 19px; font-weight: 500; letter-spacing: -.005em;">Lights</div>
+      <div style="font-size: 14.5px; color: var(--ink-2); margin-top: 3px;">On, 100%</div>
+      <div style="margin-top: 11px; height: 4px; border-radius: 2px; background: rgba(255,255,255,.08);"><div style="width: 100%; height: 4px; border-radius: 2px; background: var(--lamp);"></div></div>
+    </div>
+  </div>
+  <div class="tile flat" style="left: 40px; top: 623px; width: 317px; height: 159px;">
+    <div class="abs" style="left: 18px; top: 18px; display: flex; gap: 16px;">
+      <span style="width: 56px; height: 56px; border-radius: 14px; background: rgba(255,255,255,.08); display: grid; place-items: center;"><span style="width: 20px; height: 36px; border-radius: 7px; background: linear-gradient(#77767a, #3d3c40);"></span></span>
+      <span><span class="cap" style="display: block; font-size: 11px; letter-spacing: .12em; color: var(--ink-2); font-weight: 500;">Speaker</span><span style="font-size: 17px; font-weight: 500; color: var(--muted);">Off</span></span>
+    </div>
+    <div class="abs" style="left: 19px; bottom: 18px; display: flex; align-items: center; gap: 16px; font-size: 14px; color: var(--muted);"><span style="width: 34px; height: 34px; border-radius: 50%; background: rgba(255,255,255,.08); display: grid; place-items: center; color: var(--ink-2);"><svg class="i" width="16" height="16" viewBox="0 0 24 24"><path d="M12 3v9M18.4 6.6a9 9 0 1 1-12.8 0"/></svg></span>Tap to turn on</div>
+  </div>
+  <div class="tile flat" style="left: 377px; top: 274px; width: 317px; height: 508px; padding: 22px 22px;">
+    <div class="cap" style="font-size: 11.5px; margin: 0 0 21px 0;">In the kitchen</div>
+    <div style="display: flex; flex-direction: column; gap: 10px;">
+      <div class="scene"><svg class="i" width="18" height="18" viewBox="0 0 24 24"><rect x="3.5" y="5" width="17" height="14" rx="2"/><path d="M3.5 9.5h17M3.5 14.5h17M8 5v14M16 5v14"/></svg><span><b>Movie</b><small>Lights low, screen on</small></span></div>
+      <div class="scene"><svg class="i" width="18" height="18" viewBox="0 0 24 24"><path d="M12 3l1.8 5.4L19 10l-5.2 1.6L12 17l-1.8-5.4L5 10l5.2-1.6z"/></svg><span><b>Guests</b><small>Lights up bright</small></span></div>
+      <div class="scene"><svg class="i" width="18" height="18" viewBox="0 0 24 24"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"/></svg><span><b>Sleep</b><small>Lights and screens off</small></span></div>
+      <div class="scene"><svg class="i" width="18" height="18" viewBox="0 0 24 24"><path d="M12 3v9M18.4 6.6a9 9 0 1 1-12.8 0"/></svg><span><b>All off</b><small>Lights off and media paused</small></span></div>
+    </div>
+  </div>
+  <div class="tile big" style="left: 714px; top: 274px; width: 317px; height: 333px; padding: 22px;">
+    <div style="font-size: 19px; font-weight: 500; margin-bottom: 11px;">Refrigerator</div>
+    <div style="display: flex; flex-direction: column; gap: 5px;">
+      <div class="row on"><svg class="i" width="14" height="14" viewBox="0 0 24 24"><path d="M12 3s6 6.4 6 11a6 6 0 0 1-12 0c0-4.6 6-11 6-11z"/></svg>Ice Maker<span class="v">On</span></div>
+      <div class="row"><svg class="i" width="14" height="14" viewBox="0 0 24 24"><path d="M12 3s6 6.4 6 11a6 6 0 0 1-12 0c0-4.6 6-11 6-11z"/></svg>Ice Bites<span class="v">Off</span></div>
+      <div class="row"><svg class="i" width="14" height="14" viewBox="0 0 24 24"><rect x="6" y="3" width="12" height="18" rx="2"/><path d="M6 10h12M9 6v2M9 13v3"/></svg>Power Cool<span class="v">Off</span></div>
+      <div class="row on"><svg class="i" width="14" height="14" viewBox="0 0 24 24"><path d="M12 3s6 6.4 6 11a6 6 0 0 1-12 0c0-4.6 6-11 6-11z"/></svg>Power Freeze<span class="v">On</span></div>
+    </div>
+    <svg class="abs" style="right: -6px; bottom: -6px;" width="76" height="86" viewBox="0 0 76 86" fill="none" stroke="rgba(255,255,255,.07)" stroke-width="5"><rect x="4" y="4" width="80" height="100" rx="8"/><path d="M4 36h80M20 18v8M20 50v14"/></svg>
+  </div>
+  <div class="tile" style="left: 1050px; top: 449px; width: 317px; height: 159px;">
+    <div class="tn"><svg class="i" width="17" height="17" viewBox="0 0 24 24"><path d="M12 3v9M18.4 6.6a9 9 0 1 1-12.8 0"/></svg>Coffee maker</div><div class="ts">Off</div>
+  </div>
+<sc-if value="{{m1}}">
+  <div class="tile lit" style="left: 714px; top: 623px; width: 317px; height: 159px;">
+    <div class="tn"><svg class="i" width="18" height="18" viewBox="0 0 24 24"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2V16h5v-.1c0-.8.4-1.5 1-2A6 6 0 0 0 12 3z"/></svg>Under Cabinet</div><div class="ts">On, 100%</div>
+  </div>
+  <div class="tile lit" style="left: 1050px; top: 274px; width: 317px; height: 159px;">
+    <div class="tn"><svg class="i" width="18" height="18" viewBox="0 0 24 24"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2V16h5v-.1c0-.8.4-1.5 1-2A6 6 0 0 0 12 3z"/></svg>Night light</div><div class="ts">On, 30%</div>
+  </div><div class="finger" style="left: 843px; top: 673px;"></div></sc-if>
+<sc-if value="{{m2}}">
+  <div class="tile unlit pending" style="left: 714px; top: 623px; width: 317px; height: 159px;">
+    <div class="tn"><svg class="i" width="18" height="18" viewBox="0 0 24 24"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2V16h5v-.1c0-.8.4-1.5 1-2A6 6 0 0 0 12 3z"/></svg>Under Cabinet</div><div class="ts">Off</div>
+  </div>
+  <div class="tile lit" style="left: 1050px; top: 274px; width: 317px; height: 159px;">
+    <div class="tn"><svg class="i" width="18" height="18" viewBox="0 0 24 24"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2V16h5v-.1c0-.8.4-1.5 1-2A6 6 0 0 0 12 3z"/></svg>Night light</div><div class="ts">On, 30%</div>
+  </div></sc-if>
+<sc-if value="{{m3}}">
+  <div class="tile lit" style="left: 714px; top: 623px; width: 317px; height: 159px;">
+    <div class="tn"><svg class="i" width="18" height="18" viewBox="0 0 24 24"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2V16h5v-.1c0-.8.4-1.5 1-2A6 6 0 0 0 12 3z"/></svg>Under Cabinet</div><div class="ts">On, 100%</div>
+  </div>
+  <div class="tile lit" style="left: 1050px; top: 274px; width: 317px; height: 159px;">
+    <div class="tn"><svg class="i" width="18" height="18" viewBox="0 0 24 24"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2V16h5v-.1c0-.8.4-1.5 1-2A6 6 0 0 0 12 3z"/></svg>Night light</div><div class="ts">On, 30%</div>
+  </div></sc-if>
+<sc-if value="{{m4}}">
+  <div class="tile lit" style="left: 714px; top: 623px; width: 317px; height: 159px;">
+    <div class="tn"><svg class="i" width="18" height="18" viewBox="0 0 24 24"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2V16h5v-.1c0-.8.4-1.5 1-2A6 6 0 0 0 12 3z"/></svg>Under Cabinet</div><div class="ts">On, 100%</div>
+  </div>
+  <div class="tile lit" style="left: 1050px; top: 274px; width: 317px; height: 159px;">
+    <div class="tn"><svg class="i" width="18" height="18" viewBox="0 0 24 24"><path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2V16h5v-.1c0-.8.4-1.5 1-2A6 6 0 0 0 12 3z"/></svg>Night light</div><div class="ts">On, 30%</div>
+  </div></sc-if>
+
+  <!-- the foot: the assistant, and who is home -->
+  <div class="abs" style="left: 40px; top: 814px; width: 56px; height: 56px; border-radius: 50%; background: radial-gradient(circle at 34% 28%, rgba(255,255,255,.55), transparent 16%), radial-gradient(circle at 60% 70%, #c06ad8 0, transparent 46%), radial-gradient(circle at 40% 40%, #5a6ee0, #2a2a7a 55%, #0e0c24 82%); box-shadow: 0 0 0 1.5px rgba(255,255,255,.18), 0 0 24px rgba(110,92,210,.3);"></div>
+  <div class="abs" style="right: 40px; top: 826px; display: flex; align-items: center; gap: 18px; font-size: 14px; color: var(--muted);">
+    <span>Jordan and Alex are home</span><span style="color: var(--ink-2); font-size: 15.5px;">People</span>
+    <span style="display: flex;">
+      <span style="width: 32px; height: 32px; border-radius: 50%; background: #8a7258; display: grid; place-items: center; font-size: 12px; color: #fff; font-weight: 600; border: 1.5px solid #15161c;">J</span>
+      <span style="width: 32px; height: 32px; border-radius: 50%; background: #5b4a3d; margin-left: -6px; display: grid; place-items: center; font-size: 12px; color: #ccc; font-weight: 600; border: 1.5px solid #15161c;">S</span>
+      <span style="width: 32px; height: 32px; border-radius: 50%; background: #4f6f63; margin-left: -6px; display: grid; place-items: center; font-size: 12px; color: #fff; font-weight: 600; border: 1.5px solid #15161c;">A</span>
+      <span style="width: 32px; height: 32px; border-radius: 50%; background: rgba(255,255,255,.1); margin-left: -6px; display: grid; place-items: center; color: var(--ink-2); border: 1.5px solid #15161c;"><svg class="i" width="13" height="13" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg></span>
+    </span>
+  </div>
+<sc-if value="{{m3}}"><div class="toast error">Under Cabinet isn&rsquo;t answering</div></sc-if>
+<sc-if value="{{m4}}"><div class="toast error">Night light isn&rsquo;t answering</div></sc-if>
+<sc-if value="{{late}}">
+  <div class="ring" style="left: 1184px; top: 26px; width: 120px; height: 33px;"></div>
+  <span class="tag" style="right: 140px; top: 66px;">Still says Connected</span>
+</sc-if>
+
+  <div class="note" style="left: 1050px; top: 623px; width: 350px; height: 159px;">
+    <span class="cap">Today &mdash; step through it</span>
+    <div class="try"><sc-for list="{{flips}}" as="f"><span class="{{f.cls}}" onClick="{{f.go}}">{{f.label}}</span></sc-for></div>
+    {{say}}
+  </div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{"moment":{"editor":"enum","options":["Tap","Guess","Back on","Night light"],"default":"Tap","section":"The moment"}}'>
+/* ONE BOARD, THE WHOLE TAP. Step from the tap to the toast; the second light goes the same way. */
+class Component extends DCLogic {
+  renderVals() {
+    const steps = ["Tap","Guess","Back on","Night light"]
+    const say = ["Under Cabinet is on. Somebody taps it to turn it off.","The card goes Off at once: the panel guessing ahead. The request never leaves this screen.","A few seconds on it is back to On, and the toast blames the light. The light was never asked.","The same with the night light. Nothing says the screen itself is cut off, and the corner still says Connected."]
+    const s = this.state.s || this.props.moment || steps[0]
+    const at = steps.indexOf(s) + 1
+    return {
+      m1: at === 1, m2: at === 2, m3: at === 3, m4: at === 4, late: at >= 3,
+      say: say[at - 1],
+      flips: steps.map(v => ({ label: v, cls: v === s ? 'flip on' : 'flip', go: () => this.setState({ s: v }) })),
+    }
+  }
+}
+</script>
+</body>
+</html>

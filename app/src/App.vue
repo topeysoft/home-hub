@@ -6,12 +6,18 @@
 import { inApp } from './inapp'
 import { narrow } from './band'
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
-import { store, start, halt, load, foundCount, visibleRooms, activity, roomActive, houseLine, weatherLine, needsSetup, dismissToast, updateReady, forgetDone, cap } from './store'
+import { store, start, halt, load, foundCount, visibleRooms, activity, roomActive, houseLine, weatherLine, needsSetup, dismissToast, updateReady, forgetDone, cap, linkNow, clockNow } from './store'
+import { bandFor, probe, reach } from './reach'
+import { door } from './door'
 import Setup from './Setup.vue'
 import Join from './Join.vue'
 import Away from './Away.vue'
 import MovePage from './MovePage.vue'
+import ScreenRoom from './ScreenRoom.vue'
+import { homeRoom, isScreen, needsRoom, screenRoom } from './screen'
 import CodePrompt from './CodePrompt.vue'
+import Keys from './Keys.vue'
+import { onWall } from './keys'
 import { lock } from './code'
 import Sky from './Sky.vue'
 import ArtDefs from './ArtDefs.vue'
@@ -28,6 +34,7 @@ import AskPane from './AskPane.vue'
 import { isPage } from './pages'
 import Opened from './Opened.vue'
 import PrinterPane from './PrinterPane.vue'
+import PowerPane from './PowerPane.vue'
 import WeatherPane from './WeatherPane.vue'
 import Icon from './Icon.vue'
 import { clockParts, restingFacts, restWeather } from './resting'
@@ -35,6 +42,7 @@ import WeatherArt from './WeatherArt.vue'
 import { glassVars, isTone, toneVars, type ToneName } from './tone'
 import { isFace, isLayout, isNav, type FaceName, type LayoutName, type NavName } from './layout'
 import { feelFrom, placeOf, TOUCHED_AT, READ_AT } from './look'
+import { picked, shade, shadeOf } from './shade'
 import RailView from './views/RailView.vue'
 import WallView from './views/WallView.vue'
 import RoomsView from './views/RoomsView.vue'
@@ -44,7 +52,8 @@ import Household from './Household.vue'
 import { locale } from './lang'
 
 const now = ref(new Date())
-const selected = ref<string | null>(new URLSearchParams(location.search).get('room') ?? safeGet('room'))   // ?room=kitchen deep-links a kiosk
+const screen = isScreen()   // a wall screen for a hub elsewhere, or for this one: it has a room of its own (design/companion/, C)
+const selected = ref<string | null>(new URLSearchParams(location.search).get('room') ?? (screen ? screenRoom() : null) ?? safeGet('room'))   // ?room=kitchen deep-links a kiosk
 function safeGet(k: string) { try { return localStorage.getItem(k) } catch { return null } }
 function open(id: string | null) { selected.value = id; try { id ? localStorage.setItem('room', id) : localStorage.removeItem('room') } catch {} }
 
@@ -58,7 +67,9 @@ watch(selected, () => nextTick(() => document.querySelector('.rail-item.active')
 const setup = computed(() => !!store.status && (store.previewSetup || needsSetup()))
 /* The house is not showing: either this phone is not in it yet, or it is being reached from outside and
    the house did not open. Both put a screen of their own up in place of everything. */
-const shut = computed(() => lock.unpaired || !!lock.away || store.moving)   // a page that is the whole screen: nothing of the house under it
+/* A screen in the house with no room yet is asked for one before anything else shows. */
+const placing = computed(() => screen && !lock.unpaired && !lock.away && !store.moving && !setup.value && needsRoom(rooms.value))
+const shut = computed(() => lock.unpaired || !!lock.away || store.moving || placing.value)   // a page that is the whole screen: nothing of the house under it
 const panel = computed(() => isPage(store.sheet))   // This house is open, on one of its pages
 /* A phone at the door opens its own pane, and stays open until it is answered or put aside. It is
    not `store.opened` -- that is a device -- but it is the same surface and the room recedes behind
@@ -75,6 +86,33 @@ const ambient = computed(() => store.sky.elevation < -8 ? 'night' : store.sky.el
    ?tone= and ?layout= override it for this tab only, the way ?at= and ?wx= do,
    so previewing a look never changes what the rest of the house is showing. */
 const params = new URLSearchParams(location.search)
+// The wall unit has no keyboard of its own, so the panel brings one there and nowhere else (design/keyboard/, C).
+const wall = onWall()
+if (wall) {
+  document.documentElement.dataset.wall = ''
+  /* Frosted cards under a moving finger are more blur than the wall's GPU can redraw: a Pi 5 dropped about half the
+     frames of a swipe, and 5% with no frost. So whatever is scrolling loses its frost while it moves and gets it back
+     when it stops -- in motion the difference cannot be seen, still it is the same glass. */
+  // Taken off as the finger lands on a strip that can scroll, so the first frames of a swipe are already light;
+  // a tap that never scrolled has it back on lift-off.
+  const scroller = (el: EventTarget | null) => {
+    for (let n = el instanceof Element ? el : null; n; n = n.parentElement)
+      if (n instanceof HTMLElement && n.scrollWidth > n.clientWidth + 1 && /auto|scroll/.test(getComputedStyle(n).overflowX)) return n
+    return null
+  }
+  let held: HTMLElement | null = null, scrolled = false
+  document.addEventListener('pointerdown', (e) => {
+    if (e.pointerType !== 'touch') return
+    held = scroller(e.target); scrolled = false
+    if (held) held.dataset.moving = ''
+  }, { capture: true, passive: true })
+  document.addEventListener('pointerup', () => { if (held && !scrolled) delete held.dataset.moving; held = null }, { capture: true, passive: true })
+  document.addEventListener('scroll', (e) => {
+    if (!(e.target instanceof HTMLElement)) return
+    scrolled = true; e.target.dataset.moving = ''
+  }, { capture: true, passive: true })
+  document.addEventListener('scrollend', (e) => { if (e.target instanceof HTMLElement) delete e.target.dataset.moving }, { capture: true, passive: true })
+}
 const toneParam = params.get('tone'), layoutParam = params.get('layout')
 
 /* The house's feel, which is what the Look page actually writes: one of three,
@@ -94,8 +132,21 @@ const width = ref(window.innerWidth)
 const measure = () => (width.value = window.innerWidth)
 const place = computed(() => placeOf(width.value))
 
+/* Light or dark, the one part of the look that is this screen's own (shade.ts). It lands on <html>
+   rather than the shell so a sheet or a toast drawn outside the shell takes it too, and it tells the
+   browser, so a scrollbar or a form control is drawn to match. */
+const darkOS = window.matchMedia('(prefers-color-scheme: dark)')
+const prefersDark = ref(darkOS.matches)
+const onScheme = () => (prefersDark.value = darkOS.matches)
+const shadeNow = computed(() => shadeOf(picked.value, width.value >= TOUCHED_AT, prefersDark.value, params.get('shade')))
+watch(shadeNow, s => {
+  shade.value = s
+  document.documentElement.dataset.shade = s
+  document.documentElement.style.colorScheme = s
+}, { immediate: true })
+
 const toneName = computed<ToneName>(() => isTone(toneParam) ? toneParam : (isTone(store.ambient.look?.tone) ? store.ambient.look!.tone as ToneName : feel.value.tone))
-const tone = computed(() => toneVars(store.sky.elevation, store.sky.condition, toneName.value))
+const tone = computed(() => toneVars(store.sky.elevation, store.sky.condition, toneName.value, shadeNow.value))
 const layout = computed<LayoutName>(() => isLayout(layoutParam) ? layoutParam : (isLayout(store.ambient.look?.layout) ? store.ambient.look!.layout as LayoutName : place.value.layout))
 
 /* where the way around the house lives -- the side list, or tabs across the
@@ -110,7 +161,7 @@ const face = computed<FaceName>(() => isFace(faceParam) ? faceParam : (isFace(st
    and Pastel did nothing at all on this face. A face that is not on costs
    nothing, because there is nothing to bind. */
 const glass = computed(() => face.value === 'glass'
-  ? glassVars(store.sky.elevation, store.sky.condition, toneName.value) : {})
+  ? glassVars(store.sky.elevation, store.sky.condition, toneName.value, shadeNow.value) : {})
 /* Whether this screen can paint a pane at all. Asked once: it cannot change
    while the panel is open, and a host that cannot blur gets the face flattened
    rather than taken away -- panel.css says what that means. ?flat=1 previews
@@ -139,6 +190,12 @@ const wxIcon = computed(() => WX_ICON[store.sky.condition] ?? 'cloud')
 
 const previewAt = new URLSearchParams(location.search).get('at')   // ?at=19:30 previews an hour; the clock follows the sky so a preview agrees with itself
 const shown = computed(() => { if (!previewAt) return now.value; const d = new Date(now.value); const [h, m] = previewAt.split(':').map(Number); d.setHours(h || 0, m || 0, 0, 0); return d })
+/* Not while the hub is restarting, updating or not ready: those have their own screen, which says more. */
+const band = computed(() => {
+  if (!store.loaded || store.restarting || store.updating || store.restoring || store.status?.driver !== 'ready') return null
+  return bandFor({ out: reach.out, lost: store.linkLost, since: reach.since, heard: reach.heard, phone: narrow.value, anywhere: !!door.token,
+    at: t => new Date(t + clockNow() - Date.now()).toLocaleTimeString(locale(), { hour: 'numeric', minute: '2-digit' }) })
+})
 const clock = computed(() => shown.value.toLocaleTimeString(locale(), { hour: 'numeric', minute: '2-digit' }))
 const facts = computed(() => idle.value ? restingFacts(shown.value) : [])   // only worked out while the panel rests
 const restWx = computed(() => idle.value ? restWeather() : null)
@@ -156,12 +213,12 @@ function touched() {
   lastTouch = Date.now()
   if (!idle.value) return
   idle.value = false
-  /* Waking goes home, so what somebody left open before the panel rested goes with it. A phone
+  /* Waking goes home (a screen with a room goes to its room), so what somebody left open before the panel rested goes with it. A phone
      asking to join is the exception and stays: that one is a question still waiting for an answer,
      not something left lying around. */
   store.opened = null
   store.outside = false
-  open(null)
+  open(homeRoom(rooms.value))   // a screen wakes to its own room; everything else to Home
   woke.value++
 }
 /* A phone knocking wakes the wall, and clears anything put aside so the pane comes back up: this is
@@ -206,6 +263,7 @@ onMounted(() => {
   window.addEventListener('keydown', touched, { capture: true })
   document.addEventListener('visibilitychange', looked)
   atTouch.addEventListener('change', measure)
+  darkOS.addEventListener('change', onScheme)
   atRead.addEventListener('change', measure)
 })
 onUnmounted(() => {
@@ -214,13 +272,14 @@ onUnmounted(() => {
   window.removeEventListener('keydown', touched, { capture: true })
   document.removeEventListener('visibilitychange', looked)
   atTouch.removeEventListener('change', measure)
+  darkOS.removeEventListener('change', onScheme)
   atRead.removeEventListener('change', measure)
 })
 </script>
 
 <template>
-  <div class="shell" :data-ambient="ambient" :data-nav="nav" :data-face="face" :data-layout="layout" :data-flat="face === 'glass' && flat ? '' : null" :style="[tone, glass, openTint]" :class="{ resting: idle, 'in-setup': setup || shut, 'opened-shell': !!store.opened || !!store.printer || store.outside || panel || asking }">
-    <Sky :quiet="!idle && !setup" />
+  <div class="shell" :data-held="wall && !idle ? '' : null" :data-ambient="ambient" :data-nav="nav" :data-face="face" :data-layout="layout" :data-flat="face === 'glass' && flat ? '' : null" :style="[tone, glass, openTint]" :class="{ resting: idle, 'in-setup': setup || shut, 'opened-shell': !!store.opened || !!store.printer || store.outside || panel || asking }">
+    <Sky :quiet="!idle && !setup" :held="wall && !idle" />
     <!-- glass lays its blooms on the sky the canvas just painted, under the veil -->
     <div class="sky-bloom" v-if="face === 'glass'"></div>
     <ArtDefs />
@@ -229,6 +288,7 @@ onUnmounted(() => {
     <Join v-else-if="lock.unpaired" @joined="rejoin" />
     <MovePage v-else-if="store.moving" />
     <Setup v-else-if="setup" />
+    <ScreenRoom v-else-if="placing" :home="store.status?.home || 'the house'" :locked="!!store.status?.locked" :rooms="rooms" :screens="store.phones" @placed="open" />
     <TopBar v-if="!setup && !shut && nav === 'top'" :clock="clock" :day="day" :now="shown" :tab="tab" :in-room="!!room" @go="go" />
     <aside class="rail" v-if="!setup && !shut && nav === 'side'">
       <div class="rail-clock">
@@ -258,14 +318,11 @@ onUnmounted(() => {
         </button>
       </div>
       <div class="rail-foot">
-        <span class="link" :class="{ up: store.linkUp }">{{ store.linkUp ? 'Connected' : 'Reconnecting' }}</span>
+        <span class="link" :class="linkNow().cls">{{ linkNow().word }}</span>
       </div>
     </aside>
 
-    <main class="stage" v-if="!setup && !shut">
-      <Transition name="banner">
-        <div class="banner" v-if="store.loaded && store.linkLost"><Icon name="refresh" :size="16" /> Reconnecting to the hub. What you see may be a little behind.</div>
-      </Transition>
+    <main class="stage" :class="{ hushed: band?.hushed }" v-if="!setup && !shut">
 
       <div class="offline" v-if="!store.loaded || store.restarting || store.updating?.lost || store.status?.driver !== 'ready'">
         <!-- A restart is the one thing this panel does that destroys the thing doing it, and it is
@@ -323,6 +380,7 @@ onUnmounted(() => {
     <Viewer />
     <Opened v-if="store.opened" />
     <PrinterPane v-if="store.printer" />
+    <PowerPane v-if="store.powerOpen" />
     <WeatherPane v-if="store.outside" :now="shown" />
     <AskPane v-if="asking" />
     <!-- :duration because what moves is inside: Vue times a transition from the
@@ -347,9 +405,19 @@ onUnmounted(() => {
     <Transition name="sheet"><YardSheet v-if="store.yard && store.roofline?.exists && store.roofline.yard" /></Transition>
     <Transition name="sheet"><StripSheet v-if="store.strip && stripSheetOpen(store.strip.state, store.sheet, store.stripAsked, store.stripPutDown) && !(store.bridge && store.bridge.state !== 'none')" /></Transition>
     <Transition name="sheet"><CodePrompt v-if="lock.prompt" /></Transition>
+    <Keys v-if="wall" />
+
+    <!-- This screen cut off from the hub, said along its foot before anyone taps (design/out-of-reach/, C) -->
+    <Transition name="toast">
+      <div class="reach-band" v-if="band" role="status">
+        <span class="reach-band-icon"><Icon name="unlinked" :size="22" /></span>
+        <span class="reach-band-text"><b>{{ band.title }}</b><small>{{ band.body }}</small></span>
+        <button class="reach-band-act" @click="probe()"><Icon name="refresh" :size="16" />Try now</button>
+      </div>
+    </Transition>
 
     <Transition name="toast">
-      <div class="toast" :class="store.toast.kind" v-if="store.toast" :key="store.toast.id" role="status">
+      <div class="toast" :class="[store.toast.kind, { 'over-band': band }]" v-if="store.toast" :key="store.toast.id" role="status">
         <span class="toast-text">{{ store.toast.text }}</span>
         <button class="toast-act" v-if="store.toast.action" @click="store.toast.action.run(); dismissToast()">{{ store.toast.action.label }}</button>
       </div>

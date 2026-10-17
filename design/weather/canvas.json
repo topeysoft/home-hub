@@ -1,4 +1,6 @@
 {
+  "name": "The weather",
+  "areas": ["Wall screens"],
   "artboards": [
     {
       "file": "Today.dc.html",

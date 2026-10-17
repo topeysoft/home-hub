@@ -27,7 +27,7 @@ cannot be reviewed as one. Work that followed it has been settled in a single me
 `canvas.json` that places every board and every note on a canvas:
 
 ```sh
-tools/dev.sh design        # every collection, on the canvas it was drawn on
+tools/dev.sh design        # the contents of design/: search, each collection read in order or on its canvas
 ```
 
 A board is a `.dc.html` file: the markup carries the design's real values — colors, sizes, spacing,
@@ -35,6 +35,17 @@ radii, shadows — and `canvas.json` gives it an `x`, a `y`, a `title`, and an a
 saying what it argues. Boards that need state extend `DCLogic` in a `<script data-dc-script>` and
 interpolate `{{ dotted.paths }}`; `data-props` turns a value into a chip you can flip while looking
 at it, which is how one board covers fifteen weather conditions instead of fifteen boards.
+
+A collection's `canvas.json` also carries its `name` (unless an `index.html` gives one) and its
+`areas` — the parts of the house it is about, `["Light strips"]` — which is how the viewer's contents
+group it; `tools/artboards/lib.test.mjs` fails on a collection without them. When a direction is
+picked, say so on the page it was picked on, either as `"decided": {"on": "2026-10-01", "chose": "A,
+with B's row"}` or as a note headed `DECIDED 1 OCTOBER 2026`; the viewer reads either, puts it at the
+top of the page, and opens the canvas on the board that won.
+
+A collection drawn in another worktree is on the viewer's front page under **From other checkouts**
+until its branch is merged, marked **Waiting for you** while nothing on it says what was picked. Ask
+for a pick by the collection's folder name; search finds it by that, from any checkout.
 
 The wall is **1440×900**. The phone is **390×844**. A board that argues about another screen says so
 by being that size.
@@ -55,7 +66,8 @@ by being that size.
 5. **Then build it**, and pin the arrangement with a test that fails on purpose if it drifts
    (`app/tests/rooms.test.ts` is the model). The picture the user chose is the spec.
 6. **Leave the rejected boards in place**, on their own canvas page, with their cases intact. They
-   are the record of why the shipped thing is the shipped thing.
+   are the record of why the shipped thing is the shipped thing. Name that page after the one it
+   lost on — `"Held dark, and why: not chosen"` — and the viewer folds it in at the end of that page.
 
 **Changing a screen that already has boards means changing the artboard first, then the test, then
 the code** — in that order. The alternative is a test that pins the panel to a drawing nobody
@@ -133,6 +145,13 @@ More than one session works in this tree at a time, and the git index is shared 
   minutes have passed. If someone else's lines ride along, say so rather than letting it pass.
 - Expect your own uncommitted work to disappear into their commits. Check `git log` before assuming
   an edit was lost.
+
+- **Push a branch at its first commit** (`git push -u origin <branch>`, never with `development`
+  as its upstream). A session ends and its worktree is forgotten; a commit on no remote is then one
+  `rm` from gone. `tools/dev.sh` names any checkout or branch holding such work, `tools/dev.sh
+  checkouts` lists them all, and `tools/dev.sh tidy` removes only what is merged and clean, after
+  asking. Work a session leaves uncommitted when it ends is kept under `refs/wip/` by the
+  `SessionEnd` hook in `.claude/settings.json` (`tools/wip-snapshot.sh`), without touching the files.
 
 Branch off `development`; pull requests target `development`, not `main`.
 
@@ -226,6 +245,11 @@ Do not reopen these, and do not propose around them.
   Every phone switches to the web address once rather than being handed over each time it is set to Anywhere.
   The household chooses the name. Pinned by `app/tests/address.test.ts` and `app/e2e/address.spec.ts`; the
   brain's half is `brain/hub/address.py`, the host's `driver-layer/host/away.sh`, the maker's `relay/service`.
+- **A second screen joins the house's hub; it never builds a second house** (7 October, `design/companion/`, C).
+  One home engine per house. A wall screen in a house that has a hub says whose house it found, asks for the
+  passcode (or a yes from another screen), then asks which room it is in. It opens on that room and wakes to it.
+  The shells open the panel with `?screen=1`. Pinned by `app/e2e/companion.spec.ts` and
+  `brain/tests/test_api_screens.py`. Do not propose a screen that keeps a standby copy of the house running.
 - **The roofline is one light that keeps its own evenings; the occasion only decides how it looks**
   (1 October, `design/roofline/`). Several controllers are one tile. Evenings are asked once at the end of an
   outside light's setup, like a porch light, and an occasion still turns nothing on. The occasion owns
@@ -233,6 +257,18 @@ Do not reopen these, and do not propose around them.
   still. A household changes a look by saying it in the command box (a fixed grammar, five words of
   motion, no model), and it plays on the roof before it is kept. The way round is asked in the yard only
   once a chase is wanted. `brain/hub/roofline.py`, pinned by `brain/tests/test_roofline.py`.
+- **Every Elyir product with a screen starts the same way** (7 October, `design/boot/`, J). *elyir* is
+  written by hand, the dot of the i lights like a lamp and breathes, slowly, then glides into the
+  product's own mark (the hub's is the house) and breathes there until the product is ready. No logo
+  card, no progress, no words but the name -- one sentence only if a start is slow. The name and the lamp
+  are shared frame for frame; a product brings where the dot lands and when it is ready. `startup/`,
+  pinned to the board by `startup/startup.test.mjs`.
+- **The wall brings its own keyboard, shaped to the field** (7 October, `design/keyboard/`, C). The wall unit's
+  Linux has none, so the panel draws one there and only there (worked out, not passed in: a wall screen in Chromium on Linux, `onWall` in `keys.ts`; `?wall=1` only forces it for previews); phones
+  and tablets keep theirs. Docked along the bottom on the panel's glass, the page moving up just far enough: a
+  keypad for digits, letters otherwise, and for the command box letters with the house's own completions above
+  them -- every one a sentence the grammar runs, never a guess. `app/src/Keys.vue`, `keys.ts`,
+  `Commands.complete`; pinned by `app/tests/keys.test.ts` and `app/e2e/keyboard.touch.spec.ts`.
 
 - **The Brilliant work lives in a repository of its own, and public code never reaches into it**
   (5 October 2026). This repository is public and every hub clones it whole. The bridge puck here (`puck/`) is
@@ -243,6 +279,13 @@ Do not reopen these, and do not propose around them.
   hub nor a puck ever hands one to the other (`Bridges.kind()`, `fwupdate.cpp`). A house's own names, keys
   and network scans never come into this tree either: the secret scan in CI and `tools/hooks/pre-commit`
   are there for that.
+- **A screen that can't reach the hub says so before anyone taps** (9 October, `design/out-of-reach/`, C with
+  B's card). An open live connection is not proof: the screen makes a fresh request every half minute, and two
+  misses put a band along the foot ("Changes made here aren't reaching the hub", since when, the switches on the
+  wall still work). The corner stops saying Connected. While cut off, a tap guesses nothing, and the card it
+  touched says Still on rather than flipping back. A request that never arrived names the hub; only one the hub
+  answered with a failure names the light. The band replaces the Reconnecting banner. Pinned by
+  `app/tests/reach.test.ts` and `app/e2e/reach.spec.ts`; the rules and words are `app/src/reach.ts`.
 
 ---
 

@@ -35,16 +35,16 @@ class OwnerTests(ApiTest):
 
     def test_a_fresh_engine_is_onboarded_without_anyone_seeing_it(self):
         self.hub.driver = "fresh"
-        acct = {"username": "temi", "password": "p", "token": "T", "refresh": None}
+        acct = {"username": "jordan", "password": "p", "token": "T", "refresh": None}
         with mock.patch.object(ha_setup, "onboard", mock.AsyncMock(return_value=acct)):
-            r = self.client.post("/setup/owner", json={"name": "Temi", "home": "Ash Street"})
+            r = self.client.post("/setup/owner", json={"name": "Jordan", "home": "Ash Street"})
         self.assertEqual(r.status_code, 200)
         self.assertEqual(self.hub.settings.get("ha")["token"], "T")
         self.assertEqual(self.hub.settings.get("home_name"), "Ash Street")
 
     def test_a_house_with_no_name_is_still_called_something(self):
         self.hub.driver = "ready"
-        self.client.post("/setup/owner", json={"name": "Temi"})
+        self.client.post("/setup/owner", json={"name": "Jordan"})
         self.assertEqual(self.hub.settings.get("home_name"), "Home")
 
     def test_a_person_needs_a_name(self):
@@ -54,13 +54,13 @@ class OwnerTests(ApiTest):
 
     def test_when_the_engine_is_not_answering_the_screen_is_told_to_wait_rather_than_that_it_failed(self):
         self.hub.driver = "down"
-        r = self.client.post("/setup/owner", json={"name": "Temi"})
+        r = self.client.post("/setup/owner", json={"name": "Jordan"})
         self.assertEqual(r.status_code, 503)
 
     def test_when_onboarding_breaks_halfway_the_words_come_from_the_engine(self):
         self.hub.driver = "fresh"
         with mock.patch.object(ha_setup, "onboard", mock.AsyncMock(side_effect=ha_setup.SetupError("could not create the owner"))):
-            r = self.client.post("/setup/owner", json={"name": "Temi"})
+            r = self.client.post("/setup/owner", json={"name": "Jordan"})
         self.assertEqual(r.status_code, 502)
         self.assertIn("could not create the owner", r.json()["detail"])
 
@@ -69,19 +69,19 @@ class SignInTests(ApiTest):
     ready = False
 
     def test_signing_in_to_an_engine_that_was_set_up_by_hand_keeps_the_token(self):
-        with mock.patch.object(ha_setup, "sign_in", mock.AsyncMock(return_value={"username": "temi", "password": "p", "token": "T"})):
-            r = self.client.post("/setup/login", json={"username": "temi", "password": "p"})
+        with mock.patch.object(ha_setup, "sign_in", mock.AsyncMock(return_value={"username": "jordan", "password": "p", "token": "T"})):
+            r = self.client.post("/setup/login", json={"username": "jordan", "password": "p"})
         self.assertEqual(r.status_code, 200)
         self.assertEqual(self.hub.settings.get("ha")["token"], "T")
 
     def test_a_wrong_password_says_so_and_changes_nothing(self):
         with mock.patch.object(ha_setup, "sign_in", mock.AsyncMock(side_effect=ha_setup.SetupError("That name and password did not work."))):
-            r = self.client.post("/setup/login", json={"username": "temi", "password": "no"})
+            r = self.client.post("/setup/login", json={"username": "jordan", "password": "no"})
         self.assertEqual(r.status_code, 401)
         self.assertIsNone(self.hub.settings.get("ha"))
 
     def test_both_halves_are_needed_before_the_engine_is_troubled(self):
-        for body in ({"username": "temi"}, {"password": "p"}, {}):
+        for body in ({"username": "jordan"}, {"password": "p"}, {}):
             with self.subTest(body=body):
                 self.assertEqual(self.client.post("/setup/login", json=body).status_code, 400)
 
@@ -93,9 +93,9 @@ class FinishingTests(ApiTest):
         self.assertEqual(self.sent("status")[-1]["status"]["setup_done"], True)
 
     def test_the_advanced_door_hands_over_the_engines_own_sign_in(self):
-        self.hub.settings.set(ha={"url": "http://ha:8123", "username": "temi", "password": "p", "token": "T"})
+        self.hub.settings.set(ha={"url": "http://ha:8123", "username": "jordan", "password": "p", "token": "T"})
         a = self.client.get("/setup/advanced").json()
-        self.assertEqual((a["username"], a["password"]), ("temi", "p"))
+        self.assertEqual((a["username"], a["password"]), ("jordan", "p"))
         self.assertNotIn("token", a)          # the Advanced door is a sign-in, not a key hand-over
 
 
@@ -118,7 +118,7 @@ class LocationTests(ApiTest):
 
 class UsernameTests(unittest.TestCase):
     def test_a_persons_name_becomes_something_the_engine_will_accept(self):
-        self.assertEqual(ha_setup.username_for("Temi Adeyeri"), "temiadeyeri")
+        self.assertEqual(ha_setup.username_for("Jordan Lee"), "jordanlee")
         # Letters the engine will not take are dropped, not transliterated: Zoë's name gives up its ë.
         self.assertEqual(ha_setup.username_for("Zoë O'Brien-Smith"), "zoobriensmith")
         self.assertEqual(ha_setup.username_for("温"), "owner")          # nothing usable left: it still has to be a name

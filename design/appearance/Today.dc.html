@@ -1,0 +1,41 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>Today</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500&family=Plus+Jakarta+Sans:wght@200;300;400;500&display=swap">
+<link rel="stylesheet" href="scene.css">
+</head>
+<body>
+<div class="board"></div>
+<script src="scene.js"></script>
+<script>
+/* Today: Daylight, the lightest look the panel ships -- paper cards in the pastel tone, held .335
+   lighter than the sky (app/src/tone.ts), on the sky as it is, with today's veil. The cards are as
+   light as anything gets, and they are still tied to a sky that goes dark at night; the bars, the
+   band and the weather are dark glass at every hour. */
+const FIELD = { night: 0.15, dusk: 0.25, noon: 0.49 }
+const ok = (l, c, h) => `oklch(${l.toFixed(3)} ${c} ${h})`
+window.Look = (s) => {
+  const f = FIELD[s.hour]
+  const L = Math.min(f + 0.335, 0.92), light = L > 0.62          // INK_FLIPS_AT
+  const aL = f + 0.30, aLight = aL > 0.62                       // the acting card's own distance
+  const card = (h, c) => `linear-gradient(155deg, ${ok(L + 0.055, c, h)}, ${ok(L, c, h + 6)})`
+  const ink = light ? '#1e1b24' : '#f1eee8', ink2 = light ? 'rgba(30,27,36,.62)' : '#b9b5ad'
+  const chip = light ? 'rgba(30,27,36,.10)' : 'rgba(255,255,255,.12)'
+  return {
+    sky: s.screen === 'rest' ? Scene.real(s.hour, { veil: Scene.REST_VEIL }) : Scene.real(s.hour, { veil: Scene.VEIL }),
+    vars: {
+      ...Scene.DARK,
+      '--card': card(245, 0.010), '--card-edge': light ? 'rgba(30,27,36,.14)' : 'rgba(255,255,255,.10)',
+      '--card-ink': ink, '--card-ink-2': ink2, '--chip': chip,
+      '--well': light ? 'rgba(30,27,36,.06)' : 'rgba(255,255,255,.06)', '--track': light ? 'rgba(30,27,36,.18)' : 'rgba(255,255,255,.18)',
+      '--play-ink': light ? '#fff' : '#111',
+      '--cool': `linear-gradient(155deg, ${ok(aL + 0.055, 0.085, 250)}, ${ok(aL, 0.085, 256)})`,
+      '--cool-ink': aLight ? '#1e1b24' : '#f1eee8', '--cool-ink-2': aLight ? 'rgba(30,27,36,.66)' : '#cfcbc3', '--cool-chip': aLight ? 'rgba(30,27,36,.12)' : 'rgba(255,255,255,.16)',
+      '--lamp-on': card(82, 0.047), '--lamp-on-ink': ink, '--lamp-on-ink-2': light ? '#7a4a10' : '#e9b872', '--lamp-on-chip': chip,
+    },
+  }
+}
+Scene.init({ tag: 'Today — Daylight, as it ships' })
+</script>
+</body>
+</html>

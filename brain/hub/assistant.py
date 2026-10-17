@@ -84,7 +84,7 @@ the rooms and devices listed. Never invent ids. Keep the name in the person's ow
 
 {VOCABULARY}
 
-Some requests are for right now, not a standing rule: "play rain on Nadine's speaker", "turn the theater light off",
+Some requests are for right now, not a standing rule: "play rain on Robin's speaker", "turn the theater light off",
 "white noise in the bedroom for an hour". Those are an action, not a rule: one device, one action, optional data
 (a sound needs {{"sound": "<id>", "minutes": <optional>}}; volume takes {{"volume_level": 0.0-1.0}}), and a name saying
 what will happen in plain words. The person confirms it on the panel before anything moves.

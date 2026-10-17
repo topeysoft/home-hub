@@ -24,6 +24,7 @@ import { ago, cap, deviceById, done, justDone, keptPrints, scenesFor, store, wha
 import { printCards } from '../printers'
 import PrintCard from '../tiles/PrintCard.vue'
 import { leave } from '../leaving'
+import { alwaysIds, homeRow, type RowCard } from '../onhome'
 import type { Device, Printer, Room } from '../api'
 import SceneBar from '../SceneBar.vue'
 import CameraTile from '../tiles/CameraTile.vue'
@@ -40,7 +41,7 @@ const props = defineProps<{ rooms: Room[]; when: string; woke?: number }>()
 
 /* The row's cards, in the order drawn. A device is a card; the scenes are one
    card among them ('scenes'), so the grid can place them all the same way. */
-type Card = { key: string; kind: 'device' | 'scenes' | 'print'; device?: Device; printer?: Printer }
+type Card = RowCard<Printer>
 const cameras = computed(() => props.rooms.flatMap(r => r.devices.filter(d => cap(d) === 'camera')))
 const climates = computed(() => props.rooms.flatMap(r => r.devices.filter(d => cap(d) === 'climate')))
 /* A card here stands for something that is on, so turning it off would take it out of the row. It does
@@ -108,22 +109,13 @@ const scenes = computed(() => scenesFor(null).length > 0)
    it is the one thing in the house with an end time, and this is where the household already looks.
    Everything else moves along one card. Which prints, and in what order, is printers.ts's. */
 const prints = computed(() => printCards(store.printers?.printers ?? [], keptPrints()))
+const always = computed(() => alwaysIds().map(deviceById).filter((d): d is Device => !!d))
 const cards = computed<Card[]>(() => {
-  const dev = (d: Device): Card => ({ key: d.id, kind: 'device', device: d })
-  const playing = on.value.find(d => d.id === lead.value)
-  const tall = on.value.filter(d => d !== playing).slice(0, 8)
   /* the glance cards, two to a column: the first column pairs a camera with the
      thermostat, as drawn, and the rest follow in their own columns at the end */
   const [cam0, ...cams] = cameras.value, [clim0, ...clims] = climates.value
-  const small = [cam0, clim0, ...cams, ...clims].filter((d): d is Device => !!d)
-  const out: Card[] = prints.value.map(p => ({ key: `print:${p.id}`, kind: 'print', printer: p }))
-  if (playing) out.push(dev(playing))
-  out.push(...small.slice(0, 2).map(dev))
-  out.push(...tall.slice(0, 1).map(dev))
-  if (scenes.value) out.push({ key: 'scenes', kind: 'scenes' })
-  out.push(...tall.slice(1).map(dev))
-  out.push(...small.slice(2).map(dev))
-  return out
+  const glance = [cam0, clim0, ...cams, ...clims].filter((d): d is Device => !!d)
+  return homeRow({ prints: prints.value, on: on.value, lead: lead.value, glance, always: always.value, scenes: scenes.value })
 })
 const empty = computed(() => !cards.value.length)
 const tile = (d: Device) => cap(d) === 'light' ? LightTile : cap(d) === 'media' ? MediaTile : cap(d) === 'climate' ? ClimateTile : cap(d) === 'camera' ? CameraTile : PlainTile
@@ -187,7 +179,7 @@ onUnmounted(() => clearTimeout(settle))
   <div class="bento" ref="bento" v-if="!empty" :class="flow" role="group" aria-label="On right now">
     <template v-for="(c, i) in cards" :key="c.key">
       <PrintCard v-if="c.kind === 'print'" class="bento-card" :style="{ '--flow-i': i }" :printer="c.printer!" />
-      <component v-else-if="c.kind === 'device'" :is="tile(c.device!)" class="bento-card" :class="{ going: !!going[c.device!.id], gone: !!gone[c.device!.id], kept: !!keptLine(c.device!) }" :data-kept="keptLine(c.device!) || null" :style="{ '--flow-i': i }" :device="c.device!" v-hold="() => (store.opened = c.device!)" />
+      <component v-else-if="c.kind === 'device'" :is="tile(c.device!)" class="bento-card" :class="{ going: !!going[c.device!.id], gone: !!gone[c.device!.id], kept: !!keptLine(c.device!) }" :data-kept="keptLine(c.device!) || null" :style="{ '--flow-i': i }" :device="c.device!" :always="c.always || undefined" v-hold="() => (store.opened = c.device!)" />
       <div v-else class="bento-card tile scene-card" :style="{ '--flow-i': i }">
         <span class="scene-card-when">{{ when }}</span>
         <SceneBar :room="null" />

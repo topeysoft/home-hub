@@ -13,8 +13,9 @@ import { oklch } from '../sky'
 import { leadsFixture, partnerOf, seeing, speedWord } from '../units'
 import { heldLine, heldOf, roofTile } from '../controller'
 import { makerWord } from '../telling'
+import { reach, stillLine } from '../reach'
 
-const props = defineProps<{ device: Device }>()
+const props = defineProps<{ device: Device; always?: boolean }>()
 /* A STRIP THE CONTROLLER IS KEEPING DARK (design/controller-panel/, "held": A, decided 1 October). The
    tile stops claiming a state it cannot have: it says Staying off, and why, with a shield where the bulb
    was -- in the lamp color, the house's attention color and not a danger color, because the strip is
@@ -25,6 +26,7 @@ const held = computed(() => heldOf(props.device))
 const on = computed(() => props.device.state === 'on' && !held.value)
 const dead = computed(() => isDead(props.device))
 const pending = computed(() => !!store.pending[props.device.id])
+const still = computed(() => reach.unreached[props.device.id] ? stillLine(on.value) : null)
 const dimmable = computed(() => !!(props.device.attrs.supported_color_modes ?? []).some((m: string) => m !== 'onoff'))
 const live = computed(() => Math.round((props.device.attrs.brightness ?? 0) / 2.55))
 const preview = ref<number | null>(null)
@@ -152,17 +154,20 @@ async function up() {
 </script>
 
 <template>
-  <div class="tile light" :class="{ on, dead, dimmable: dimmable && !held, pending, seeing: eye, held: !!held }" :style="wash" role="button"
+  <div class="tile light" :class="{ on, dead, dimmable: dimmable && !held, pending, seeing: eye, held: !!held, unreached: !!still }" :style="wash" role="button"
        :aria-label="held ? `${name}, ${label}. ${heldLine(held)}. Tap to see why` : `${name}, ${label}`" :aria-pressed="held ? undefined : on"
        tabindex="0" @pointerdown="down" @pointermove="move" @pointerup="up" @pointercancel="release" @lostpointercapture="release"
        @keydown.enter.space.prevent="held ? (store.opened = device) : perform(device, on ? 'off' : 'on', undefined, { state: on ? 'off' : 'on' })">
     <div class="fill" v-if="!held" :style="{ width: pct + '%' }"></div>
     <DeviceArt v-if="!held" :kind="kind" :state="{ on, brightness: pct / 100, color }" />
-    <span class="tile-maker" v-if="makerWord(device.maker) && !held">{{ makerWord(device.maker) }}</span>
+    <!-- kept on this screen's Home even when off (onhome.ts): the pin says why an off lamp is here -->
+    <span class="tile-maker tile-always" v-if="always && !held" title="Always on Home"><Icon name="keep" :size="13" /></span>
+    <span class="tile-maker" v-else-if="makerWord(device.maker) && !held">{{ makerWord(device.maker) }}</span>
     <div class="tile-body">
       <span class="tile-icon"><Icon :name="held ? 'shield' : 'light'" /></span>
       <span class="tile-name">{{ name }}</span>
       <span class="tile-state" v-if="held"><span class="held-state">{{ label }}</span><span class="held-why">{{ heldLine(held) }}</span></span>
+      <span class="tile-state" v-else-if="still"><span class="tile-said">{{ still.said }}</span><span class="tile-why">{{ still.why }}</span></span>
       <span class="tile-state" v-else>{{ label }}</span>
       <span class="machine-rows tile-carry" v-if="carried">
         <span class="machine-row" role="button" tabindex="0" :class="{ on: carried.state === 'on', dead: isDead(carried), pending: !!store.pending[carried.id] }"

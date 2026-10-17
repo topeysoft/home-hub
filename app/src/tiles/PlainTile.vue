@@ -7,19 +7,22 @@ import { computed } from 'vue'
 import type { Device } from '../api'
 import { cap, iconFor, isActive, isDead, perform, shortName, roomOf, store } from '../store'
 import { readingLabel } from '../readings'
+import { chargerWords, isCharging } from '../chargers'
 import Icon from '../Icon.vue'
 import DeviceArt from '../DeviceArt.vue'
 import { kindFor, type ArtState } from '../art'
 import { useArm } from '../twice'
 import { leadsFixture, partnerOf, seeing } from '../units'
 import { makerWord } from '../telling'
+import { reach, stillLine } from '../reach'
 
-const props = defineProps<{ device: Device }>()
+const props = defineProps<{ device: Device; always?: boolean }>()
 const kind = computed(() => cap(props.device))
-const on = computed(() => isActive(props.device))
+const on = computed(() => kind.value === 'charger' ? isCharging(props.device) : isActive(props.device))
+const still = computed(() => reach.unreached[props.device.id] ? stillLine(on.value) : null)
 const dead = computed(() => isDead(props.device))
 const pending = computed(() => !!store.pending[props.device.id])
-const passive = computed(() => ['sensor', 'motion', 'contact'].includes(kind.value))
+const passive = computed(() => ['sensor', 'motion', 'contact', 'charger'].includes(kind.value))
 const name = computed(() => shortName(props.device, roomOf(props.device)))
 
 /* null for the passive ones -- a sensor, a motion detector, a door contact. They
@@ -39,6 +42,7 @@ const artState = computed<ArtState>(() => {
 const label = computed(() => {
   const d = props.device, k = kind.value
   if (dead.value) return 'Not answering'
+  if (k === 'charger') return chargerWords(d)
   if (passive.value) return readingLabel(d)
   if (armed.value) return armed.value
   if (k === 'lock') return d.state === 'locked' ? 'Locked' : d.state === 'unlocked' ? 'Unlocked' : d.state
@@ -74,16 +78,18 @@ function tap() {
 </script>
 
 <template>
-  <button class="tile plain" :class="[kind, { on, dead, passive, pending, arming, seeing: eye }]" :disabled="passive || dead" @click="tap" :aria-pressed="passive ? undefined : on">
+  <button class="tile plain" :class="[kind, { on, dead, passive, pending, arming, seeing: eye, unreached: !!still }]" :disabled="passive || dead" @click="tap" :aria-pressed="passive ? undefined : on">
     <!-- no artwork of its own, so the icon, oversized and faint, is the art: a shelf of no-name plugs reads composed rather than empty -->
     <DeviceArt v-if="shape" :kind="shape" :state="artState" />
     <!-- rung four: nothing drawn for this one, so the icon goes oversized and faint and becomes the art -->
     <span class="tile-art" v-else aria-hidden="true"><Icon :name="iconFor(device)" :size="150" /></span>
-    <span class="tile-maker" v-if="makerWord(device.maker)">{{ makerWord(device.maker) }}</span>
+    <span class="tile-maker tile-always" v-if="always" title="Always on Home"><Icon name="keep" :size="13" /></span>
+    <span class="tile-maker" v-else-if="makerWord(device.maker)">{{ makerWord(device.maker) }}</span>
     <div class="tile-body">
       <span class="tile-icon"><Icon :name="iconFor(device)" /></span>
       <span class="tile-name">{{ name }}</span>
-      <span class="tile-state" :class="{ big: kind === 'sensor' }">{{ label }}</span>
+      <span class="tile-state" v-if="still"><span class="tile-said">{{ still.said }}</span><span class="tile-why">{{ still.why }}</span></span>
+      <span class="tile-state" v-else :class="{ big: kind === 'sensor' }">{{ label }}</span>
       <!-- a cover says how far in a bar as well as in words: "70% open" is the
            number, the bar is the picture of it, and the board draws both -->
       <span class="tile-bar" v-if="kind === 'cover' && device.attrs.current_position != null" aria-hidden="true"><i :style="{ width: device.attrs.current_position + '%' }"></i></span>
