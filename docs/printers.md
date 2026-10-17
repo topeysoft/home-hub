@@ -22,12 +22,12 @@ printer, and from then on the house knows what it is doing: printing, done, need
   printer would let the hub do more, since it is at home, but a wall in the kitchen is not somebody standing at the
   printer, which is what starting a print or saying the bed is clear needs.
 - **Works with the internet down, once a printer is in.** A printer's name at home spells its LAN address
-  (`192-168-86-73.obi1.home.elyir.app`), so the hub connects to that address directly and checks the certificate
+  (`192-168-1-73.atlas.home.elyir.app`), so the hub connects to that address directly and checks the certificate
   against the name: no DNS, no relay. Away is the fallback when home does not answer. Finding a printer the first
   time asks the relay which printers share the house's public address (`nearby.elyir.app`); that needs the
   internet, and nothing else depends on it.
 - **The printer's words, not ours.** A printer that needs somebody is a line in *Needs a look* carrying its own
-  headline ("OBI1 needs you") and detail; what it tells its phones goes in the house's log as kind `printer`.
+  headline ("Atlas needs you") and detail; what it tells its phones goes in the house's log as kind `printer`.
 
 ## What the brain does
 
@@ -45,10 +45,10 @@ printer, and from then on the house knows what it is doing: printing, done, need
 
 A view is `{id, name, connected, via: home|away, state, headline, detail, word, since, room, actions, temps, camera, job}`
 with `job = {name, progress, layer, layers, remaining_s, eta_clock, elapsed_s, colors, material, filament, thumbnail}`.
-`word` is the state as it fits after a name in a room's line ("OBI1 printing", "C3PO ready", "R2D2 stopped"),
+`word` is the state as it fits after a name in a room's line ("Atlas printing", "Vega ready", "Juno stopped"),
 `room` is `{id, name}` or null, and `filament` is what the print is made of as the card says it ("White PLA").
 The status also carries `asks`: one row per ask, `{id, name, state, title, detail, until}`, in the words the row on
-Add says -- "Tap Allow on OBI1's screen" with the time the printer stops asking, then *is in the house*, *said no*,
+Add says -- "Tap Allow on Atlas's screen" with the time the printer stops asking, then *is in the house*, *said no*,
 *Nobody answered on*, or *Couldn't reach*. `allowed` stays in `asking` until the Add door is next opened.
 
 Checked against a real printer on 2 October 2026: found among three, asked as a hub and allowed at the printer,

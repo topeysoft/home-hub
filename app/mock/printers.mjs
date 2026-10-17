@@ -1,25 +1,25 @@
 /* The house's 3D printers, for the mock brain (brain/hub/printers.py, docs/printers.md, design/printers/).
 
-   A house with printers is a different house -- a print card leads Your afternoon, the band has R2D2's
+   A house with printers is a different house -- a print card leads Your afternoon, the band has Juno's
    line in it -- and every other board and test was drawn at the house without them. So they are there
    only when the PAGE asks: `?printers=` on the panel's own address, read off each request's Referer, or
    PRINTERS=<scenario> for the whole mock. One mock serves every e2e test at once, so a page that asks
    gets its own copy of the scenario, keyed by its address, and what it changes (a room, an ask) is its own.
 
-     ?printers=1 | printing   OBI1 printing a phone stand, R2D2 stopped with nothing on its bed, C3PO ready
-     ?printers=needs_you      OBI1 waiting for a spool, with its two answers
-     ?printers=finished       OBI1 done, cooling
-     ?printers=room           as printing, with OBI1 and C3PO in the Office (the boards' Workshop)
+     ?printers=1 | printing   Atlas printing a phone stand, Juno stopped with nothing on its bed, Vega ready
+     ?printers=needs_you      Atlas waiting for a spool, with its two answers
+     ?printers=finished       Atlas done, cooling
+     ?printers=room           as printing, with Atlas and Vega in the Office (the boards' Workshop)
      ?printers=found          no printers yet, three on the Wi-Fi
-     ?printers=asking         ...and the hub asking OBI1, 1:42 left
+     ?printers=asking         ...and the hub asking Atlas, 1:42 left
      ?printers=answers        ...and the four answers, in the rows that asked
 
    Every value is the boards': 42%, layer 118 of 280, done at 4:20 PM against the ?at=14:47 clock, white PLA,
    220/60/38. The camera is a drawing of the bed, not a stream; ?still=1 or not, the same picture. */
 
-const HOME = id => `https://192-168-86-7${id.length}.${id}.home.elyir.app`
+const HOME = id => `https://192-168-1-7${id.length}.${id}.home.elyir.app`
 const AWAY = id => `https://${id}.elyir.app`
-const NAMES = { obi1: 'OBI1', r2d2: 'R2D2', c3po: 'C3PO' }
+const NAMES = { atlas: 'Atlas', juno: 'Juno', vega: 'Vega' }
 const WORDS = { ready: 'ready', preparing: 'getting ready', printing: 'printing', needs_you: 'needs you', finished: 'done', problem: 'stopped' }
 const ROOMS = { living: 'Living room', kitchen: 'Kitchen', bedroom: 'Bedroom', office: 'Office', front: 'Front door', garage: 'Garage', backyard: 'Backyard', bath: 'Bathroom' }
 
@@ -36,14 +36,14 @@ function asked(req) {
 }
 
 const PLA = { colors: ['#f4f1ea'], material: 'PLA', filament: 'White PLA' }
-function obi1(state, now) {
+function atlas(state, now) {
   const job = { name: 'Phone stand', progress: 0.42, layer: 118, layers: 280, remaining_s: 5580, eta_clock: '4:20 pm',
-                elapsed_s: 7440, ...PLA, thumbnail: '/printers/obi1/thumbnail' }
-  if (state === 'needs_you') return { state, headline: 'OBI1 needs you', since: now - 240,
+                elapsed_s: 7440, ...PLA, thumbnail: '/printers/atlas/thumbnail' }
+  if (state === 'needs_you') return { state, headline: 'Atlas needs you', since: now - 240,
     detail: 'White PLA ran out. Load a new spool into slot 2, or let me switch to the white in slot 6.',
     actions: [{ id: 'swap_slot', label: 'Switch to slot 6', primary: true, style: 'amber', args: { slot: 5 } }, { id: 'resume', label: 'Resume' }],
     temps: { nozzle: 220, bed: 60, chamber: 38 }, job }
-  if (state === 'finished') return { state, headline: 'OBI1: Phone stand is done', since: now - 29 * 60,
+  if (state === 'finished') return { state, headline: 'Atlas: Phone stand is done', since: now - 29 * 60,
     detail: 'I’ll tell you when the bed is cool enough to lift it off.', actions: [],
     temps: { nozzle: 41, bed: 52, chamber: 36 }, job: { ...job, progress: 1, layer: 280, remaining_s: 0, elapsed_s: 13020 } }
   if (state === 'paused') return { state: 'needs_you', headline: 'Paused.', since: now,
@@ -56,10 +56,10 @@ function obi1(state, now) {
     actions: [{ id: 'pause', label: 'Pause' }, { id: 'cancel', label: 'Stop this print' }],
     temps: { nozzle: 220, bed: 60, chamber: 38 }, job }
 }
-const R2D2 = now => ({ state: 'problem', headline: 'R2D2 stopped', since: now - 5700,
+const Juno = now => ({ state: 'problem', headline: 'Juno stopped', since: now - 5700,
   detail: 'The toolhead isn’t answering. Check the cable to the head, then try again.',
   actions: [{ id: 'help', label: 'Show me what to check' }], temps: { nozzle: 24, bed: 23 }, job: null })
-const C3PO = () => ({ state: 'ready', headline: 'Ready', detail: 'No spools loaded yet.', since: null, actions: [], temps: { nozzle: 26, bed: 25 }, job: null })
+const Vega = () => ({ state: 'ready', headline: 'Ready', detail: 'No spools loaded yet.', since: null, actions: [], temps: { nozzle: 26, bed: 25 }, job: null })
 
 function printer(id, live, room = null) {
   return { id, name: NAMES[id], connected: true, via: 'home', word: WORDS[live.state] ?? '', camera: `/printers/${id}/camera`,
@@ -68,14 +68,14 @@ function printer(id, live, room = null) {
 const found = id => ({ id, name: NAMES[id], home: HOME(id), away: AWAY(id), kind: '3D printer' })
 
 function seed(scenario, now) {
-  const printing = () => ({ printers: [printer('c3po', C3PO()), printer('obi1', obi1('printing', now)), printer('r2d2', R2D2(now))], found: [], asking: {}, until: {} })
-  if (scenario === 'needs_you') return { ...printing(), printers: [printer('c3po', C3PO()), printer('obi1', obi1('needs_you', now))] }
-  if (scenario === 'finished') return { ...printing(), printers: [printer('c3po', C3PO()), printer('obi1', obi1('finished', now))] }
-  if (scenario === 'room') return { ...printing(), printers: [printer('c3po', C3PO(), 'office'), printer('obi1', obi1('printing', now), 'office'), printer('r2d2', R2D2(now))] }
-  if (scenario === 'found') return { printers: [], found: ['obi1', 'r2d2', 'c3po'].map(found), asking: {}, until: {} }
-  if (scenario === 'asking') return { printers: [], found: ['obi1', 'r2d2', 'c3po'].map(found), asking: { obi1: 'waiting' }, until: { obi1: Date.now() / 1000 + 102 } }
-  if (scenario === 'answers') return { printers: [printer('obi1', obi1('printing', now))], found: ['r2d2', 'c3po'].map(found),
-    asking: { obi1: 'allowed', r2d2: 'refused', c3po: 'expired' }, until: {} }
+  const printing = () => ({ printers: [printer('vega', Vega()), printer('atlas', atlas('printing', now)), printer('juno', Juno(now))], found: [], asking: {}, until: {} })
+  if (scenario === 'needs_you') return { ...printing(), printers: [printer('vega', Vega()), printer('atlas', atlas('needs_you', now))] }
+  if (scenario === 'finished') return { ...printing(), printers: [printer('vega', Vega()), printer('atlas', atlas('finished', now))] }
+  if (scenario === 'room') return { ...printing(), printers: [printer('vega', Vega(), 'office'), printer('atlas', atlas('printing', now), 'office'), printer('juno', Juno(now))] }
+  if (scenario === 'found') return { printers: [], found: ['atlas', 'juno', 'vega'].map(found), asking: {}, until: {} }
+  if (scenario === 'asking') return { printers: [], found: ['atlas', 'juno', 'vega'].map(found), asking: { atlas: 'waiting' }, until: { atlas: Date.now() / 1000 + 102 } }
+  if (scenario === 'answers') return { printers: [printer('atlas', atlas('printing', now))], found: ['juno', 'vega'].map(found),
+    asking: { atlas: 'allowed', juno: 'refused', vega: 'expired' }, until: {} }
   return printing()
 }
 
@@ -118,7 +118,7 @@ export const printersAsked = req => !!house(req)
 function send(res, body, code = 200) { res.writeHead(code, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(body)) }
 function read(req, then) { let raw = ''; req.on('data', c => (raw += c)); req.on('end', () => { let b = {}; try { b = JSON.parse(raw) } catch { /* empty */ } then(b) }) }
 
-/* The camera: OBI1's bed, as the boards draw it -- the gantry, the nozzle's glow, the part half made. */
+/* The camera: Atlas's bed, as the boards draw it -- the gantry, the nozzle's glow, the part half made. */
 const BED = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" width="640" height="360">
 <defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2a2e35"/><stop offset=".62" stop-color="#16181c"/><stop offset="1" stop-color="#0c0d10"/></linearGradient>
 <linearGradient id="p" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6e5a3a"/><stop offset="1" stop-color="#3e3322"/></linearGradient>
@@ -162,7 +162,7 @@ export function printersRoute(req, res, p) {
     setTimeout(() => {
       if (h.asking[id] !== 'waiting') return
       h.asking[id] = 'allowed'
-      h.printers.push(printer(id, id === 'obi1' ? obi1('printing', h.now) : C3PO()))
+      h.printers.push(printer(id, id === 'atlas' ? atlas('printing', h.now) : Vega()))
     }, Number(process.env.PRINTER_ALLOWS_AFTER || 2500))
     send(res, status(h)); return true
   }
@@ -180,7 +180,7 @@ export function printersRoute(req, res, p) {
     read(req, b => {
       const next = b.action === 'pause' ? 'paused' : b.action === 'cancel' ? 'stopped' : b.action === 'resume' || b.action === 'swap_slot' ? 'printing' : null
       if (!next) return send(res, one)
-      Object.assign(one, obi1(next, h.now), { word: WORDS[obi1(next, h.now).state] })
+      Object.assign(one, atlas(next, h.now), { word: WORDS[atlas(next, h.now).state] })
       send(res, one)
     })
     return true

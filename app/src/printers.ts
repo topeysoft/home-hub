@@ -28,7 +28,7 @@ export type CardLook = 'printing' | 'waiting' | 'done' | 'fault'
 export function hasCard(p: Printer): boolean {
   if (!p.job) return false
   /* A printer that stopped MID-PRINT still has the print on its bed, and its card turns the fault color
-     in place rather than leaving -- the board's note on R2D2. One with no job is a row on Needs a look. */
+     in place rather than leaving -- the board's note on Juno. One with no job is a row on Needs a look. */
   return ['preparing', 'printing', 'needs_you', 'finished', 'problem'].includes(p.state ?? '')
 }
 
@@ -54,17 +54,17 @@ export const printerOn = (p: Printer) => ['preparing', 'printing', 'needs_you'].
 /** The printers a household has put in this room. */
 export const printersIn = (printers: Printer[], roomId: string) => printers.filter(p => p.room?.id === roomId)
 
-/** "OBI1 printing", "C3PO ready" -- a printer as one part of a room's line. */
+/** "Atlas printing", "Vega ready" -- a printer as one part of a room's line. */
 export const printerPart = (p: Printer) => `${p.name} ${p.word || ''}`.trim()
 
-/** "OBI1 printing, 42%" -- the same with how far, for a chip or a card that has no bar of its own. */
+/** "Atlas printing, 42%" -- the same with how far, for a chip or a card that has no bar of its own. */
 export function printerChip(p: Printer): string {
   const pct = percent(p)
   return p.state === 'printing' && pct != null ? `${printerPart(p)}, ${pct}%` : printerPart(p)
 }
 
 /**
- * THE BAND DOES NOT REPEAT A CARD ON THE SAME SCREEN (the note on design/printers/StatesB). OBI1 waiting
+ * THE BAND DOES NOT REPEAT A CARD ON THE SAME SCREEN (the note on design/printers/StatesB). Atlas waiting
  * for a spool is its card, with the printer's question and its two answers on it; the brain also files it
  * on Needs a look, which is right for the page and wrong for the band above that card -- the same sentence
  * twice, one of them with nothing to tap. So on a screen that is showing a printer's card, the band leaves
@@ -117,7 +117,7 @@ export function jobLine(p: Printer, now = Date.now(), locale?: string): string {
   return [p.job?.filament, started].filter(Boolean).join(' · ')
 }
 
-/** "OBI1 · White PLA" -- under the part's name on a card. */
+/** "Atlas · White PLA" -- under the part's name on a card. */
 export const whoLine = (p: Printer) => [p.name, p.job?.filament].filter(Boolean).join(' · ')
 
 /** The color of the first filament, for the swatch beside the job. */
@@ -149,7 +149,7 @@ export function actionLabel(a: PrinterAction): string {
 
 /* ---------- found on the Wi-Fi ---------- */
 
-/** "OBI1, R2D2 and C3PO" */
+/** "Atlas, Juno and Vega" */
 export function names(list: string[]): string {
   return list.length <= 1 ? (list[0] ?? '') : `${list.slice(0, -1).join(', ')} and ${list[list.length - 1]}`
 }

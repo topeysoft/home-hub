@@ -879,7 +879,7 @@ const bridgeRows = process.env.BRIDGES === 'none' ? [] : [
      one; the phone reading /phones/me is then Jordan's iPhone, so the band line and the Home only | Anywhere choice show. */
   if (p === '/phones/me') return json(res, process.env.ADDRESS
     ? { locked: !!process.env.LOCKED, paired: true, home: 'Maple Court', phone: { ...phones.phones[1], me: true, moved: !!process.env.MOVED }, away: false,
-        lan: '192-168-86-53.maple-court.home.elyir.app', address: 'https://maple-court.elyir.app' }
+        lan: '192-168-1-53.maple-court.home.elyir.app', address: 'https://maple-court.elyir.app' }
     : { locked: !!process.env.LOCKED, paired: true, home: 'Maple Court', phone: null })
   /* A wall screen saying which room it hangs in (design/companion/, C). The mock house has no passcode, so no record. */
   if (p === '/phones/me/room' && req.method === 'POST') { let b = ''; req.on('data', c => { b += c }); req.on('end', () => {
@@ -893,7 +893,7 @@ const bridgeRows = process.env.BRIDGES === 'none' ? [] : [
   if (p === '/phones/move/claim' && req.method === 'POST') { let b = ''; req.on('data', c => { b += c }); req.on('end', () => {
     const code = String(JSON.parse(b || '{}').code || '').toUpperCase().replace(/[^A-Z0-9]/g, '')
     if (code !== 'K7Q4MPWR') { res.writeHead(410, { 'Content-Type': 'application/json' }); return res.end(JSON.stringify({ detail: "That code has run out or isn't right. Get a new one on the house's screen." })) }
-    json(res, { token: 'mocktoken', phone: { ...phones.phones[1], in_app: true }, lan: '192-168-86-53.maple-court.home.elyir.app', address: 'https://maple-court.elyir.app' })
+    json(res, { token: 'mocktoken', phone: { ...phones.phones[1], in_app: true }, lan: '192-168-1-53.maple-court.home.elyir.app', address: 'https://maple-court.elyir.app' })
   }); return }
   const remote = p.match(/^\/phones\/([^/]+)\/remote$/)
   if (remote && req.method === 'POST') { let b = ''; req.on('data', c => (b += c)); return req.on('end', () => {

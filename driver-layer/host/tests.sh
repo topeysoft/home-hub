@@ -367,7 +367,7 @@ D
   # What `ip route get` says this host's address on the LAN is; $FAKE/lan changes it.
   cat > "$bin/ip" <<'I'
 #!/usr/bin/env bash
-echo "1.1.1.1 via 192.168.86.1 dev eth0 src $(cat "$FAKE/lan" 2>/dev/null || echo 192.168.86.53) uid 0"
+echo "1.1.1.1 via 192.168.1.1 dev eth0 src $(cat "$FAKE/lan" 2>/dev/null || echo 192.168.1.53) uid 0"
 I
   chmod +x "$bin/docker" "$bin/ip"
   local secret token; secret="$(printf 's%.0s' $(seq 43))"; token="$(printf 'a%.0s' $(seq 64))"
@@ -383,7 +383,7 @@ I
   is "...and turns the away door on" "$(env_ HUB_AWAY)" on
   is "...adding away beside the radios and the voice" "$(env_ COMPOSE_PROFILES)" "zigbee,voice,away"
   is "...and brings caddy, frpc and lan-cert up" "$(cat "$fake/docker")" "compose up -d caddy frpc lan-cert"
-  is "...naming the house at home from the address it really has" "$(env_ HUB_LAN_NAME)" "192-168-86-53.jordan.home.elyir.app"
+  is "...naming the house at home from the address it really has" "$(env_ HUB_LAN_NAME)" "192-168-1-53.jordan.home.elyir.app"
   [ -f "$data/away.request" ] && no "...and takes the request away" "it is still there" || ok "...and takes the request away"
   python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); print(d["on"], d["house"])' "$data/away.json" > "$fake/said" 2>&1
   is "...and says what it did" "$(cat "$fake/said")" "True jordan"

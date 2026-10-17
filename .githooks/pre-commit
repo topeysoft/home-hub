@@ -1,0 +1,5 @@
+#!/bin/sh
+# SPDX-FileCopyrightText: 2026 Temitope Adeyeri
+# SPDX-License-Identifier: AGPL-3.0-or-later
+# Stops a commit that names a person, a real printer or a home network: scripts/private-words.sh.
+exec "$(git rev-parse --show-toplevel)/scripts/private-words.sh" --cached

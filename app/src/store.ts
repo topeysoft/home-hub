@@ -108,7 +108,7 @@ export const store = reactive({
   power: null as Power | null,         // the sun, the battery and the grid (brain/hub/power.py); null in a house without them
   powerOpen: false,                    // the power pane (PowerPane.vue)
   powerDay: null as PowerDay | null,   // today so far, and the most the roof has made this month, which the sun's warmth is measured against
-  /* A print card the house no longer has a print for -- OBI1 Ready again -- keeps its place, drained,
+  /* A print card the house no longer has a print for -- Atlas Ready again -- keeps its place, drained,
      until the panel looks away, exactly as a lamp just turned off does. This is the last thing each
      card said; `done` (below) is what says it is still owed a place. printers.ts says why. */
   printsKept: {} as Record<string, Printer>,
@@ -261,9 +261,9 @@ export function activityParts(r: Room, withMedia = true): string[] {
   /* First, and on its own terms. Everything else in this line is what a room is doing;
      a siren is what a room is SHOUTING, and it does not queue behind the lamps. */
   if (r.devices.some(d => cap(d) === 'alarm' && d.state === 'on')) parts.push('Alarm sounding')
-  /* A printer a household put here is named whatever it is doing -- "OBI1 printing · C3PO ready · Bench
+  /* A printer a household put here is named whatever it is doing -- "Atlas printing · Vega ready · Bench
      light on" (design/printers/WorkshopB). Ready is said too, unlike a lamp that is off: somebody looking
-     for C3PO in the workshop is looking for exactly that word. It does not make the room count as on;
+     for Vega in the workshop is looking for exactly that word. It does not make the room count as on;
      only printing does (roomActive). */
   for (const p of printersIn(r)) parts.push(printerPart(p))
   const lights = r.devices.filter(d => cap(d) === 'light' && d.state === 'on').length
@@ -658,7 +658,7 @@ export async function loadRoofline() {
 /* ---------- 3D printers ---------- */
 /*
  * The printer status, from the boot read or the stream. Before it is put in place, any print card the
- * house is about to stop having -- OBI1 Ready again, the part lifted off -- is kept: its last view in
+ * house is about to stop having -- Atlas Ready again, the part lifted off -- is kept: its last view in
  * `printsKept`, and its place in `done`, which App.vue sweeps when nobody is looking. Nothing vanishes
  * under the finger, and a print finishing is not a finger, but it IS somebody glancing at the wall to see
  * whether it is done -- and the card they were looking for should still be where it was.

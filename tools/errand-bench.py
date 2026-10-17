@@ -11,7 +11,7 @@ firmware half: that the format, the ids, the base64 and the ring all work on the
 speaks the same format through Home Assistant rather than paho, and is tested against it separately.
 
     brain/.venv/bin/python -u tools/errand-bench.py --puck 08388e \\
-        --ssid Bluebell --pass '...' --broker 192.168.86.53 --password '...'
+        --ssid Bluebell --pass '...' --broker 192.168.1.53 --password '...'
 
 `--base bench` by default, because the bench puck talks on its own base on purpose: nothing it says
 may land where a house is reading.

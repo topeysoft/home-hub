@@ -18,7 +18,7 @@
 #   off      HUB_AWAY=off, `away` out of the profiles, frpc and lan-cert gone, caddy back to the plain door
 #   forget   off, and the house's name and secret taken out of .env as well
 #
-# On, it also writes HUB_LAN_NAME -- the house's name at home, 192-168-86-53.<house>.home.<zone> -- from
+# On, it also writes HUB_LAN_NAME -- the house's name at home, 192-168-1-53.<house>.home.<zone> -- from
 # the address this host actually has on the LAN, not HUB_IP in .env, which install.sh writes once and a
 # DHCP lease can leave behind (found on the maker's hub on 2 October: .env said .42, the hub was .53).
 #

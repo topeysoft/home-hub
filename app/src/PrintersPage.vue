@@ -7,7 +7,7 @@
  * Printers: every 3D printer in the house, printing or not (design/printers/AddAnswers, the door on the left).
  *
  * Under B a print leads Your afternoon while it lasts, and a printer a household put in a room is a tile
- * there; a printer with neither -- C3PO, ready, with no room -- has to live somewhere a person can find it,
+ * there; a printer with neither -- Vega, ready, with no room -- has to live somewhere a person can find it,
  * and this is that place. It is also where one is forgotten: the hub comes off the printer's own list of
  * devices too (DELETE /printers/{id}), so it asks first, with the name in the question, the way removing
  * a thing does on Needs a look. A forgotten row stays, saying so, until the page is closed.
@@ -22,7 +22,7 @@ const printers = computed(() => store.printers?.printers ?? [])
 const asking = ref('')
 const busy = ref('')
 const gone = ref<Record<string, string>>({})     // forgotten while this page was open: the row stays and says so
-/* What the row says: the printer's word and where it is. "OBI1 printing, 42%", "In the Office". */
+/* What the row says: the printer's word and where it is. "Atlas printing, 42%", "In the Office". */
 const line = (id: string) => {
   const p = printers.value.find(x => x.id === id); if (!p) return ''
   const doing = printerChip(p).slice(p.name.length).trim()

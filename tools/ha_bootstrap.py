@@ -91,7 +91,7 @@ def main():
     import urllib.parse  # noqa
     ap = argparse.ArgumentParser(); ap.add_argument("--url", default="http://localhost:8123")
     ap.add_argument("--mqtt-host", default="mosquitto")
-    ap.add_argument("--roku", default="192.168.86.64")
+    ap.add_argument("--roku", default="192.168.1.64")
     ap.add_argument("--cast", default="", help="comma-separated Cast IPs (empty = rely on discovery)")
     a = ap.parse_args()
     token = onboard(a.url)

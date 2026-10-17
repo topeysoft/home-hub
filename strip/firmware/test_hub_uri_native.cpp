@@ -26,7 +26,7 @@ static void is(const std::string &given, const std::string &want) {
 
 int main() {
     is("hub", "mqtt://hub.local:1883");                    // the hub's own name, the usual case
-    is("192.168.86.53", "mqtt://192.168.86.53:1883");      // THE BUG: an address is not a name
+    is("192.168.1.53", "mqtt://192.168.1.53:1883");      // THE BUG: an address is not a name
     is("hub.local", "mqtt://hub.local:1883");              // a name that already says .local
     is("hub.lan", "mqtt://hub.lan:1883");                  // a router's own domain
     is("fd85::1", "mqtt://[fd85::1]:1883");                // IPv6 wants brackets in a URI

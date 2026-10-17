@@ -10,7 +10,7 @@
  * that before it taps, not after: the hub does not let itself in. It asks; the printer shows the ask on
  * its own screen; somebody standing at it taps Allow -- or a phone that already has that printer, at
  * home. So the tap here asks, and the row it was on GROWS IN PLACE into what to do, named for the
- * printer -- "Tap Allow on OBI1's screen" -- with how long the ask has left and a way to stop asking,
+ * printer -- "Tap Allow on Atlas's screen" -- with how long the ask has left and a way to stop asking,
  * because somebody who walked to the wrong printer should not have to wait out the clock.
  *
  * Then it answers, in the row that asked: let in, said no, nobody answered, or could not reach. Every

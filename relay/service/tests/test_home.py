@@ -34,27 +34,27 @@ class Base(unittest.TestCase):
 
 class Names(Base):
     def test_only_addresses_inside_a_house(self):
-        for ok, ip in (("192-168-86-53", "192.168.86.53"), ("10-0-0-2", "10.0.0.2"), ("172-16-4-1", "172.16.4.1"), ("172-31-255-255", "172.31.255.255")):
+        for ok, ip in (("192-168-1-53", "192.168.1.53"), ("10-0-0-2", "10.0.0.2"), ("172-16-4-1", "172.16.4.1"), ("172-31-255-255", "172.31.255.255")):
             self.assertEqual(private_address(ok), ip)
         for bad in ("8-8-8-8", "172-32-0-1", "127-0-0-1", "192-168-1", "192-168-1-256", "169-254-1-1", "nope"):
             self.assertIsNone(private_address(bad), bad)
 
     def test_a_carried_house_is_answered_with_its_own_address(self):
-        self.assertEqual(self.home.address("192-168-86-53.jordan.home.elyir.app."), "192.168.86.53")
-        self.assertEqual(self.home.lan_name("jordan", "192.168.86.53"), "192-168-86-53.jordan.home.elyir.app")
+        self.assertEqual(self.home.address("192-168-1-53.jordan.home.elyir.app."), "192.168.1.53")
+        self.assertEqual(self.home.lan_name("jordan", "192.168.1.53"), "192-168-1-53.jordan.home.elyir.app")
 
     def test_nothing_for_a_house_nobody_pays_for_or_nobody_has(self):
-        self.assertIsNone(self.home.address("192-168-86-53.palace.home.elyir.app"))
-        self.assertIsNone(self.home.address("192-168-86-53.nobody.home.elyir.app"))
+        self.assertIsNone(self.home.address("192-168-1-53.palace.home.elyir.app"))
+        self.assertIsNone(self.home.address("192-168-1-53.nobody.home.elyir.app"))
 
     def test_nothing_that_is_not_shaped_like_a_house_name(self):
-        for n in ("8-8-8-8.jordan.home.elyir.app", "192-168-86-53.home.elyir.app", "x.192-168-86-53.jordan.home.elyir.app",
-                  "192-168-86-53.jordan.elyir.app", "192-168-86-53.jordan.home.evil.com"):
+        for n in ("8-8-8-8.jordan.home.elyir.app", "192-168-1-53.home.elyir.app", "x.192-168-1-53.jordan.home.elyir.app",
+                  "192-168-1-53.jordan.elyir.app", "192-168-1-53.jordan.home.evil.com"):
             self.assertIsNone(self.home.address(n), n)
 
 
 class Challenges(Base):
-    NAME = "_acme-challenge.192-168-86-53.jordan.home.elyir.app."
+    NAME = "_acme-challenge.192-168-1-53.jordan.home.elyir.app."
 
     def test_a_house_answers_a_challenge_for_its_own_name(self):
         self.assertIsNone(self.home.present("jordan", self.NAME, VALUE))
@@ -69,7 +69,7 @@ class Challenges(Base):
         self.assertEqual(self.home.present("jordan", self.NAME, "bad value; rm"), "that does not look like a challenge value")
 
     def test_a_house_nobody_pays_for_gets_no_certificate(self):
-        self.assertEqual(self.home.present("palace", "_acme-challenge.192-168-86-53.palace.home.elyir.app", VALUE),
+        self.assertEqual(self.home.present("palace", "_acme-challenge.192-168-1-53.palace.home.elyir.app", VALUE),
                          "this house is not carried by this relay")
 
     def test_one_nobody_cleaned_up_goes_within_the_hour(self):
@@ -105,23 +105,23 @@ class OverDNS(Base):
 
     def test_a_carried_house_resolves_to_its_lan_address(self):
         for tcp in (False, True):
-            r = self.ask("192-168-86-53.jordan.home.elyir.app", tcp=tcp)
+            r = self.ask("192-168-1-53.jordan.home.elyir.app", tcp=tcp)
             self.assertEqual(r.header.rcode, RCODE.NOERROR); self.assertTrue(r.header.aa)
-            self.assertEqual([str(a.rdata) for a in r.rr], ["192.168.86.53"])
+            self.assertEqual([str(a.rdata) for a in r.rr], ["192.168.1.53"])
 
     def test_the_challenge_is_served_as_txt(self):
-        self.home.present("jordan", "_acme-challenge.192-168-86-53.jordan.home.elyir.app", VALUE)
-        r = self.ask("_acme-challenge.192-168-86-53.jordan.home.elyir.app", "TXT")
+        self.home.present("jordan", "_acme-challenge.192-168-1-53.jordan.home.elyir.app", VALUE)
+        r = self.ask("_acme-challenge.192-168-1-53.jordan.home.elyir.app", "TXT")
         self.assertEqual([str(a.rdata).strip('"') for a in r.rr], [VALUE])
 
     def test_names_that_are_not_there_are_nxdomain_and_the_rest_of_the_internet_is_refused(self):
         self.assertEqual(self.ask("8-8-8-8.jordan.home.elyir.app").header.rcode, RCODE.NXDOMAIN)
-        self.assertEqual(self.ask("192-168-86-53.palace.home.elyir.app").header.rcode, RCODE.NXDOMAIN)
+        self.assertEqual(self.ask("192-168-1-53.palace.home.elyir.app").header.rcode, RCODE.NXDOMAIN)
         self.assertEqual(self.ask("example.com").header.rcode, RCODE.REFUSED)
         self.assertEqual(self.ask("jordan.elyir.app").header.rcode, RCODE.REFUSED)
 
     def test_a_name_with_a_challenge_below_it_is_nodata_not_nxdomain(self):
-        r = self.ask("192-168-86-53.jordan.home.elyir.app", "TXT")
+        r = self.ask("192-168-1-53.jordan.home.elyir.app", "TXT")
         self.assertEqual(r.header.rcode, RCODE.NOERROR); self.assertEqual(r.rr, [])
 
     def test_the_zone_says_only_lets_encrypt_and_no_wildcards(self):

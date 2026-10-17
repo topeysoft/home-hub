@@ -9,7 +9,7 @@ and nothing here imports a line of the printer's own software. The printer keeps
 what it tells them; the hub adds the wall, the house's log and its "Needs a look".
 
 WORKS WITH THE INTERNET DOWN, once a printer is in. Its name at home spells its LAN address --
-192-168-86-73.obi1.home.elyir.app -- so the hub connects to that address straight and checks the
+192-168-1-73.atlas.home.elyir.app -- so the hub connects to that address straight and checks the
 certificate against the name: no DNS, no relay. Finding a printer the first time asks the relay which
 printers share the house's public address, which does need the internet; that is a convenience, not a
 path anything else depends on.
@@ -36,8 +36,8 @@ NAME = re.compile(r"^[a-z0-9](?:[a-z0-9-]{0,28}[a-z0-9])?$")
 PRIVATE = [ipaddress.ip_network(n) for n in ("10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16")]
 
 
-# What each of the printer's six states is called in a line about a room or a chip: "OBI1 printing",
-# "C3PO ready". The printer's own headline is a sentence ("White PLA ran out.") and does not fit after
+# What each of the printer's six states is called in a line about a room or a chip: "Atlas printing",
+# "Vega ready". The printer's own headline is a sentence ("White PLA ran out.") and does not fit after
 # a name, so the house keeps this one short word per state, here, where the panel can carry it.
 WORDS = {"ready": "ready", "preparing": "getting ready", "printing": "printing", "needs_you": "needs you",
          "finished": "done", "problem": "stopped"}
@@ -79,7 +79,7 @@ def filament(job: dict) -> str | None:
 
 
 def lan_address(home: str | None) -> str | None:
-    """https://192-168-86-73.obi1.home.elyir.app -> 192.168.86.73, and only an address inside a house."""
+    """https://192-168-1-73.atlas.home.elyir.app -> 192.168.1.73, and only an address inside a house."""
     host = (home or "").split("://", 1)[-1].split("/", 1)[0]
     m = re.match(r"^(\d{1,3})-(\d{1,3})-(\d{1,3})-(\d{1,3})\.", host)
     if not m:

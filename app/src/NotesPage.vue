@@ -71,7 +71,7 @@ async function run(n: Note, a: Act, id: string) {
   /* A strip held dark: Show me opens the light's own pane, where the same sentence and the next step
      are (design/controller-panel/NeedsLookB.dc.html). The row stays -- the strip is still dark. */
   if (a.act === 'open') { const d = deviceById(a.to!); if (d) store.opened = d; return }
-  /* A printer that needs somebody: Open R2D2 is its own pane, where its words and its actions are. This
+  /* A printer that needs somebody: Open Juno is its own pane, where its words and its actions are. This
      page steps aside for it, because a pane and This house share a layer and the later one would cover
      it; the row stays, and is here again behind the door, while the printer still needs somebody. */
   if (a.act === 'printer') { store.sheet = null; store.printer = a.to; return }

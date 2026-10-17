@@ -119,7 +119,7 @@ const things = computed(() => {
   return `${hw.size === 1 ? '1 thing' : `${hw.size} things`}, and what brought each of them`
 })
 const found = computed(() => foundCount() ? `${foundCount() === 1 ? '1 thing' : `${foundCount()} things`} found nearby` : 'Lights, plugs, cameras, locks')
-/* "OBI1 printing, 42%" -- the printer doing the most, the way the board's door says it; then how many. */
+/* "Atlas printing, 42%" -- the printer doing the most, the way the board's door says it; then how many. */
 const printers = computed(() => store.printers?.printers ?? [])
 const printersHint = computed(() => {
   const ps = printers.value
