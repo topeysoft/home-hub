@@ -286,6 +286,12 @@ Do not reopen these, and do not propose around them.
   touched says Still on rather than flipping back. A request that never arrived names the hub; only one the hub
   answered with a failure names the light. The band replaces the Reconnecting banner. Pinned by
   `app/tests/reach.test.ts` and `app/e2e/reach.spec.ts`; the rules and words are `app/src/reach.ts`.
+- **The hub's front page is Elyir Bench's shape, with one line for a hub ready to plug in** (16 October,
+  `design/site/`, D). It lives at `hub.elyir.com`, as Bench lives at `bench.elyir.com`; never under `elyir.app`, where
+  names are houses' own. On a computer, Put it on a computer you have leads; on a phone, Try it live. Under the two
+  buttons, one quiet email box for anyone who wants one ready to plug in, writing to the one Elyir waitlist. Its
+  pictures are the panel on the pretend house with `NAMES=plain` (`npm run site-shots`), never somebody else's show or
+  brand. `site/`, pinned by `site/site.test.mjs`; made by `site/terraform/`, deployed by `.github/workflows/site.yml`.
 
 ---
 
