@@ -5,7 +5,7 @@
    LOCKED=1 (a code is set), FRESH=1 (first run), ASK=1 (a phone is asking to join; needs LOCKED=1), ?join=1 (the join screen),
    UPDATE=ready (one waiting, with its sheet), UPDATE=running (one happening, walking the phases), UPDATE=away (the sheet a
    phone outside the house gets), ?printers= on the panel's address (a house with 3D printers: mock/printers.mjs), ?power=
-   (a house with a Tesla gateway: mock/power.mjs).
+   (a house with a Tesla gateway: mock/power.mjs), NAMES=plain (made-up names for show and brand, for public pictures).
    Nothing here talks to a real device; every POST or DELETE says ok. */
 import http from 'node:http'
 import fs from 'node:fs'
@@ -372,7 +372,14 @@ const PICS = { f2: pic('#3b4a5c', '#1b2230'), g1: pic('#2f2a26', '#14110f'), y1:
 const started = Date.now()      // the mock's frames are as old as the mock, bar the one that is deliberately stale
 
 const MIME = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png', '.json': 'application/json', '.woff2': 'font/woff2', '.webmanifest': 'application/manifest+json' }
-const json = (res, body) => { res.writeHead(200, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(body)) }
+/* NAMES=plain: the same house with made-up names in place of a real show, its service and the brands on the cards,
+   for pictures that go somewhere public (site/shots.mjs). A real house shows its own names; a page we publish must not
+   show somebody else's. */
+const PLAIN = process.env.NAMES === 'plain' ? [['The Bear', 'Harbor Lights'], ['Disney+', 'Streaming'], ['Philips Hue bridge', 'Light bridge'],
+  ['Philips Hue', 'Brightway'], ['Sonos Roam', 'Kitchen speaker'], ['Sonos', 'Speaker'], ['Chromecast (Den)', 'Den TV'],
+  ['Blue in Green', 'Late Light'], ['Miles Davis', 'The Quiet Hours']] : []
+const plain = (text) => PLAIN.reduce((t, [from, to]) => t.replaceAll(from, to), text)
+const json = (res, body) => { res.writeHead(200, { 'Content-Type': 'application/json' }); res.end(plain(JSON.stringify(body))) }
 
 /* What this house shares, and who holds it. The door is open while nothing holds it yet (a bridge
    waiting to be scanned) or for five minutes after Add an app. */
@@ -1095,7 +1102,7 @@ const bridgeRows = process.env.BRIDGES === 'none' ? [] : [
    screen existed whose whole point is something happening in the room while you watch -- naming a
    switch by pressing it. Now anything the mock changes can be pushed the way the hub pushes it. */
 const live = new Set()
-function push(msg) { const s = JSON.stringify(msg); for (const sock of live) { try { sock.write(frame(s)) } catch { live.delete(sock) } } }
+function push(msg) { const s = plain(JSON.stringify(msg)); for (const sock of live) { try { sock.write(frame(s)) } catch { live.delete(sock) } } }
 function frame(text) {
   const b = Buffer.from(text)
   const head = b.length < 126 ? Buffer.from([0x81, b.length])

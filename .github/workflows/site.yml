@@ -1,0 +1,51 @@
+# The site at https://hub.elyir.com (the front page, /install and the waitlist), deployed when something it's made of
+# changes on main. It is design/site's D; site/site.test.mjs pins it to the board and is run before anything goes up.
+#
+# Secrets (Settings > Secrets and variables > Actions):
+#   CLOUDFLARE_API_TOKEN   a token with only Account > Cloudflare Pages > Edit (not the site's Terraform token)
+#   CLOUDFLARE_ACCOUNT_ID  the Cloudflare account
+# Without them it still builds and tests, and skips the deploy. The project, the address and the waitlist's database
+# are made by site/terraform/, never here.
+name: Site (hub.elyir.com)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "site/**"
+      - "install.sh"                # https://hub.elyir.com/install serves it
+      - "app/public/favicon.svg"
+      - ".github/workflows/site.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: site-deploy
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  site:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: The page still matches its board
+        run: node --test site/site.test.mjs
+
+      - name: Put it together
+        run: site/build.sh
+
+      - name: Deploy to Cloudflare Pages
+        if: env.CLOUDFLARE_API_TOKEN != '' && env.CLOUDFLARE_ACCOUNT_ID != ''
+        working-directory: site
+        run: npx --yes wrangler@4 pages deploy dist --project-name elyir-home-hub --branch main --commit-dirty=true

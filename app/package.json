@@ -13,6 +13,7 @@
     "mock": "node mock/brain.mjs",
     "brain": "cd ../brain && .venv/bin/python dev.py",
     "shots": "node mock/shots.mjs",
+    "site-shots": "node mock/site-shots.mjs",
     "cost": "node mock/cost.mjs",
     "art-sheet": "node mock/art-sheet.mjs",
     "art-sheet:check": "node mock/art-sheet.mjs --check",
