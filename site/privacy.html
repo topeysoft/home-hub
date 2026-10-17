@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Privacy · Elyir Home Hub</title>
+<meta name="description" content="What leaves a house that runs Elyir Home Hub, what this website and the waitlist keep, and what the Use it anywhere service sees.">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="preload" href="/fonts/instrument-sans.woff2" as="font" type="font/woff2" crossorigin>
+<style>
+  /* Every sentence here is checked against the code that does it; when the code changes what it sends, this page
+     changes with it, and its date moves. site/site.test.mjs holds the few claims a test can see. */
+  @font-face { font-family: 'Instrument Sans'; src: url('/fonts/instrument-sans.woff2') format('woff2'); font-weight: 400 700; font-display: swap }
+  :root {
+    --ground: #0c0d10; --line: rgba(255, 255, 255, .1); --ink: #f1eee8; --quiet: #b9b5ad; --faint: #8f8c85; --lamp-text: #e9b872;
+    --font: 'Instrument Sans', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+    color-scheme: dark;
+  }
+  @media (prefers-color-scheme: light) {
+    :root { --ground: #f4f2ee; --line: rgba(28, 26, 22, .12); --ink: #1c1a16; --quiet: #4a463f; --faint: #6f6b62; --lamp-text: #8a5f1f; color-scheme: light }
+  }
+  * { box-sizing: border-box }
+  html, body { background: var(--ground); color: var(--ink) }
+  body { margin: 0; font: 17px/1.6 var(--font); -webkit-font-smoothing: antialiased; padding-inline: 16px; padding-block: 0 64px }
+  @media (min-width: 720px) { body { padding-inline: 40px } }
+  .wrap { max-width: 1328px; margin: 0 auto }
+  a { color: inherit }
+  :focus-visible { outline: 2px solid var(--lamp-text); outline-offset: 3px }
+  nav { display: flex; align-items: center; height: 76px }
+  .home { display: inline-flex; align-items: center; gap: 12px; text-decoration: none; font-weight: 500; font-size: 17px }
+  main { max-width: 68ch; padding-top: 32px }
+  .label { margin: 0; font-size: 12px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: var(--lamp-text) }
+  h1 { margin: 10px 0 16px; font-weight: 500; font-size: clamp(36px, 5vw, 52px); line-height: 1.04; letter-spacing: -.025em; text-wrap: balance }
+  h2 { margin: 44px 0 10px; font-weight: 500; font-size: 24px; letter-spacing: -.015em; text-wrap: balance }
+  p, li { color: var(--quiet) }
+  p { margin: 0 0 14px }
+  ul { margin: 0 0 14px; padding-left: 20px; display: grid; gap: 8px }
+  b { color: var(--ink); font-weight: 500 }
+  .lede { font-size: 19px; color: var(--ink) }
+  .fine { font-size: 14px; color: var(--faint); border-top: 1px solid var(--line); padding-top: 20px; margin-top: 48px }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav>
+    <a class="home" href="/"><svg width="28" height="28" viewBox="84 92 344 336" aria-hidden="true"><path d="M112 248 256 120l144 128" fill="none" stroke="currentColor" stroke-width="30" stroke-linecap="round" stroke-linejoin="round"/><path d="M148 226v170h216V226" fill="none" stroke="currentColor" stroke-width="30" stroke-linecap="round" stroke-linejoin="round"/><circle cx="256" cy="306" r="32" fill="#e9b872"/></svg>Elyir Home Hub</a>
+  </nav>
+
+  <main>
+    <p class="label">Privacy · 16 October 2026</p>
+    <h1>What leaves your house</h1>
+    <p class="lede">The hub runs in your house. Your rooms, your lights, your cameras and who is home are kept on the hub, not with us. There is no tracking or analytics in the hub or on this website.</p>
+    <p>Below is everything that does leave, and why. The hub's code is public, so anyone can check this page against it: <a href="https://github.com/topeysoft/home-hub">github.com/topeysoft/home-hub</a>.</p>
+
+    <h2>This website and the waitlist</h2>
+    <p>This site sets no cookies, counts no visitors, and loads nothing from any other site. It is served by Cloudflare, which sees your internet address as any web host does.</p>
+    <p>If you join the waitlist we keep <b>your email address, that it was for the hub, and when you joined</b>. We use it once, to tell you when there is a hub ready to plug in. We don't share it or sell it. It is stored with Cloudflare. To be taken off, write to <b>privacy@elyir.app</b>.</p>
+
+    <h2>What the hub sends on its own</h2>
+    <ul>
+      <li><b>Updates.</b> Every six hours the hub asks GitHub whether there is a newer release, and downloads it from GitHub.</li>
+      <li><b>Weather.</b> The Norwegian weather service (MET Norway) is given the house's location, so the wall can show the weather there.</li>
+      <li><b>3D printers.</b> Every five minutes the hub asks our service which printers share its internet connection. Like any request, it carries the house's internet address.</li>
+      <li><b>Finding your town, only when you ask.</b> During setup, searching for a town asks Open-Meteo. <i>Use where I am</i> asks ipwho.is to place the house by its internet address. Naming a spot on the map asks OpenStreetMap.</li>
+      <li><b>Accounts you connect.</b> A camera, doorbell or thermostat that lives behind its own account talks to that company the way its own app would, and that company's terms apply.</li>
+    </ul>
+
+    <h2>The assistant</h2>
+    <p>Simple sentences in the box at the top of Home, like <i>kitchen lights off</i>, are understood on the hub and never leave it.</p>
+    <p>The assistant is off until you add a key of your own from Anthropic. Once it's on, a sentence the hub can't understand by itself goes to Anthropic. With it go the names and states of your rooms and things, who is home, and the time, so the answer makes sense. It is sent under your account and Anthropic's terms, never ours.</p>
+
+    <h2>Listening and cameras</h2>
+    <p>Listening for spoken commands is off. When the hub speaks, the voice is made on the hub. Camera video goes from the camera to your screens through the hub. When you watch it away from home, it travels through our service encrypted, and we can't see it.</p>
+
+    <h2>Use it anywhere</h2>
+    <p>If your house has its own web address, your phones reach it through our service. The connection is encrypted from your phone to your hub, and our service passes it along without being able to read it. It runs on servers in Finland.</p>
+    <p>For each house the service keeps:</p>
+    <ul>
+      <li>the house's name, and a one-way fingerprint of its secret, never the secret itself;</li>
+      <li>when the name was taken and when it is paid up to;</li>
+      <li>the internet address it last connected from, and when.</li>
+    </ul>
+    <p>Its connection logs say which house connected, when, and how much went through. They are kept for seven days.</p>
+    <p>Paying isn't set up yet. When it is, this page will say who handles payments and what they keep.</p>
+    <p>If you stop, only reaching the house from outside stops. The name stays reserved for you, so you can come back to it. To have it removed, write to <b>privacy@elyir.app</b>.</p>
+
+    <h2>Phones</h2>
+    <p>The phones you let in are listed on the hub, which keeps a one-way fingerprint of each phone's key. The app that holds every house you've joined keeps that list on the phone itself; we keep nothing about it. When the app asks which houses are on the Wi-Fi it's using, our service sees the phone's internet address.</p>
+
+    <p class="fine">When what the hub sends changes, this page changes with it, and the date at the top moves. Questions: privacy@elyir.app.</p>
+  </main>
+</div>
+</body>
+</html>

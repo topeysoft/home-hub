@@ -6,10 +6,10 @@
 <title>Elyir Home Hub</title>
 <meta name="description" content="Your house on one screen: lights, locks, cameras and the thermostat, on a screen on the wall and every phone in the house. Set up by answering a few questions. Free and open source.">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400&display=swap">
+<link rel="preload" href="/fonts/instrument-sans.woff2" as="font" type="font/woff2" crossorigin>
 <style>
+  /* The panel's own face, served from here so a visit asks nobody else for anything (fonts/OFL.txt). */
+  @font-face { font-family: 'Instrument Sans'; src: url('/fonts/instrument-sans.woff2') format('woff2'); font-weight: 400 700; font-display: swap }
   /* hub.elyir.com: design/site, D (A with C's line). The panel's own colors and type; dark unless the visitor's
      setting is light. The pretend house is not built yet, so Try it live opens a picture of it, said as such. */
   :root {
@@ -27,7 +27,7 @@
     --glow: rgba(233, 184, 114, .10);
     --shadow: 0 40px 90px rgba(0, 0, 0, .55);
     --font: 'Instrument Sans', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
-    --mono: 'IBM Plex Mono', ui-monospace, Menlo, monospace;
+    --mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
     color-scheme: dark;
   }
   @media (prefers-color-scheme: light) {
@@ -208,7 +208,7 @@
       </div>
       <div class="way">
         <h3>Ready to plug in</h3>
-        <p>We're making a hub that comes ready. Leave your email and we'll write once, when it is.</p>
+        <p>We're making a hub that comes ready. Leave your email and we'll write once, when it is. <a href="/privacy">What we keep</a></p>
         <form class="list" novalidate>
           <label class="trap" aria-hidden="true">Leave this empty <input name="website" tabindex="-1" autocomplete="off"></label>
           <input type="email" name="email" id="way-email" required autocomplete="email" placeholder="you@example.com" aria-label="Your email">
@@ -229,6 +229,7 @@
     <div class="notes">
       <p>Built on Home Assistant, which nobody in the house ever has to open.</p>
       <p>Free software under the AGPL: <a href="https://github.com/topeysoft/home-hub">the code is on GitHub</a>, so you can run it, read it and change it.</p>
+      <p><a href="/privacy">What leaves your house</a>, and what this site and the waitlist keep.</p>
       <p>Home Assistant, Raspberry Pi and NUC are trademarks of their owners. Elyir isn't affiliated with them.</p>
     </div>
   </footer>

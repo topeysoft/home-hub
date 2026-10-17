@@ -101,3 +101,20 @@ test("the waitlist turns away what isn't an email, and quietly ignores a script"
 test('the waitlist says plainly when it has nowhere to write', async () => {
   assert.equal((await ask({ email: 'sam@example.com' }, {})).status, 503)
 })
+
+test('a visit asks nobody else for anything: no fonts, scripts or pictures from another site', () => {
+  const fetched = [...page.matchAll(/<(?:link|script|img|iframe)\b[^>]*\b(?:href|src)="([^"]+)"/g)].map((m) => m[1])
+  assert.ok(fetched.length > 0)
+  for (const url of fetched) assert.ok(url.startsWith('/'), `the page loads ${url}`)
+  assert.ok(!/url\(['"]?https?:/.test(page), 'nor from a stylesheet')
+})
+
+test('the privacy page is reachable from the waitlist, and says what it keeps', () => {
+  const ways = page.slice(at('id="get"'), at('id="anywhere"'))
+  assert.match(ways, /href="\/privacy"/)
+  assert.match(page.slice(at('<footer>')), /href="\/privacy"/)
+  const privacy = text(readFileSync(path.join(HERE, 'privacy.html'), 'utf8'))
+  assert.match(privacy, /your email address, that it was for the hub, and when you joined/)
+  assert.match(privacy, /privacy@elyir\.app/)
+  for (const word of ['relay', 'brain', 'entity', 'integration']) assert.ok(!new RegExp(`\\b${word}`, 'i').test(privacy), `the privacy page says ${word}`)
+})
