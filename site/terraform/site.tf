@@ -9,6 +9,11 @@ data "cloudflare_zone" "site" {
 resource "cloudflare_d1_database" "waitlist" {
   account_id = var.account_id
   name       = "elyir-waitlist"
+
+  # Said out loud because the API always reports it, and left unsaid every plan would offer to change the database.
+  read_replication = {
+    mode = "disabled"
+  }
 }
 
 # A direct-upload project: no Git connection, no build here. What it serves is put together by site/build.sh and
