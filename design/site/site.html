@@ -1,0 +1,335 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Home Hub Front Page</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Reading chrome follows the viewer's theme. The boards are the site as a visitor sees it, drawn dark in the
+   panel's own values (app/src/panel.css), at real size; ?board=<id> shows one board alone, which is how each
+   .dc.html draws it, so the boards and this page cannot disagree. The notes are canvas.json's. */
+:root {
+  --bg: #0c0d10; --surface: #15171c; --ink: #f1eee8; --ink-2: #b9b5ad; --ink-3: #8a877f;
+  --line: rgba(255,255,255,.1); --lamp: #e9b872; --lamp-text: #e9b872;
+  --font: 'Instrument Sans', -apple-system, 'Segoe UI', system-ui, sans-serif;
+  --mono: 'IBM Plex Mono', ui-monospace, Menlo, monospace;
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg: #f3f1ec; --surface: #ffffff; --ink: #1c1a16; --ink-2: #57534b; --ink-3: #6f6b62;
+    --line: rgba(28,26,22,.12); --lamp: #b8863e; --lamp-text: #8a5f1f; color-scheme: light;
+  }
+}
+:root[data-theme="light"] {
+  --bg: #f3f1ec; --surface: #ffffff; --ink: #1c1a16; --ink-2: #57534b; --ink-3: #6f6b62;
+  --line: rgba(28,26,22,.12); --lamp: #b8863e; --lamp-text: #8a5f1f; color-scheme: light;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.55 var(--font); -webkit-font-smoothing: antialiased; }
+.wrap { max-width: 1120px; margin: 0 auto; padding: 40px 16px 96px; }
+@media (min-width: 640px) { .wrap { padding-inline: 32px; } }
+.eyebrow { font-size: 12px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); }
+.top h1 { font-size: clamp(32px, 5vw, 48px); font-weight: 500; letter-spacing: -.02em; line-height: 1.05; margin: 10px 0 14px; text-wrap: balance; }
+.top p { color: var(--ink-2); max-width: 66ch; margin: 0; }
+.note { margin-top: 48px; max-width: 72ch; }
+.note h2 { font-size: 22px; font-weight: 500; letter-spacing: -.01em; margin: 0 0 10px; text-wrap: balance; }
+.note p { margin: 0 0 12px; color: var(--ink-2); }
+.note p b { color: var(--ink); font-weight: 600; letter-spacing: .02em; }
+.board { margin-top: 28px; }
+.board .cap { font-size: 14px; color: var(--ink-3); margin-bottom: 10px; }
+.fit { position: relative; overflow: hidden; border-radius: 10px; border: 1px solid var(--line); max-width: 100%; }
+.fit > .bd { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+.fit.phone { max-width: 390px; }
+.row { display: flex; flex-wrap: wrap; gap: 24px; align-items: flex-start; }
+.row > .board { flex: 1 1 560px; min-width: 0; }
+.row > .board.ph { flex: 0 1 320px; }
+body.solo { background: #000; overflow: hidden; }
+body.solo .wrap { display: none; }
+
+/* ---------- the boards ---------- */
+.bd { --s-bg: #0c0d10; --s-bg-2: #111318; --s-ink: #f1eee8; --s-ink-2: #b9b5ad; --s-ink-3: #8f8c85;
+  --s-lamp: #e9b872; --s-lamp-ink: #2a1c07; --s-line: rgba(255,255,255,.1); --s-surface: rgba(26,28,34,.72);
+  color: var(--s-ink); background: var(--s-bg); font-family: var(--font); overflow: hidden; position: relative; line-height: 1.5; }
+.bd.computer { width: 1440px; height: 900px; }
+.bd.phone { width: 390px; height: 844px; }
+.bd .chrome { height: 40px; background: #1b1d22; border-bottom: 1px solid #000; display: flex; align-items: center; padding: 0 16px; gap: 8px; }
+.bd .chrome i { width: 12px; height: 12px; border-radius: 50%; background: #3a3d44; display: block; }
+.bd .chrome .url { margin: 0 auto; width: 520px; height: 26px; border-radius: 7px; background: #2a2d33; color: #c9c5bd; font: 13px/26px -apple-system, system-ui, sans-serif; text-align: center; }
+.bd .status { height: 47px; display: flex; align-items: center; justify-content: space-between; padding: 0 30px 0 34px; font: 600 16px -apple-system, system-ui, sans-serif; color: #fff; }
+.bd .status .bat { width: 26px; height: 12px; border: 1.5px solid rgba(255,255,255,.6); border-radius: 4px; position: relative; }
+.bd .status .bat::after { content: ""; position: absolute; inset: 1.5px 6px 1.5px 1.5px; background: #fff; border-radius: 1.5px; }
+.bd .urlbar { position: absolute; left: 0; right: 0; bottom: 0; height: 64px; background: rgba(30,32,37,.94); border-top: 1px solid rgba(255,255,255,.06); display: flex; justify-content: center; padding-top: 10px; }
+.bd .urlbar span { width: 330px; height: 38px; border-radius: 12px; background: #34373d; color: #e6e2da; font: 15px/38px -apple-system, system-ui, sans-serif; text-align: center; }
+.bd .vp { position: relative; overflow: hidden; }
+.bd.computer .vp { height: 860px; }
+.bd.phone .vp { height: 733px; }
+.bd .sky { background: radial-gradient(1200px 520px at 72% 38%, rgba(233,184,114,.10), transparent 60%), radial-gradient(900px 600px at 10% 0%, rgba(80,96,140,.16), transparent 60%), var(--s-bg); }
+
+.bd .nav { height: 76px; display: flex; align-items: center; gap: 12px; padding: 0 56px; }
+.bd .nav .name { font-weight: 500; font-size: 17px; letter-spacing: -.005em; }
+.bd .nav .links { margin-left: auto; display: flex; align-items: center; gap: 30px; font-size: 15px; color: var(--s-ink-2); }
+.bd .pill { display: inline-flex; align-items: center; justify-content: center; height: 48px; padding: 0 24px; border-radius: 999px; font-size: 16px; font-weight: 500; white-space: nowrap; }
+.bd .pill.sm { height: 38px; padding: 0 18px; font-size: 14.5px; }
+.bd .pill.lamp { background: var(--s-lamp); color: var(--s-lamp-ink); }
+.bd .pill.ghost { border: 1px solid rgba(255,255,255,.22); color: var(--s-ink); }
+.bd h1 { margin: 0; font-weight: 500; letter-spacing: -.025em; line-height: 1.02; text-wrap: balance; }
+.bd h2 { margin: 0; font-weight: 500; letter-spacing: -.02em; line-height: 1.08; }
+.bd h3 { margin: 0; font-weight: 500; font-size: 26px; letter-spacing: -.015em; line-height: 1.15; }
+.bd p { margin: 0; }
+.bd .lead { color: var(--s-ink-2); }
+.bd .small { font-size: 14px; color: var(--s-ink-3); }
+.bd .label { font-size: 12px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: var(--s-lamp); }
+.bd code, .bd .cmd { font-family: var(--mono); }
+.bd .cmd { display: flex; align-items: center; gap: 12px; background: #07080a; border: 1px solid var(--s-line); border-radius: 12px; padding: 12px 12px 12px 16px; font-size: 13.5px; color: #e8e3da; white-space: nowrap; overflow: hidden; }
+.bd .cmd span { overflow: hidden; text-overflow: ellipsis; flex: 1; min-width: 0; }
+.bd .cmd b { font: 500 13px var(--font); color: var(--s-ink); border: 1px solid rgba(255,255,255,.18); border-radius: 8px; padding: 5px 12px; }
+.bd .field { display: flex; gap: 10px; }
+.bd .field .in { flex: 1; height: 48px; border-radius: 12px; border: 1px solid rgba(255,255,255,.18); background: rgba(255,255,255,.04); color: var(--s-ink-3); font-size: 16px; line-height: 46px; padding: 0 16px; }
+
+/* devices: the real panel, framed */
+.bd .wallf { background: #030405; border: 1px solid rgba(255,255,255,.09); border-radius: 22px; padding: 12px; box-shadow: 0 40px 90px rgba(0,0,0,.55), 0 0 0 1px rgba(0,0,0,.6); }
+.bd .wallf img, .bd .phonef img { display: block; width: 100%; border-radius: 10px; }
+.bd .phonef { background: #030405; border: 1px solid rgba(255,255,255,.12); border-radius: 40px; padding: 9px; box-shadow: 0 30px 70px rgba(0,0,0,.6); }
+.bd .phonef img { border-radius: 31px; }
+.bd .crop { overflow: hidden; }
+
+/* today: the repository as it is */
+.gh { --g-bg: #0d1117; --g-line: #30363d; --g-ink: #e6edf3; --g-mute: #8d96a0; --g-link: #4493f8; --g-btn: #21262d;
+  background: var(--g-bg); color: var(--g-ink); font: 14px/1.5 -apple-system, 'Segoe UI', system-ui, sans-serif; height: 100%; }
+.gh .hd { height: 64px; background: #010409; border-bottom: 1px solid var(--g-line); display: flex; align-items: center; gap: 14px; padding: 0 32px; font-size: 15px; }
+.gh .hd .o { width: 32px; height: 32px; border-radius: 50%; border: 2px solid var(--g-ink); }
+.gh .hd b { font-weight: 600; }
+.gh .tabs { display: flex; gap: 26px; padding: 0 32px; border-bottom: 1px solid var(--g-line); height: 48px; align-items: center; color: var(--g-ink); }
+.gh .tabs span:first-child { box-shadow: inset 0 -2px #f78166; height: 48px; line-height: 48px; font-weight: 600; }
+.gh .main { display: grid; grid-template-columns: 1fr 296px; gap: 24px; padding: 24px 32px; }
+.gh .bar { display: flex; gap: 8px; margin-bottom: 16px; }
+.gh .btn { height: 32px; line-height: 30px; padding: 0 12px; border-radius: 6px; border: 1px solid var(--g-line); background: var(--g-btn); font-weight: 500; }
+.gh .btn.go { background: #238636; border-color: rgba(240,246,252,.1); margin-left: auto; }
+.gh .files { border: 1px solid var(--g-line); border-radius: 6px; overflow: hidden; }
+.gh .files div { display: grid; grid-template-columns: 220px 1fr 110px; height: 39px; align-items: center; padding: 0 16px; border-top: 1px solid var(--g-line); color: var(--g-mute); }
+.gh .files div:first-child { border-top: 0; background: #161b22; color: var(--g-ink); grid-template-columns: 1fr 110px; }
+.gh .files div b { color: var(--g-ink); font-weight: 400; }
+.gh .files div em { font-style: normal; text-align: right; }
+.gh .side h4 { margin: 0 0 12px; font-size: 16px; }
+.gh .side p { margin: 0 0 14px; font-size: 16px; }
+.gh .side div { color: var(--g-mute); margin: 8px 0; }
+.gh.m .hd { height: 56px; padding: 0 16px; }
+.gh.m .repo { padding: 16px; border-bottom: 1px solid var(--g-line); }
+.gh.m .repo h4 { margin: 0 0 6px; font-size: 20px; font-weight: 600; }
+.gh.m .repo p { margin: 0 0 12px; color: var(--g-ink); }
+.gh.m .files { margin: 16px; }
+.gh.m .files div { grid-template-columns: 1fr 90px; }
+</style>
+</head>
+<body>
+<div class="wrap" id="page">
+  <header class="top">
+    <div class="eyebrow">design/site · 16 October 2026 · D picked</div>
+    <h1>The Home Hub front page</h1>
+    <p>What somebody who hears about Elyir Home Hub meets first, and where it lives. Today's page is drawn first, then the pick, D: A's page with C's line for a hub ready to plug in. The directions that lost follow at the end, with their cases. Every screen inside the boards is the shipped panel on the pretend house, taken today.</p>
+  </header>
+  <div id="read"></div>
+</div>
+<div id="solo"></div>
+<script>
+const MARK = (s) => `<svg width="${s}" height="${s}" viewBox="84 92 344 336" aria-hidden="true"><path d="M112 248 256 120l144 128" fill="none" stroke="#f1eee8" stroke-width="30" stroke-linecap="round" stroke-linejoin="round"/><path d="M148 226v170h216V226" fill="none" stroke="#f1eee8" stroke-width="30" stroke-linecap="round" stroke-linejoin="round"/><circle cx="256" cy="306" r="32" fill="#e9b872"/></svg>`
+const ELYIR = (w) => `<svg width="${w}" viewBox="50 20 470 340" aria-label="elyir"><path d="M68 222C80 216 90 211 100 205C120 195 145 180 145 165C145 150 118 152 110 175C102 200 110 240 140 240C160 240 175 225 185 205C200 170 225 90 225 55C225 25 200 25 195 60C190 100 190 200 200 230C207 245 225 245 240 225C248 210 252 185 255 160C252 195 255 240 280 240C300 240 310 205 312 160C312 230 310 300 295 330C285 350 260 345 268 320C278 290 320 265 345 235C352 215 358 185 362 160C358 195 356 225 368 240C378 250 395 235 405 215C410 195 415 175 420 160C428 168 440 170 448 162C450 190 452 220 458 240C463 228 476 214 494 208" fill="none" stroke="#f1eee8" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"/><circle cx="363" cy="120" r="14" fill="#e9b872"/></svg>`
+const CMD = 'curl -fsSL https://hub.elyir.com/install | sudo bash'
+
+const computer = (url, inner) => `<div class="bd computer"><div class="chrome"><i></i><i></i><i></i><div class="url">${url}</div></div><div class="vp sky">${inner}</div></div>`
+const phone = (url, inner) => `<div class="bd phone"><div class="status"><span>7:40</span><span class="bat"></span></div><div class="vp sky">${inner}</div><div class="urlbar"><span>${url}</span></div></div>`
+const wall = (img, w) => `<div class="wallf" style="width:${w}px"><img src="shots/${img}.jpg" alt=""></div>`
+const hand = (img, w, h) => `<div class="phonef" style="width:${w}px${h ? `;height:${h}px;overflow:hidden` : ''}"><img src="shots/${img}.jpg" alt=""></div>`
+const nav = (right) => `<div class="nav">${MARK(28)}<span class="name">Elyir Home Hub</span><div class="links">${right}</div></div>`
+const NAV_FULL = nav(`<span>Try it</span><span>Get it</span><span>Use it anywhere</span><span class="pill ghost sm">Sign in</span>`)
+const NAV_PHONE = `<div class="nav" style="height:60px;padding:0 20px">${MARK(26)}<span class="name" style="font-size:16px">Elyir Home Hub</span><div class="links"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#f1eee8" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg></div></div>`
+
+const WAITLIST_LINE = `<div style="border-top:1px solid var(--s-line);padding-top:18px;display:grid;gap:10px">
+  <p style="font-size:15.5px"><span style="font-weight:500">Want one ready to plug in?</span> <span class="lead">We're making one. Leave your email and we'll write once, when it's ready.</span></p>
+  <div class="field"><span class="in" style="height:42px;line-height:40px;font-size:15px">you@example.com</span><span class="pill ghost sm" style="height:42px">Tell me</span></div></div>`
+
+const FILES = [['.github','home-hub','11 days ago'],['app','home-hub','11 days ago'],['brain','home-hub','11 days ago'],['design','home-hub','11 days ago'],['docs','The README is the front door for Elyir Home Hub','11 days ago'],['driver-layer','home-hub','11 days ago'],['kiosk','home-hub','11 days ago'],['matter-bridge','home-hub','11 days ago'],['puck','home-hub','11 days ago'],['relay','relay: the printer app may compile the WebAssembly…','yesterday'],['releases','home-hub','11 days ago'],['sounds','home-hub','11 days ago'],['strip','home-hub','11 days ago'],['tools','The README is the front door for Elyir Home Hub','11 days ago'],['.gitignore','home-hub','11 days ago'],['.gitleaks.toml','home-hub','11 days ago'],['AGENTS.md','home-hub','11 days ago'],['CLA.md','home-hub','11 days ago'],['CONTRIBUTING.md','Security reports go to security@elyir.app…','11 days ago']]
+
+const BOARDS = {
+  today: () => computer('github.com/topeysoft/home-hub', `<div class="gh">
+    <div class="hd"><span class="o"></span><span>topeysoft / <b>home-hub</b></span><span class="btn" style="margin-left:10px;border-radius:999px;height:24px;line-height:22px;font-size:12px;padding:0 8px">Public</span></div>
+    <div class="tabs"><span>Code</span><span>Issues</span><span>Pull requests</span><span>Actions</span><span>Security</span><span>Insights</span></div>
+    <div class="main"><div>
+      <div class="bar"><span class="btn">main</span><span class="btn">1 Branch</span><span class="btn">0 Tags</span><span class="btn" style="margin-left:auto">Go to file</span><span class="btn go">Code</span></div>
+      <div class="files"><div><span><b>Temitope Adeyeri</b>&nbsp; Merge pull request #29 from topeysoft/printers-wasm-newhub</span><em>6 Commits</em></div>
+      ${FILES.map(([n, m, t]) => `<div><b>${n}</b><span>${m}</span><em>${t}</em></div>`).join('')}</div>
+    </div><div class="side"><h4>About</h4><p>Elyir Home Hub: a smart home hub a household sets up from its own screen</p><div>Readme</div><div>AGPL-3.0 license</div><div>Contributing</div><div>0 stars</div><div>0 forks</div></div></div></div>`),
+
+  'today-phone': () => phone('github.com', `<div class="gh m">
+    <div class="hd"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#e6edf3" stroke-width="1.8" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span class="o" style="margin:0 auto"></span><span class="btn" style="height:30px;line-height:28px">Sign in</span></div>
+    <div class="repo"><div style="color:var(--g-mute)">topeysoft / <b style="color:var(--g-link);font-weight:600">home-hub</b></div><h4 style="margin-top:8px">home-hub</h4><p>Elyir Home Hub: a smart home hub a household sets up from its own screen</p><div style="color:var(--g-mute)">AGPL-3.0 license · 0 stars · 0 forks</div></div>
+    <div class="tabs" style="padding:0 16px"><span>Code</span><span>Issues</span><span>Pull requests</span><span>Actions</span></div>
+    <div class="files"><div><span><b>Temitope Adeyeri</b> Merge pull…</span><em>6 Commits</em></div>${FILES.slice(0, 10).map(([n, , t]) => `<div><b>${n}</b><em>${t}</em></div>`).join('')}</div></div>`),
+
+  a: (line = false) => computer('hub.elyir.com', `${NAV_FULL}
+    <div style="display:grid;grid-template-columns:500px 1fr;gap:48px;padding:${line ? 36 : 52}px 56px 0;align-items:start">
+      <div style="padding-top:${line ? 24 : 36}px;display:grid;gap:${line ? 22 : 26}px">
+        <div class="label">Elyir Home Hub</div>
+        <h1 style="font-size:64px">Your house, on one screen.</h1>
+        <p class="lead" style="font-size:19px">Lights, locks, cameras and the thermostat, on a screen on the wall and every phone in the house. Setting it up is a few questions. It keeps working when the internet is down.</p>
+        <div style="display:flex;gap:12px"><span class="pill lamp">Put it on a computer you have</span><span class="pill ghost">Try it live</span></div>
+        <p class="small">Free and open source · a Raspberry Pi 5, a NUC or a mini PC</p>
+        ${line ? WAITLIST_LINE : ''}
+      </div>
+      <div style="position:relative;height:600px">
+        <div style="position:absolute;right:-110px;top:0">${wall('wall-evening', 800)}</div>
+        <div style="position:absolute;left:-20px;top:250px">${hand('phone-home', 196, 400)}</div>
+      </div>
+    </div>
+    <div style="position:absolute;left:56px;right:56px;bottom:0;border-top:1px solid var(--s-line);padding-top:26px;height:96px"><h2 style="font-size:30px;color:var(--s-ink-2)">Try a pretend house, right here</h2></div>`),
+
+  'a-phone': (line = false) => phone('hub.elyir.com', `${NAV_PHONE}
+    <div style="padding:${line ? 14 : 22}px 20px 0;display:grid;gap:${line ? 14 : 18}px">
+      <div class="label">Elyir Home Hub</div>
+      <h1 style="font-size:40px">Your house, on one screen.</h1>
+      <p class="lead" style="font-size:16.5px">Lights, locks, cameras and the thermostat, on a screen on the wall and every phone in the house. Setting it up is a few questions.</p>
+      <div style="display:grid;gap:10px"><span class="pill lamp">Try it live</span><span class="pill ghost">Put it on a computer you have</span></div>
+      ${line ? WAITLIST_LINE : ''}
+    </div>
+    <div style="display:flex;justify-content:center;margin-top:${line ? 22 : 30}px">${hand('phone-home', 250, 330)}</div>`),
+
+  d: () => BOARDS.a(true),
+  'd-phone': () => BOARDS['a-phone'](true),
+
+  'a-more': () => computer('hub.elyir.com', `
+    <div style="display:grid;grid-template-columns:480px 1fr;gap:56px;padding:40px 56px 0;align-items:center">
+      <div style="display:grid;gap:18px"><div class="label">Try it</div><h2 style="font-size:42px">A pretend house, right here</h2>
+        <p class="lead" style="font-size:18px">A whole house that isn't real. Tap the lights, run Bedtime, type <i>kitchen lights off</i>. It starts when you ask, so the page stays quick.</p></div>
+      <div style="position:relative;width:600px;justify-self:end">${wall('wall-room', 600)}
+        <div style="position:absolute;inset:12px;border-radius:10px;background:rgba(8,9,12,.62);display:grid;place-items:center"><span class="pill lamp">Start the pretend house</span></div></div>
+    </div>
+    <div style="padding:36px 56px 0"><h2 style="font-size:30px;margin-bottom:20px">Ways to get it</h2>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:20px">
+        <div style="border:1px solid var(--s-line);border-radius:18px;padding:22px;display:grid;gap:12px;background:var(--s-surface)"><h3 style="font-size:21px">On a computer you have</h3><p class="lead" style="font-size:15px">A Raspberry Pi 5, a NUC or a mini PC with Linux. One command, free.</p><div class="cmd"><span>${CMD}</span><b>Copy</b></div></div>
+        <div style="border:1px solid var(--s-line);border-radius:18px;padding:22px;display:grid;gap:12px;background:var(--s-surface)"><h3 style="font-size:21px">On a new Raspberry Pi 5</h3><p class="lead" style="font-size:15px">Put the card in, plug the Pi into power and your router, and open hub.local on your phone.</p><span class="pill ghost sm" style="justify-self:start">Get the card image</span></div>
+        <div style="border:1px solid var(--s-line);border-radius:18px;padding:22px;display:grid;gap:12px;background:var(--s-surface)"><h3 style="font-size:21px">Ready to plug in</h3><p class="lead" style="font-size:15px">We're making a hub that comes ready. Leave your email and we'll write once, when it is.</p><div class="field"><span class="in" style="height:40px;line-height:38px;font-size:14px">you@example.com</span><span class="pill lamp sm">Tell me</span></div></div>
+      </div></div>
+    <div style="position:absolute;left:56px;right:56px;bottom:0;border-top:1px solid var(--s-line);padding-top:24px;height:104px;display:flex;gap:40px;align-items:baseline">
+      <h2 style="font-size:28px;white-space:nowrap">Free at home. <span style="color:var(--s-lamp)">$3 a month</span> to use it anywhere.</h2>
+      <p class="lead" style="font-size:15px">Your house gets its own web address, so your phones work away from home. Stop any time: only reaching it from outside stops.</p></div>`),
+
+  b: () => computer('hub.elyir.com', `${nav(`<span>Try it live</span><span class="pill lamp sm">Get it</span>`)}
+    <div style="text-align:center;padding:30px 0 0;display:grid;gap:14px;justify-items:center">
+      <h1 style="font-size:52px">Plug it in. Open hub.local. Answer a few questions.</h1>
+      <p class="lead" style="font-size:19px;max-width:640px">That's the whole setup. Then the house runs from a screen on the wall and every phone in it, with the internet up or down.</p>
+    </div>
+    <div style="position:absolute;left:50%;top:282px;margin-left:-560px">${wall('wall-evening', 1120)}</div>
+    <div style="position:absolute;left:50%;top:470px;margin-left:420px">${hand('phone-home', 210, 430)}</div>`),
+
+  'b-phone': () => phone('hub.elyir.com', `<div class="nav" style="height:60px;padding:0 20px">${MARK(26)}<span class="name" style="font-size:16px">Elyir Home Hub</span><div class="links"><span class="pill lamp sm" style="height:34px">Get it</span></div></div>
+    <div style="padding:16px 20px 0;display:grid;gap:14px"><h1 style="font-size:35px">Plug it in. Open hub.local. Answer a few questions.</h1>
+    <p class="lead" style="font-size:16px">That's the whole setup. Then the house runs from a screen on the wall and every phone in it.</p></div>
+    <div style="display:flex;justify-content:center;margin-top:24px">${hand('phone-home', 270, 420)}</div>`),
+
+  'b-more': () => computer('hub.elyir.com', `
+    <div style="display:grid;grid-template-columns:660px 1fr;gap:64px;padding:56px 56px 0;align-items:center">
+      ${wall('wall-setup', 660)}
+      <div style="display:grid;gap:14px"><div class="label">Setting up</div><h2 style="font-size:40px">A few questions, on the screen</h2>
+      <p class="lead" style="font-size:18px">Your name, where home is, which rooms. No app to download and no account to make. Speakers and TVs already on your Wi‑Fi are found on their own.</p></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 300px;gap:64px;padding:56px 56px 0 120px;align-items:start">
+      <div style="display:grid;gap:14px;padding-top:40px"><div class="label">Telling it</div><h2 style="font-size:40px">Type it the way you'd say it</h2>
+      <p class="lead" style="font-size:18px;max-width:560px"><i>Kitchen lights off. Movie in the den. Is the front door locked?</i> Simple sentences run at once, like a tap. Anything else goes to the assistant, which asks before it does anything.</p></div>
+      <div class="crop" style="height:420px">${hand('phone-home', 300)}</div>
+    </div>`),
+
+  c: () => computer('hub.elyir.com', `${NAV_FULL}
+    <div style="text-align:center;padding:34px 0 0;display:grid;gap:14px;justify-items:center">
+      <h1 style="font-size:54px">A smart home the whole household can use.</h1>
+      <p class="lead" style="font-size:19px;max-width:700px">Lights, locks, cameras and the rest, on a screen on the wall and every phone in the house. You set it up by answering a few questions.</p>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;width:1080px;margin:36px auto 0">
+      <div style="border:1px solid rgba(233,184,114,.45);border-radius:22px;padding:30px;display:grid;gap:14px;background:rgba(233,184,114,.06)">
+        <div class="label">Ready to plug in · not yet</div><h3>I'd like one I can just plug in</h3>
+        <p class="lead" style="font-size:16px">We're making a hub that comes ready: plug it into power and your router, open hub.local on your phone, and answer the questions. Tell us where to write when it's ready.</p>
+        <div class="field"><span class="in">you@example.com</span><span class="pill lamp">Tell me when</span></div>
+        <p class="small">One email when it ships. Nothing else.</p></div>
+      <div style="border:1px solid var(--s-line);border-radius:22px;padding:30px;display:grid;gap:14px;background:var(--s-surface)">
+        <div class="label" style="color:var(--s-ink-3)">Free</div><h3>I have a computer for it</h3>
+        <p class="lead" style="font-size:16px">A Raspberry Pi 5, an Intel NUC or a mini PC running Linux. One command sets it up, then open hub.local.</p>
+        <div class="cmd"><span>${CMD}</span><b>Copy</b></div>
+        <p class="small">Or put a card in a new Raspberry Pi 5 · <u>Get the card image</u></p></div>
+    </div>
+    <div style="position:absolute;left:50%;top:688px;margin-left:-450px">${wall('wall-evening', 900)}</div>
+    <div style="position:absolute;left:50%;top:640px;transform:translateX(-50%);font-size:15px;color:var(--s-ink-2)">Or <u style="color:var(--s-ink)">try a pretend house</u> first</div>`),
+
+  'c-phone': () => phone('hub.elyir.com', `${NAV_PHONE}
+    <div style="padding:14px 20px 0;display:grid;gap:12px"><h1 style="font-size:33px">A smart home the whole household can use.</h1>
+    <p class="lead" style="font-size:16px">On a screen on the wall and every phone in the house. Set up by answering a few questions.</p></div>
+    <div style="margin:22px 16px 0;border:1px solid rgba(233,184,114,.45);border-radius:20px;padding:20px;display:grid;gap:12px;background:rgba(233,184,114,.06)">
+      <div class="label">Ready to plug in · not yet</div><h3 style="font-size:23px">I'd like one I can just plug in</h3>
+      <p class="lead" style="font-size:15px">We'll write once, when there's a hub you can buy.</p>
+      <span class="in" style="display:block;height:46px;border-radius:12px;border:1px solid rgba(255,255,255,.18);background:rgba(255,255,255,.04);color:var(--s-ink-3);line-height:44px;padding:0 14px">you@example.com</span>
+      <span class="pill lamp">Tell me when</span></div>
+    <div style="margin:14px 16px 0;border:1px solid var(--s-line);border-radius:20px;padding:18px 20px;display:grid;gap:6px;background:var(--s-surface)">
+      <h3 style="font-size:19px">I have a computer for it</h3><p class="small" style="color:var(--s-ink-2)">Free. The command is at <b style="color:var(--s-ink);font-weight:500">hub.elyir.com/install</b> on that computer.</p></div>
+    <p style="text-align:center;margin-top:16px;font-size:15px;color:var(--s-ink-2)">Or <u style="color:var(--s-ink)">try a pretend house</u></p>`),
+}
+
+const FILE_TO_BOARD = {
+  'Today.dc.html': 'today', 'Today-phone.dc.html': 'today-phone',
+  'SameAsBenchA.dc.html': 'a', 'SameAsBenchA-phone.dc.html': 'a-phone', 'SameAsBenchA-more.dc.html': 'a-more',
+  'EveningB.dc.html': 'b', 'EveningB-phone.dc.html': 'b-phone', 'EveningB-more.dc.html': 'b-more',
+  'WhoForC.dc.html': 'c', 'WhoForC-phone.dc.html': 'c-phone',
+  'WaitlistLineD.dc.html': 'd', 'WaitlistLineD-phone.dc.html': 'd-phone',
+}
+
+const solo = new URLSearchParams(location.search).get('board')
+if (solo && BOARDS[solo]) {
+  document.body.classList.add('solo')
+  document.getElementById('solo').innerHTML = BOARDS[solo]()
+} else {
+  readingPage()
+}
+
+async function readingPage() {
+  const read = document.getElementById('read')
+  let canvas = null
+  try { canvas = await (await fetch('canvas.json')).json() } catch {}
+  const titles = Object.fromEntries((canvas?.artboards || []).map((a) => [a.file, a.title]))
+  const notes = Object.fromEntries((canvas?.annotations || []).map((n) => [n.id, n.text]))
+  const order = canvas?.reading || Object.keys(FILE_TO_BOARD)
+  let row = null
+  for (const item of order) {
+    if (FILE_TO_BOARD[item]) {
+      const id = FILE_TO_BOARD[item], isPhone = id.endsWith('phone')
+      if (!BOARDS[id]) continue
+      if (!row) { row = document.createElement('div'); row.className = 'row'; read.append(row) }
+      const b = document.createElement('div')
+      b.className = 'board' + (isPhone ? ' ph' : '')
+      b.innerHTML = `<div class="cap">${esc(titles[item] || item)}</div><div class="fit${isPhone ? ' phone' : ''}" data-w="${isPhone ? 390 : 1440}" data-h="${isPhone ? 844 : 900}">${BOARDS[id]()}</div>`
+      row.append(b)
+    } else if (notes[item]) {
+      row = null
+      const [head, ...rest] = notes[item].split('\n\n')
+      const n = document.createElement('section')
+      n.className = 'note'
+      n.innerHTML = `<h2>${esc(cap(head))}</h2>` + rest.map((p) => `<p>${lead(esc(p))}</p>`).join('')
+      read.append(n)
+    }
+  }
+  fit()
+  addEventListener('resize', fit)
+}
+function fit() {
+  for (const f of document.querySelectorAll('.fit')) {
+    const w = +f.dataset.w, h = +f.dataset.h, s = Math.min(1, f.clientWidth / w)
+    f.style.height = h * s + 'px'
+    f.firstElementChild.style.transform = `scale(${s})`
+  }
+}
+const esc = (s) => s.replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]).replace(/\n/g, '<br>')
+const cap = (s) => s.charAt(0) + s.slice(1).toLowerCase().replace(/\b(a|b|c)\b(?=:)/g, (m) => m.toUpperCase()).replace(/\b(elyir|home hub|bench|github)\b/gi, (m) => m.replace(/\b\w/g, (c) => c.toUpperCase()))
+const lead = (p) => p.replace(/^([A-Z][A-Z ,.'’-]{2,}[.:])/, '<b>$1</b>')
+</script>
+</body>
+</html>

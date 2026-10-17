@@ -1,0 +1,228 @@
+{
+  "name": "The Home Hub front page",
+  "areas": [
+    "The website"
+  ],
+  "reading": [
+    "why",
+    "visitors",
+    "Today.dc.html",
+    "Today-phone.dc.html",
+    "today",
+    "WaitlistLineD.dc.html",
+    "WaitlistLineD-phone.dc.html",
+    "SameAsBenchA-more.dc.html",
+    "d",
+    "behind",
+    "pick",
+    "SameAsBenchA.dc.html",
+    "SameAsBenchA-phone.dc.html",
+    "a",
+    "EveningB.dc.html",
+    "EveningB-phone.dc.html",
+    "EveningB-more.dc.html",
+    "b",
+    "WhoForC.dc.html",
+    "WhoForC-phone.dc.html",
+    "c"
+  ],
+  "pages": [
+    {
+      "id": "site",
+      "name": "The Home Hub front page",
+      "decided": {
+        "on": "2026-10-16",
+        "chose": "D, A with C's line",
+        "board": "WaitlistLineD.dc.html"
+      }
+    },
+    {
+      "id": "site-rejected",
+      "name": "The Home Hub front page: not chosen"
+    }
+  ],
+  "artboards": [
+    {
+      "file": "Today.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "Today · github.com/topeysoft/home-hub on a computer: the first screen is a list of files",
+      "page": "site"
+    },
+    {
+      "file": "Today-phone.dc.html",
+      "x": 1580,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "title": "Today · on a phone: the same list, and no picture of the panel anywhere",
+      "page": "site"
+    },
+    {
+      "file": "SameAsBenchA.dc.html",
+      "x": 0,
+      "y": 0,
+      "w": 1440,
+      "h": 900,
+      "title": "A · Bench's shape: what it is, two buttons, the real screens at once",
+      "page": "site-rejected"
+    },
+    {
+      "file": "SameAsBenchA-phone.dc.html",
+      "x": 1580,
+      "y": 0,
+      "w": 390,
+      "h": 844,
+      "title": "A · On a phone: Try it live leads, because the command needs a computer",
+      "page": "site-rejected"
+    },
+    {
+      "file": "SameAsBenchA-more.dc.html",
+      "x": 2110,
+      "y": 1700,
+      "w": 1440,
+      "h": 900,
+      "title": "D · One scroll down, as A drew it: the pretend house when asked, the ways to get it, the price",
+      "page": "site"
+    },
+    {
+      "file": "EveningB.dc.html",
+      "x": 0,
+      "y": 1700,
+      "w": 1440,
+      "h": 900,
+      "title": "B · The README's sentence and the wall itself, nearly full size",
+      "page": "site-rejected"
+    },
+    {
+      "file": "EveningB-phone.dc.html",
+      "x": 1580,
+      "y": 1700,
+      "w": 390,
+      "h": 844,
+      "title": "B · On a phone: the sentence, then the phone's own Home",
+      "page": "site-rejected"
+    },
+    {
+      "file": "EveningB-more.dc.html",
+      "x": 2110,
+      "y": 1700,
+      "w": 1440,
+      "h": 900,
+      "title": "B · Further down: one moment at a time, each a real screen and two sentences",
+      "page": "site-rejected"
+    },
+    {
+      "file": "WhoForC.dc.html",
+      "x": 0,
+      "y": 3400,
+      "w": 1440,
+      "h": 900,
+      "title": "C · Two answers side by side: one ready to plug in, or a computer you have",
+      "page": "site-rejected"
+    },
+    {
+      "file": "WhoForC-phone.dc.html",
+      "x": 1580,
+      "y": 3400,
+      "w": 390,
+      "h": 844,
+      "title": "C · On a phone: the plug-in answer first, the command a line under it",
+      "page": "site-rejected"
+    },
+    {
+      "file": "WaitlistLineD.dc.html",
+      "x": 0,
+      "y": 1700,
+      "w": 1440,
+      "h": 900,
+      "title": "D · A with C's line: under the two buttons, one quiet email box for a hub ready to plug in",
+      "page": "site"
+    },
+    {
+      "file": "WaitlistLineD-phone.dc.html",
+      "x": 1580,
+      "y": 1700,
+      "w": 390,
+      "h": 844,
+      "title": "D · On a phone: Try it live leads, and the email line sits under the buttons",
+      "page": "site"
+    }
+  ],
+  "annotations": [
+    {
+      "id": "why",
+      "page": "site",
+      "x": -620,
+      "y": 0,
+      "w": 500,
+      "text": "WHY THIS EXISTS (16 OCTOBER 2026)\n\nElyir Bench has a front page: astromech's design/site/, B picked on 15 October, moving to bench.elyir.com. Elyir Home Hub has none. Somebody who hears about the hub today lands on the GitHub repository.\n\nThe launch plan's soft launch (stage 6) needs \"the demo and waitlist on the Elyir landing page\", and nothing for it had been drawn. This collection is that page: what a visitor meets first, and where it lives."
+    },
+    {
+      "id": "visitors",
+      "page": "site",
+      "x": -620,
+      "y": 900,
+      "w": 500,
+      "text": "WHO ARRIVES, AND WHAT THEY CAME FOR\n\nSOMEBODY FROM A POST. r/homeassistant, r/selfhosted, Show HN. At a computer, with a Pi or a NUC, already running something. Wants to see it, then the command.\n\nSOMEBODY SENT BY A FRIEND. \"You should get one of these.\" On a phone, with no computer to spare, and will never run a command. Wants to know what it is and whether they can have one. This is who the hub is for, and the waitlist is how we reach them later: the plan says the email list is who the service and the hardware are sold to.\n\nSOMEBODY WHO HAS ONE. Back for the command, a second screen, or Use it anywhere. Wants Sign in and the price.\n\nBench's page serves the first and the third. The hub's second visitor has no Bench equivalent, since nobody gets sent to a printer tool by a friend who isn't a maker. The directions differ in how much of the top of the page they give that person."
+    },
+    {
+      "id": "today",
+      "page": "site",
+      "x": 0,
+      "y": 960,
+      "w": 1440,
+      "text": "TODAY: THE REPOSITORY IS THE FRONT PAGE\n\ngithub.com/topeysoft/home-hub at 1440 wide: the first screen is a list of files, most of them saying \"home-hub, 11 days ago\". The README, which reads well (plug it in, open hub.local, answer a few questions), starts below that list and has no picture of the panel at all. The install command is about three screens down. There's nothing to try, nowhere to leave an email, and no price: Use it anywhere's $3 a month is said only on the hub itself, at the end of setup.\n\nOn a phone it's the same list, and the command is one nobody on a phone can run.\n\nWhat the repository does well stays. The README's sentences become the page's sentences, and its rules that do not change make a good last section."
+    },
+    {
+      "id": "a",
+      "page": "site-rejected",
+      "x": 0,
+      "y": 960,
+      "w": 1440,
+      "text": "A: THE SAME SHAPE AS BENCH'S FRONT PAGE\n\nBench's B, made for the hub. What it is and two buttons at the top, with the real screens there at once. One scroll down, the pretend house, started only when asked, then the ways to get it, then the price. On a computer, Put it on a computer you have leads. On a phone, Try it live leads, because the command needs a computer.\n\nGOOD: The two Elyir products' pages are one family, with the same top bar, the same order, and the same place for Sign in and the price. Someone who knows one knows the other. Most of the build is Bench's page with new words and pictures.\n\nCOSTS: The person sent by a friend gets two buttons that are both about a computer they don't have, and the waitlist is three sections down, as the last of the ways to get it. The pretend house has to run inside the page: today it's a small server on a computer (app/mock/brain.mjs), and moving it into the browser is a couple of days' work. B needs that too."
+    },
+    {
+      "id": "b",
+      "page": "site-rejected",
+      "x": 0,
+      "y": 2660,
+      "w": 1440,
+      "text": "B: THE EVENING, TOLD\n\nThe top of the page is the README's sentence and the wall itself, nearly full size. Below it, one moment at a time, each a real screen and two sentences: the questions at setup, typing what you want, something new arriving quietly, finding which light is which, and using it anywhere. The ways to get it, the waitlist and the price come at the end, as in A. Get it in the top bar jumps there.\n\nGOOD: It shows rather than tells, which is the hub's whole argument. It works for all three visitors without asking who they are. The moments are the launch video's script, so the page and the video are made once. The pictures are taken from the panel on the pretend house, so they can be taken again whenever the panel changes.\n\nCOSTS: The longest page of the three, and the command is the furthest down for anyone who doesn't know to press Get it. It looks least like Bench's page. The pictures have to be kept current, or the page shows a panel that's no longer shipped."
+    },
+    {
+      "id": "c",
+      "page": "site-rejected",
+      "x": 0,
+      "y": 4360,
+      "w": 1440,
+      "text": "C: ASK WHO IS VISITING\n\nUnder one sentence about what it is, two answers side by side. I'd like one I can just plug in: an email address, and one email when there's a hub to buy. I have a computer for it: the command, free. The wall sits under them, with Try a pretend house. On a phone the plug-in answer comes first, and the command is one line under it, because it has to be run on that computer anyway.\n\nGOOD: The person sent by a friend has something to do in the first second, and the waitlist the plan wants starts growing on the first day. The person from a post finds the command without scrolling. Nobody is asked to read a section that isn't for them.\n\nCOSTS: It offers a hub you can buy before there is one, so the page has to say plainly that it isn't ready (\"not yet\" is on the card). The list needs somewhere to live: a small form service, set up in Terraform like the rest. There's less to look at above the fold than in A or B, with one picture, half cut off."
+    },
+    {
+      "id": "behind",
+      "page": "site",
+      "x": -620,
+      "y": 1700,
+      "w": 500,
+      "text": "BEHIND EVERY DIRECTION\n\nTHE ADDRESS. Bench's pick (U1) already decided the shape: the company on elyir.com, each product on its own name. The hub's page is hub.elyir.com, with /try for the pretend house alone (the README links it) and /install for the script. Today's command from raw.githubusercontent.com keeps working. Not under elyir.app, because names there are houses' own addresses.\n\nONE WAITLIST. On 5 October it was one Elyir landing page and one waitlist. With U1 that becomes one list with the product ticked, a form on each product's page, and elyir.com pointing to both.\n\nTHE PICTURES. Every screen here is the shipped panel on the pretend house (app/mock) at 7:40 in the evening, taken today. Before anything is public, the pretend house's show and brand labels (The Bear, Disney+, Philips Hue, Sonos) are swapped for made-up ones.\n\nWORDS. The README's sentences, in plain words. Home Assistant is named once, low on the page, for the people who'll ask: built on it, never opened. No relay, brain or driver anywhere on the page. Use it anywhere and its price are said the way setup says them: $3 a month, stop any time, and the house carries on.\n\nDARK AND LIGHT. Drawn dark, the hub's own look. The page follows the visitor's setting, as Bench's does.\n\nTHE PRETEND HOUSE loads only when asked, everywhere it appears."
+    },
+    {
+      "id": "pick",
+      "page": "site",
+      "x": -620,
+      "y": 3000,
+      "w": 500,
+      "text": "DECIDED 16 OCTOBER 2026\n\nD: A's front page, with C's line for a hub ready to plug in under the two buttons. Below the top, the page is A's: the pretend house when asked, the three ways to get it, the price. B and C are on the page that follows, with their cases.\n\nStill to build later: B's moments under this top once the launch video exists, and C's two answers in place of the buttons once there's a hub to sell."
+    },
+    {
+      "id": "d",
+      "page": "site",
+      "x": 0,
+      "y": 2660,
+      "w": 1440,
+      "text": "D: A, WITH C'S LINE (CHOSEN, 16 OCTOBER)\n\nA's top as drawn, with one quiet line under the two buttons: Want one ready to plug in? An email box and Tell me, drawn plain so the lamp-colored button stays the only loud thing on the screen. Everything below the top is A's: the pretend house, the three ways to get it, the price.\n\nWHY: The soft launch and the announcement bring people from r/homeassistant, r/selfhosted and Show HN, who want to see it and then the command, and A gives them both at the top. It is Bench's page with new words and pictures, so the two products read as one company. The still pictures carry the top on their own, so the page can ship before the pretend house runs in the browser. The one line covers A's weak spot, the person a friend sent, and starts the waitlist on day one without promising a box.\n\nLATER: B's moments go under this top once the launch video exists, since they are its script. C's two answers replace the two buttons once there's a hub to sell."
+    }
+  ]
+}
