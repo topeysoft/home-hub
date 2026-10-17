@@ -18,11 +18,17 @@ resource "cloudflare_pages_project" "site" {
   name              = var.project_name
   production_branch = "main"
 
+  # Previews get no list, so a test deploy can never write to the real one; the function then says it isn't set up.
+  # Pages refuses a project whose two environments differ on fail_open.
   deployment_configs = {
     production = {
+      fail_open = true
       d1_databases = {
         WAITLIST = { id = cloudflare_d1_database.waitlist.id }
       }
+    }
+    preview = {
+      fail_open = true
     }
   }
 }
